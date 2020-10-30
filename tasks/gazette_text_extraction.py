@@ -47,3 +47,4 @@ def extract_text_pending_gazettes(
         storage.upload_file(
             gazette_text_file, get_text_file_name_in_remote_storage(gazette)
         )
+        database.set_gazette_as_processed(gazette["id"], gazette["file_checksum"])

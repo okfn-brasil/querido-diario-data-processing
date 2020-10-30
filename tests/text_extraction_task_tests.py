@@ -14,7 +14,7 @@ class TextExtractionTaskTests(TestCase):
         self.database_mock = MagicMock()
         self.data = [
             {
-                "id": id,
+                "id": 1,
                 "source_text": "",
                 "date": date(2020, 10, 18),
                 "edition_number": "1",
@@ -32,6 +32,7 @@ class TextExtractionTaskTests(TestCase):
             }
         ]
         self.database_mock.get_pending_gazettes = MagicMock(return_value=self.data)
+        self.database_mock.set_gazette_as_processed = MagicMock()
         self.storage_mock = MagicMock()
         self.storage_mock.get_file = MagicMock()
         self.storage_mock.upload_file = MagicMock()
@@ -43,7 +44,7 @@ class TextExtractionTaskTests(TestCase):
         )
         self.database_mock.get_pending_gazettes.assert_called_once()
 
-    def test_stoage_call_to_get_file(self):
+    def test_storage_call_to_get_file(self):
         extract_text_pending_gazettes(
             self.database_mock, self.storage_mock, self.text_extraction_function
         )
@@ -74,17 +75,11 @@ class TextExtractionTaskTests(TestCase):
             "/tmp/fake_txt_file", f'{self.data[0]["file_path"]}.txt'
         )
 
+    def test_set_gazette_as_processed(self):
+        extract_text_pending_gazettes(
+            self.database_mock, self.storage_mock, self.text_extraction_function
+        )
 
-class TextExtractionTaskFailuresTests(TestCase):
-    def setUp(self):
-        self.database_mock = MagicMock()
-        self.storage_mock = MagicMock()
-        self.text_extraction_function = MagicMock()
-
-    def test_failure_get_data_from_database(self):
-        # TODO
-        pass
-        # self.database_mock.get_pending_gazettes = MagicMock(side_effect=Exception("Failed to get pending gazettes from database"))
-        # extract_text_pending_gazettes(
-        #     self.database_mock, self.storage_mock, self.text_extraction_function
-        # )
+        self.database_mock.set_gazette_as_processed.assert_called_once_with(
+            1, "972aca2e-1174-11eb-b2d5-a86daaca905e"
+        )
