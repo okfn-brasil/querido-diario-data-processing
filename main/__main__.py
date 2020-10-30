@@ -1,6 +1,7 @@
 from os import environ
 import logging
 
+from data_extraction import get_text_from_file
 from database import create_database_interface
 from storage import create_storage_interface
 from tasks import extract_text_pending_gazettes
