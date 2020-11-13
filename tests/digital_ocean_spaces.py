@@ -112,17 +112,3 @@ class DigitalOceanSpacesIntegrationTests(TestCase):
             file_to_be_downloaded = "test/sc_gaspar/2020/09/10/fake_gazette.pdf"
             with tempfile.TemporaryFile() as tmpfile:
                 spaces.get_file(file_to_be_downloaded, tmpfile)
-
-    def test_updaload_file_to_digital_ocean_spaces(self):
-        with patch("boto3.s3.inject.upload_file") as mock:
-            spaces = DigitalOceanSpaces(
-                self.REGION,
-                self.ENDPOINT,
-                self.ACCESS_KEY,
-                self.ACCESS_SECRET,
-                self.BUCKET,
-            )
-            file_key = "test/sc_gaspar/2020/09/10/fake_gazette.pdf"
-            file_to_be_uploaded = "tests/data/fake_gazette.odt"
-            spaces.upload_file(file_to_be_uploaded, file_key)
-            mock.assert_called_once_with(file_to_be_uploaded, self.BUCKET, file_key)
