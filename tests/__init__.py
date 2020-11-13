@@ -10,8 +10,12 @@ from .postgresql import (
     PostgreSQLConnectionTests,
     CreationDatabaseInterfaceFunctionTests,
 )
-from .text_extraction_task_tests import (
-    TextExtractionTaskTests,
-)
+from .text_extraction_task_tests import TextExtractionTaskTests
 
 from .main_tests import MainModuleTests
+
+from .elasticsearch import (
+    ElasticsearchBasicTests,
+    IndexInterfaceFactoryFunctionTests,
+    ElasticsearchIntegrationTests,
+)

@@ -1,0 +1,1 @@
+from .elasticsearch import create_index_interface

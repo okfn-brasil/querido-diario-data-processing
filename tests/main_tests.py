@@ -8,10 +8,12 @@ from main import enable_debug_if_necessary, start_to_process_pending_gazettes
 
 class MainModuleTests(TestCase):
     def check_if_some_log_message_has_text(self, text, logs):
+        has_text = False
         for log in logs:
             if text in log:
-                return True
-        return False
+                has_text = True
+                break
+        return has_text
 
     @patch.dict(
         "os.environ", {"DEBUG": "1",},

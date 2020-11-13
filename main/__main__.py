@@ -4,6 +4,7 @@ import logging
 from data_extraction import get_text_from_file
 from database import create_database_interface
 from storage import create_storage_interface
+from index import create_index_interface
 from tasks import extract_text_pending_gazettes
 
 
@@ -28,7 +29,9 @@ def start_to_process_pending_gazettes():
     enable_debug_if_necessary()
     database = create_database_interface()
     storage = create_storage_interface()
-    extract_text_pending_gazettes(database, storage, get_text_from_file)
+    index = create_index_interface()
+    extract_text_pending_gazettes(database, storage, index, get_text_from_file)
+
 
 if __name__ == "__main__":
     start_to_process_pending_gazettes()

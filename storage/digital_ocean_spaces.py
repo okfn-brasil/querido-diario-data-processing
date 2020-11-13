@@ -70,7 +70,3 @@ class DigitalOceanSpaces(StorageInterface):
     def get_file(self, file_key: str, destination) -> None:
         logging.debug(f"Getting {file_key}")
         self._client.download_fileobj(self._bucket, file_key, destination)
-
-    def upload_file(self, file_path: str, file_key: str) -> None:
-        logging.debug(f"Uploading {file_key}")
-        self._client.upload_file(file_path, self._bucket, file_key)
