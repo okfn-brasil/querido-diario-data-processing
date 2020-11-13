@@ -1,2 +1,2 @@
 from .gazette_text_extraction import extract_text_pending_gazettes
-from .interfaces import DatabaseInterface, StorageInterface
+from .interfaces import DatabaseInterface, StorageInterface, IndexInterface

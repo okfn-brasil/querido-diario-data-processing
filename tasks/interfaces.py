@@ -1,4 +1,4 @@
-from typing import Generator
+from typing import Generator, Dict
 import abc
 
 
@@ -32,9 +32,19 @@ class StorageInterface(abc.ABC):
         Download the given file key in the destination on the host
         """
 
+
+class IndexInterface(abc.ABC):
+    """
+    Interface to abstract the interaction with the index system
+    """
+
     @abc.abstractmethod
-    def upload_file(file_path: str, file_key: str) -> None:
+    def create_index(index_name: str) -> None:
         """
-        Upload the file from given path to the remote storage using the given
-        file_key
+        Create the index used by the application
+        """
+
+    def index_document(document: Dict, index: str) -> None:
+        """
+        Upload document to the index
         """
