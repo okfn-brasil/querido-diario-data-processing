@@ -49,6 +49,16 @@ build:
 	podman build --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
 		-f Dockerfile $(PWD)
 
+.PHONY: login
+login:
+	podman login --username $(REGISTRY_USER) --password "$(REGISTRY_PASSWORD)" https://index.docker.io/v1/
+
+.PHONY: publish
+publish:
+	podman tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG} $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell date --rfc-3339=date --utc)
+	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell date --rfc-3339=date --utc) 
+	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG}
+
 .PHONY: destroy
 destroy:
 	podman rmi --force $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)
