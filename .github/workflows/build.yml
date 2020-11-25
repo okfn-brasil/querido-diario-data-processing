@@ -1,0 +1,33 @@
+name: Build, test and publish
+on: 
+  push:
+    branches:
+      - 'main'
+
+env:
+  REGISTRY_USER: ${{ secrets.USERNAME }}
+  REGISTRY_PASSWORD: ${{ secrets.PASSWORD }}
+
+jobs:
+  everything:
+    name: Build, test and publish code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@master
+
+      - name: Build container image
+        run: |
+          make build
+
+      - name: Run tests
+        run: |
+          make test
+
+      - name: Docker Hub login 
+        run: |
+          make login
+
+      - name: Publish container image
+        run: |
+          make publish
