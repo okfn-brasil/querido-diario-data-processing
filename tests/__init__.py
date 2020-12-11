@@ -1,6 +1,6 @@
 import unittest
 
-from .text_extraction_tests import TextExtractionTests
+from .text_extraction_tests import TextExtractionTests,TextExtractorWrapperTest
 from .digital_ocean_spaces import (
     DigitalOceanSpacesIntegrationTests,
     StorageInterfaceCreationTests,

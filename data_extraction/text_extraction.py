@@ -2,6 +2,8 @@ import logging
 import magic
 import os
 
+import requests
+
 import subprocess
 
 
@@ -73,3 +75,28 @@ def is_file_type(filepath, file_types):
     Generic method to check if a identified file type matches a given list of types
     """
     return get_file_type(filepath) in file_types
+
+
+class TextExtractorWrapper():
+    def __init__(self, url: str):
+        self._url = url
+
+    def _get_file_type(self, filepath: str) -> str:
+        """
+        Returns the file's type
+        """
+        return magic.from_file(filepath, mime=True)
+
+    def _try_extract_text(self, filepath: str) -> str:
+        with open(filepath, "rb") as file:
+            headers = {"Content-Type": self._get_file_type(filepath)}
+            response = requests.put(f"{self._url}/tika", data=file, headers=headers)
+            response.encoding = "UTF-8"
+            return response.text
+
+    def extract_text(self, filepath: str) -> str:
+        try:
+            return self._try_extract_text(filepath)
+        except Exception as e:
+            raise Exception("Could not extract file content") from e
+
