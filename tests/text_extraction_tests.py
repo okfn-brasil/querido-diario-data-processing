@@ -138,13 +138,17 @@ class ApacheTikaTextExtractorTest(TestCase):
         )
 
 
+@patch.dict(
+    "os.environ",
+    {
+        "APACHE_TIKA_SERVER": "http://localhost",
+    },
+)
 class FactoryMethodApacheTikaTest(TestCase):
     def test_object_type_returned(self):
-        text_extractor = create_apache_tika_text_extraction("")
+        text_extractor = create_apache_tika_text_extraction()
         self.assertIsInstance(text_extractor, TextExtractorInterface)
 
     def test_object_attributes_returned(self):
-        expected_url = "http://localhost"
-        text_extractor = create_apache_tika_text_extraction(expected_url)
-        self.assertEqual(expected_url, text_extractor._url)
-
+        text_extractor = create_apache_tika_text_extraction()
+        self.assertEqual("http://localhost", text_extractor._url)
