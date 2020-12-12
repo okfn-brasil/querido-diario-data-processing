@@ -2,14 +2,15 @@ FROM python:3.8
 
 RUN adduser --system gazette
 
-RUN apt-get update -y
-RUN apt-get -y install default-jre wait-for-it
+RUN apt-get update -y && \
+	apt-get -y install default-jre wait-for-it && \
+	apt-get clean
 
 # install Apache Tika
-ADD http://archive.apache.org/dist/tika/tika-server-1.24.1.jar /tika-server.jar
-RUN chmod 755 /tika-server.jar 
-ADD http://archive.apache.org/dist/tika/tika-app-1.24.1.jar /tika-app.jar
-RUN chmod 755 /tika-app.jar 
+RUN curl -o /tika-server.jar http://archive.apache.org/dist/tika/tika-server-1.24.1.jar && \
+	curl -o /tika-app.jar http://archive.apache.org/dist/tika/tika-app-1.24.1.jar  && \
+	chmod 755 /tika-server.jar && \
+	chmod 755 /tika-app.jar 
 
 RUN mkdir /mnt/code
 COPY . /mnt/code
