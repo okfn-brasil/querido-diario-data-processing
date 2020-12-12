@@ -3,7 +3,8 @@ from unittest import TestCase, skip
 from unittest.mock import patch, mock_open, MagicMock
 import os
 
-from data_extraction import get_text_from_file, TextExtractorWrapper
+from data_extraction import get_text_from_file, ApacheTikaTextExtractor
+from tasks import TextExtractorInterface
 
 
 class TextExtractionTests(TestCase):
@@ -73,11 +74,11 @@ class TextExtractionTests(TestCase):
                 msg="Extracted text does not have the expected string",
             )
 
-class TextExtractorWrapperTest(TestCase):
+class ApacheTikaTextExtractorTest(TestCase):
 
     def setUp(self):
         self.url = "http://localhost:9998"
-        self.extractor = TextExtractorWrapper(self.url)
+        self.extractor = ApacheTikaTextExtractor(self.url)
 
     def test_text_extractor_wrapper_creation(self):
         self.assertEqual(self.url, self.extractor._url)

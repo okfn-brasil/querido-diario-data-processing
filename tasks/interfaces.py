@@ -48,3 +48,9 @@ class IndexInterface(abc.ABC):
         """
         Upload document to the index
         """
+
+class TextExtractorInterface(abc.ABC):
+    def extract_text(self, filepath: str) -> str:
+        """
+        Extract the text from the given file
+        """

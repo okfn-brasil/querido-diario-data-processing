@@ -1,6 +1,6 @@
 import unittest
 
-from .text_extraction_tests import TextExtractionTests,TextExtractorWrapperTest
+from .text_extraction_tests import TextExtractionTests,ApacheTikaTextExtractorTest
 from .digital_ocean_spaces import (
     DigitalOceanSpacesIntegrationTests,
     StorageInterfaceCreationTests,
