@@ -101,5 +101,10 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         except Exception as e:
             raise Exception("Could not extract file content") from e
 
-def create_apache_tika_text_extraction(apache_tika_server_url: str) -> TextExtractorInterface:
+
+def get_apache_tika_server_url():
+    return os.environ["APACHE_TIKA_SERVER"]
+
+def create_apache_tika_text_extraction() -> TextExtractorInterface:
+    apache_tika_server_url = get_apache_tika_server_url()
     return ApacheTikaTextExtractor(apache_tika_server_url)
