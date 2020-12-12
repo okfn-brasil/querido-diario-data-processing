@@ -1,7 +1,7 @@
 from os import environ
 import logging
 
-from data_extraction import get_text_from_file
+from data_extraction import create_apache_tika_text_extraction
 from database import create_database_interface
 from storage import create_storage_interface
 from index import create_index_interface
@@ -30,7 +30,8 @@ def start_to_process_pending_gazettes():
     database = create_database_interface()
     storage = create_storage_interface()
     index = create_index_interface()
-    extract_text_pending_gazettes(database, storage, index, get_text_from_file)
+    text_extractor = create_apache_tika_text_extraction()
+    extract_text_pending_gazettes(database, storage, index, text_extractor)
 
 
 if __name__ == "__main__":
