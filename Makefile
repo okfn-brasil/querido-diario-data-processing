@@ -15,6 +15,7 @@ POSTGRES_IMAGE ?= postgres:10
 ELASTICSEARCH_PORT1 ?= 9200
 ELASTICSEARCH_PORT2 ?= 9300
 ELASTICSEARCH_CONTAINER_NAME ?= queridodiario-elasticsearch
+APACHE_TIKA_CONTAINER_NAME ?= queridodiario-apache-tika-server
 
 run-command=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 	--pod $(POD_NAME) \
@@ -35,7 +36,7 @@ wait-for=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 	--env POSTGRES_HOST=$(POSTGRES_HOST) \
 	--env POSTGRES_PORT=$(POSTGRES_PORT) \
 	--user=$(UID):$(UID) \
-	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) wait-for-it --timeout=30 $1)
+	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) wait-for-it --timeout=60 $1)
 
 .PHONY: black
 black:
@@ -70,7 +71,7 @@ create-pod: destroy-pod
 	podman pod create --name $(POD_NAME)
 
 .PHONY: test
-test: create-pod elasticsearch database retest
+test: create-pod elasticsearch database apache-tika-server retest
 
 .PHONY: retest
 retest:
@@ -96,6 +97,22 @@ retest-main:
 retest-index:
 	$(call run-command, python -m unittest -f tests/elasticsearch.py)
 
+.PHONY: retest-tika
+retest-tika:
+	$(call run-command, python -m unittest -f tests/text_extraction_tests.py)
+
+start-apache-tika-server:
+	podman run -d --pod $(POD_NAME) --name $(APACHE_TIKA_CONTAINER_NAME) \
+    	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
+		java -jar /tika-server.jar
+
+stop-apache-tika-server:
+	podman stop --ignore $(APACHE_TIKA_CONTAINER_NAME)
+	podman rm --force --ignore $(APACHE_TIKA_CONTAINER_NAME)
+
+.PHONY: apache-tika-server
+apache-tika-server: stop-apache-tika-server start-apache-tika-server
+
 
 shell:
 	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
@@ -114,7 +131,7 @@ stop-database:
 	podman rm --force --ignore $(DATABASE_CONTAINER_NAME)
 
 .PHONY: database
-database: start-database wait-database
+database: stop-database start-database wait-database
 
 start-database:
 	podman run -d --rm -ti \
@@ -128,7 +145,7 @@ start-database:
 wait-database:
 	$(call wait-for, localhost:5432)
 
-load-database: 
+load-database:
 	podman run --rm -ti \
 		--pod $(POD_NAME) \
 		--volume $(PWD):/mnt/code:rw \
