@@ -1,10 +1,11 @@
 import logging
 import magic
 import os
+import subprocess
 
 import requests
 
-import subprocess
+from tasks import TextExtractorInterface
 
 
 def check_file_exists(filepath: str):
@@ -77,7 +78,7 @@ def is_file_type(filepath, file_types):
     return get_file_type(filepath) in file_types
 
 
-class TextExtractorWrapper():
+class ApacheTikaTextExtractor(TextExtractorInterface):
     def __init__(self, url: str):
         self._url = url
 

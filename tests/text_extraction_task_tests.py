@@ -6,8 +6,7 @@ from datetime import date, datetime
 import tempfile
 
 from data_extraction import get_text_from_file
-
-from tasks import extract_text_pending_gazettes
+from tasks import extract_text_pending_gazettes, TextExtractorInterface
 
 
 class TextExtractionTaskTests(TestCase):
@@ -39,9 +38,7 @@ class TextExtractionTaskTests(TestCase):
         self.storage_mock.upload_file = MagicMock()
         with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
             self.tmpfile_returned_by_text_extraction_function_mock = tmpfile.name
-        self.text_extraction_function = MagicMock(
-            return_value=self.tmpfile_returned_by_text_extraction_function_mock
-        )
+        self.text_extraction_function = MagicMock(spec=TextExtractorInterface)
         self.index_mock = MagicMock()
         self.index_mock.index_document = MagicMock()
 
@@ -82,9 +79,9 @@ class TextExtractionTaskTests(TestCase):
             self.text_extraction_function,
         )
 
-        self.text_extraction_function.assert_called_once()
-        self.assertEqual(len(self.text_extraction_function.call_args.args), 1)
-        self.assertIsInstance(self.text_extraction_function.call_args.args[0], str)
+        self.text_extraction_function.extract_text.assert_called_once()
+        self.assertEqual(len(self.text_extraction_function.extract_text.call_args.args), 1)
+        self.assertIsInstance(self.text_extraction_function.extract_text.call_args.args[0], str)
 
     def test_text_file_upload_should_not_be_called(self):
         extract_text_pending_gazettes(
@@ -143,20 +140,22 @@ class TextExtractionTaskTests(TestCase):
                 "territory_name": "Gaspar",
             }
         ]
+        expected_data = data[0].copy()
+        with open("tests/data/fake_gazette.txt", "r") as f:
+            expected_data["source_text"] = f.read()
+
         database_mock.get_pending_gazettes = MagicMock(return_value=data)
         database_mock.set_gazette_as_processed = MagicMock()
 
         tmp_gazette_file = self.copy_file_to_temporary_file(
             "tests/data/fake_gazette.txt"
         )
-        text_extraction_function = MagicMock(return_value=tmp_gazette_file)
+        text_extraction_function = MagicMock(spec=TextExtractorInterface)
+        text_extraction_function.extract_text.return_value=expected_data["source_text"]
 
         extract_text_pending_gazettes(
             database_mock, self.storage_mock, self.index_mock, text_extraction_function,
         )
-        expected_data = data[0].copy()
-        with open("tests/data/fake_gazette.txt", "r") as f:
-            expected_data["source_text"] = f.read()
         self.index_mock.index_document.assert_called_once_with(expected_data)
 
     def file_should_not_exist(self, file_to_check):
@@ -164,30 +163,10 @@ class TextExtractionTaskTests(TestCase):
             os.path.exists(file_to_check), msg=f"File {file_to_check} should be deleted"
         )
 
-    def test_after_index_document_remove_files_from_disk(self):
-        tmpfile_returned_by_text_extraction_function_mock = None
-        with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
-            tmpfile_returned_by_text_extraction_function_mock = tmpfile.name
-
-        text_extraction_function = MagicMock(
-            return_value=tmpfile_returned_by_text_extraction_function_mock
-        )
-
-        extract_text_pending_gazettes(
-            self.database_mock,
-            self.storage_mock,
-            self.index_mock,
-            text_extraction_function,
-        )
-
-        self.file_should_not_exist(tmpfile_returned_by_text_extraction_function_mock)
-        self.file_should_not_exist(text_extraction_function.call_args.args[0])
-
     def test_invalid_file_type_should_be_skipped(self):
 
-        text_extraction_function = MagicMock(
-            side_effect=Exception("Unsupported file type")
-        )
+        text_extraction_function = MagicMock(spec=TextExtractorInterface)
+        text_extraction_function.extract_text.side_effect=Exception("Unsupported file type")
 
         extract_text_pending_gazettes(
             self.database_mock,
@@ -199,7 +178,7 @@ class TextExtractionTaskTests(TestCase):
         self.database_mock.get_pending_gazettes.assert_called_once()
         self.database_mock.set_gazette_as_processed.assert_not_called()
         self.index_mock.index_document.assert_not_called()
-        self.file_should_not_exist(text_extraction_function.call_args.args[0])
+        self.file_should_not_exist(text_extraction_function.extract_text.call_args.args[0])
 
     def assert_called_twice(self, mock):
         self.assertEqual(mock.call_count, 2, msg="Mock should be called twice")
@@ -245,16 +224,16 @@ class TextExtractionTaskTests(TestCase):
         database_mock.get_pending_gazettes = MagicMock(return_value=data)
         database_mock.set_gazette_as_processed = MagicMock()
 
-        tmpfile_returned_by_text_extraction_function_mock = None
-        with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
-            tmpfile_returned_by_text_extraction_function_mock = tmpfile.name
+        file_content_returned_by_text_extraction_function_mock = None
+        with open("tests/data/fake_gazette.txt", "r") as f:
+            file_content_returned_by_text_extraction_function_mock = f.read()
 
-        text_extraction_function = MagicMock(
-            side_effect=[
+        text_extraction_function = MagicMock(spec=TextExtractorInterface)
+        text_extraction_function.extract_text.side_effect=[
                 Exception("Unsupported file type"),
-                tmpfile_returned_by_text_extraction_function_mock,
+                file_content_returned_by_text_extraction_function_mock,
             ]
-        )
+
 
         extract_text_pending_gazettes(
             database_mock, self.storage_mock, self.index_mock, text_extraction_function,
@@ -262,8 +241,7 @@ class TextExtractionTaskTests(TestCase):
 
         database_mock.get_pending_gazettes.assert_called_once()
         self.assert_called_twice(self.storage_mock.get_file)
-        self.assert_called_twice(text_extraction_function)
+        self.assert_called_twice(text_extraction_function.extract_text)
         database_mock.set_gazette_as_processed.assert_called_once()
         self.index_mock.index_document.assert_called_once()
-        self.file_should_not_exist(tmpfile_returned_by_text_extraction_function_mock)
-        self.file_should_not_exist(text_extraction_function.call_args.args[0])
+        self.file_should_not_exist(text_extraction_function.extract_text.call_args.args[0])
