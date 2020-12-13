@@ -1,6 +1,8 @@
 IMAGE_NAMESPACE ?= serenata
 IMAGE_NAME ?= querido-diario-data-processing
 IMAGE_TAG ?= latest
+APACHE_TIKA_IMAGE_NAME ?=  querido-diario-apache-tika-server
+APACHE_TIKA_IMAGE_TAG ?= latest
 POD_NAME ?= querido-diario-data-extraction
 
 # Database info user to run the tests
@@ -45,10 +47,18 @@ black:
 		--user=$(UID):$(UID) $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
 		black .
 
-.PHONY: build
-build:
+.PHONY: build-devel
+build-devel:
 	podman build --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
-		-f Dockerfile $(PWD)
+		-f scripts/Dockerfile $(PWD)
+
+.PHONY: build-tika-server
+build-tika-server:
+	podman build --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
+		-f scripts/Dockerfile_apache_tika $(PWD)
+
+.PHONY: build
+build: build-devel build-tika-server
 
 .PHONY: login
 login:
@@ -103,7 +113,7 @@ retest-tika:
 
 start-apache-tika-server:
 	podman run -d --pod $(POD_NAME) --name $(APACHE_TIKA_CONTAINER_NAME) \
-    	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
+    	$(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
 		java -jar /tika-server.jar
 
 stop-apache-tika-server:
