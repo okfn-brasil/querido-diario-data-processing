@@ -5,7 +5,6 @@ import logging
 from datetime import date, datetime
 import tempfile
 
-from data_extraction import get_text_from_file
 from tasks import extract_text_pending_gazettes, TextExtractorInterface
 
 
