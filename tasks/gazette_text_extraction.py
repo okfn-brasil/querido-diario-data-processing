@@ -24,15 +24,6 @@ def download_gazette_file(gazette, storage: StorageInterface) -> str:
         return tmpfile.name
 
 
-def load_gazette_content(gazette: Dict, gazette_text_file: str) -> None:
-    """
-    Load the gazette content in the gazette dictionary
-    """
-
-    with open(gazette_text_file, "r") as f:
-        gazette["source_text"] = f.read()
-
-
 def delete_gazette_files(gazette_file: str) -> None:
     """
     Removes the files used to process the gazette content.
