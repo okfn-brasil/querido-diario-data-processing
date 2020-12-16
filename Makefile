@@ -80,8 +80,10 @@ destroy-pod:
 create-pod: destroy-pod
 	podman pod create --name $(POD_NAME)
 
+prepare-test-env: create-pod elasticsearch database apache-tika-server
+
 .PHONY: test
-test: create-pod elasticsearch database apache-tika-server retest
+test: prepare-test-env retest
 
 .PHONY: retest
 retest:
@@ -131,7 +133,7 @@ shell:
 		--user=$(UID):$(UID) $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) bash
 
 .PHONY: coverage
-coverage: create-pod database elasticsearch
+coverage: prepare-test-env
 	$(call run-command, coverage erase)
 	$(call run-command, coverage run -m unittest tests)
 	$(call run-command, coverage report -m)
