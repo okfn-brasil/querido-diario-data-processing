@@ -30,7 +30,7 @@ class ApacheTikaTextExtractorTest(TestCase):
     @patch("requests.put", return_value=MagicMock(text="Fake gazette content"))
     @patch("builtins.open", new_callable=mock_open, read_data="")
     @patch("magic.from_file", return_value="application/pdf")
-    def test_odt_file_content_extraction(self, magic_mock, open_mock, request_get_mock):
+    def test_request_reponse_return(self, magic_mock, open_mock, request_get_mock):
         text = self.extractor.extract_text("tests/data/fake_gazette.pdf")
         self.assertEqual("Fake gazette content", text)
 
