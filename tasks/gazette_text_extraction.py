@@ -42,6 +42,22 @@ def try_to_extract_content(gazette_file: str, text_extractor: TextExtractorInter
         os.remove(gazette_file)
         raise e
 
+def get_file_endpoint() -> str:
+    """
+    Get the endpoint where the gazette files can be downloaded.
+    """
+    return os.environ["QUERIDO_DIARIO_FILES_ENDPOINT"]
+
+def get_gazette_text_and_define_url(
+    gazette: Dict, gazette_file: str, text_extractor: TextExtractorInterface
+):
+    """
+    Extract file content and define the url to access the file in the storage
+    """
+    gazette["source_text"] = try_to_extract_content(gazette_file, text_extractor)
+    file_endpoint = get_file_endpoint()
+    gazette["url"] = f"{file_endpoint}/{gazette['file_path']}"
+
 
 def try_process_gazette_file(
     gazette: Dict,
@@ -55,7 +71,7 @@ def try_process_gazette_file(
     """
     logging.debug(f"Processing gazette {gazette['file_path']}")
     gazette_file = download_gazette_file(gazette, storage)
-    gazette["source_text"] = try_to_extract_content(gazette_file, text_extractor)
+    get_gazette_text_and_define_url(gazette, gazette_file, text_extractor)
     index.index_document(gazette)
     database.set_gazette_as_processed(gazette["id"], gazette["file_checksum"])
     delete_gazette_files(gazette_file)

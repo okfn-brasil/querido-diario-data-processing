@@ -8,6 +8,9 @@ import tempfile
 from tasks import extract_text_pending_gazettes, TextExtractorInterface
 
 
+@patch.dict(
+        "os.environ", {"QUERIDO_DIARIO_FILES_ENDPOINT": "http://test.com",},
+)
 class TextExtractionTaskTests(TestCase):
     def setUp(self):
         self.database_mock = MagicMock()
@@ -38,6 +41,7 @@ class TextExtractionTaskTests(TestCase):
         with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
             self.tmpfile_returned_by_text_extraction_function_mock = tmpfile.name
         self.text_extraction_function = MagicMock(spec=TextExtractorInterface)
+        self.text_extraction_function.extract_text.return_value = ""
         self.index_mock = MagicMock()
         self.index_mock.index_document = MagicMock()
 
@@ -137,6 +141,7 @@ class TextExtractionTaskTests(TestCase):
                 "processed": False,
                 "state_code": "SC",
                 "territory_name": "Gaspar",
+                "url" : "http://test.com/tests/data/fake_gazette.txt"
             }
         ]
         expected_data = data[0].copy()
@@ -201,6 +206,7 @@ class TextExtractionTaskTests(TestCase):
                 "processed": False,
                 "state_code": "SC",
                 "territory_name": "Gaspar",
+                "url" : "http://test.com/sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.pdf"
             },
             {
                 "id": 2,
@@ -218,6 +224,7 @@ class TextExtractionTaskTests(TestCase):
                 "processed": False,
                 "state_code": "SC",
                 "territory_name": "Gaspar",
+                "url" : "http://test.com/sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.pdf"
             },
         ]
         database_mock.get_pending_gazettes = MagicMock(return_value=data)
@@ -243,4 +250,15 @@ class TextExtractionTaskTests(TestCase):
         self.assert_called_twice(text_extraction_function.extract_text)
         database_mock.set_gazette_as_processed.assert_called_once()
         self.index_mock.index_document.assert_called_once()
-        self.file_should_not_exist(text_extraction_function.extract_text.call_args.args[0])
+        self.file_should_not_exist(
+            text_extraction_function.extract_text.call_args.args[0]
+        )
+
+    def test_gazette_url(self):
+        expected_data = self.data[0].copy()
+        expected_data["url"] = f"http://test.com/{expected_data['file_path']}"
+
+        extract_text_pending_gazettes(
+            self.database_mock, self.storage_mock, self.index_mock, self.text_extraction_function,
+        )
+        self.index_mock.index_document.assert_called_once_with(expected_data)
