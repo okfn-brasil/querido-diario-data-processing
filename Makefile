@@ -5,6 +5,10 @@ APACHE_TIKA_IMAGE_NAME ?=  querido-diario-apache-tika-server
 APACHE_TIKA_IMAGE_TAG ?= latest
 POD_NAME ?= querido-diario-data-extraction
 
+# S3 mock
+STORAGE_BUCKET ?= queridodiariobucket
+STORAGE_IMAGE ?= adobe/s3mock:2.1.28
+STORAGE_CONTAINER_NAME ?= queridodiario-s3
 # Database info user to run the tests
 DATABASE_CONTAINER_NAME ?= queridodiario-db
 POSTGRES_PASSWORD ?= queridodiario
@@ -13,6 +17,7 @@ POSTGRES_DB ?= queridodiariodb
 POSTGRES_HOST ?= localhost
 POSTGRES_PORT ?= 5432
 POSTGRES_IMAGE ?= postgres:10
+DATABASE_RESTORE_FILE ?= contrib/dump/queridodiariodb.tar
 # Elasticsearch info to run the tests
 ELASTICSEARCH_PORT1 ?= 9200
 ELASTICSEARCH_PORT2 ?= 9300
@@ -67,7 +72,7 @@ login:
 .PHONY: publish
 publish:
 	podman tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG} $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell date --rfc-3339=date --utc)
-	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell date --rfc-3339=date --utc) 
+	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell date --rfc-3339=date --utc)
 	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG}
 
 .PHONY: destroy
@@ -78,7 +83,7 @@ destroy-pod:
 	podman pod rm --force --ignore $(POD_NAME)
 
 create-pod: destroy-pod
-	podman pod create --name $(POD_NAME)
+	podman pod create -p 5432:5432 --name $(POD_NAME)
 
 prepare-test-env: create-pod elasticsearch database apache-tika-server
 
@@ -138,6 +143,13 @@ coverage: prepare-test-env
 	$(call run-command, coverage run -m unittest tests)
 	$(call run-command, coverage report -m)
 
+start-s3:
+	podman run -d --rm -ti \
+		--name $(STORAGE_CONTAINER_NAME) \
+		--pod $(POD_NAME) \
+		-e initialBuckets=$(STORAGE_BUCKET) \
+        $(STORAGE_IMAGE)
+
 .PHONY: stop-database
 stop-database:
 	podman rm --force --ignore $(DATABASE_CONTAINER_NAME)
@@ -158,28 +170,32 @@ wait-database:
 	$(call wait-for, localhost:5432)
 
 load-database:
-	podman run --rm -ti \
-		--pod $(POD_NAME) \
-		--volume $(PWD):/mnt/code:rw \
-		$(POSTGRES_IMAGE) bash -c "dropdb -h localhost -U $(POSTGRES_USER)  $(POSTGRES_DB) && createdb -h localhost -U $(POSTGRES_USER)  $(POSTGRES_DB) &&  psql -h localhost -U $(POSTGRES_USER) $(POSTGRES_DB) -f /mnt/code/querido-diario-dump.txt"
-
-.PHONY: sql
-sql:
-	podman run --rm -ti \
-		--pod $(POD_NAME) \
-		postgres:12 psql -h localhost -U $(POSTGRES_USER)
+ifneq ("$(wildcard $(DATABASE_RESTORE_FILE))","")
+	podman cp $(DATABASE_RESTORE_FILE) $(DATABASE_CONTAINER_NAME):/mnt/dump_file
+	podman exec $(DATABASE_CONTAINER_NAME) bash -c "pg_restore -v -c -h localhost -U $(POSTGRES_USER) -d $(POSTGRES_DB) /mnt/dump_file || true"
+else
+    echo "cannot restore because file does not exists '$(DATABASE_RESTORE_FILE)'"
+	exit 1
+endif
 
 set-run-variable-values:
 	$(eval POD_NAME=run-$(POD_NAME))
 	$(eval DATABASE_CONTAINER_NAME=run-$(DATABASE_CONTAINER_NAME))
 	$(eval ELASTICSEARCH_CONTAINER_NAME=run-$(ELASTICSEARCH_CONTAINER_NAME))
 
+.PHONY: sql
+sql: set-run-variable-values
+	podman run --rm -ti \
+		--pod $(POD_NAME) \
+		$(POSTGRES_IMAGE) psql -h localhost -U $(POSTGRES_USER) $(POSTGRES_DB)
+
 .PHONY: run
-run: set-run-variable-values create-pod database elasticsearch load-database
+run: set-run-variable-values create-pod start-s3 database elasticsearch load-database
+	cp --no-clobber contrib/sample.env .env
 	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
-		--env-file envvars \
+		--env-file .env \
 		--user=$(UID):$(UID) $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python main
 
 .PHONY: shell-run
