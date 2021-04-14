@@ -179,6 +179,7 @@ else
 endif
 
 set-run-variable-values:
+	cp --no-clobber contrib/sample.env .env
 	$(eval POD_NAME=run-$(POD_NAME))
 	$(eval DATABASE_CONTAINER_NAME=run-$(DATABASE_CONTAINER_NAME))
 	$(eval ELASTICSEARCH_CONTAINER_NAME=run-$(ELASTICSEARCH_CONTAINER_NAME))
@@ -191,7 +192,6 @@ sql: set-run-variable-values
 
 .PHONY: run
 run: set-run-variable-values create-pod start-s3 database elasticsearch load-database
-	cp --no-clobber contrib/sample.env .env
 	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
