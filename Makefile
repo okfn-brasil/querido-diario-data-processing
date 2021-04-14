@@ -17,7 +17,7 @@ POSTGRES_DB ?= queridodiariodb
 POSTGRES_HOST ?= localhost
 POSTGRES_PORT ?= 5432
 POSTGRES_IMAGE ?= postgres:10
-DATABASE_RESTORE_FILE ?= contrib/dump/queridodiariodb.tar
+DATABASE_RESTORE_FILE ?= contrib/data/queridodiariodb.tar
 # Elasticsearch info to run the tests
 ELASTICSEARCH_PORT1 ?= 9200
 ELASTICSEARCH_PORT2 ?= 9300
@@ -174,7 +174,7 @@ ifneq ("$(wildcard $(DATABASE_RESTORE_FILE))","")
 	podman cp $(DATABASE_RESTORE_FILE) $(DATABASE_CONTAINER_NAME):/mnt/dump_file
 	podman exec $(DATABASE_CONTAINER_NAME) bash -c "pg_restore -v -c -h localhost -U $(POSTGRES_USER) -d $(POSTGRES_DB) /mnt/dump_file || true"
 else
-    echo "cannot restore because file does not exists '$(DATABASE_RESTORE_FILE)'"
+	echo "cannot restore because file does not exists '$(DATABASE_RESTORE_FILE)'"
 	exit 1
 endif
 
