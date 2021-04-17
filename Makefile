@@ -9,6 +9,7 @@ POD_NAME ?= querido-diario-data-extraction
 STORAGE_BUCKET ?= queridodiariobucket
 STORAGE_IMAGE ?= adobe/s3mock:2.1.28
 STORAGE_CONTAINER_NAME ?= queridodiario-s3
+STORAGE_PORT ?= 9090
 # Database info user to run the tests
 DATABASE_CONTAINER_NAME ?= queridodiario-db
 POSTGRES_PASSWORD ?= queridodiario
@@ -83,7 +84,10 @@ destroy-pod:
 	podman pod rm --force --ignore $(POD_NAME)
 
 create-pod: destroy-pod
-	podman pod create -p 5432:5432 --name $(POD_NAME)
+	podman pod create -p $(POSTGRES_PORT):$(POSTGRES_PORT) \
+					  -p $(ELASTICSEARCH_PORT1):$(ELASTICSEARCH_PORT1) \
+					  -p $(STORAGE_PORT):$(STORAGE_PORT) \
+	                  --name $(POD_NAME)
 
 prepare-test-env: create-pod elasticsearch database apache-tika-server
 
