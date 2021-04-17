@@ -135,7 +135,7 @@ stop-apache-tika-server:
 apache-tika-server: stop-apache-tika-server start-apache-tika-server
 
 
-shell:
+shell: set-run-variable-values
 	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
