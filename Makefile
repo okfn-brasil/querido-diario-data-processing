@@ -7,9 +7,11 @@ POD_NAME ?= querido-diario-data-extraction
 
 # S3 mock
 STORAGE_BUCKET ?= queridodiariobucket
-STORAGE_IMAGE ?= adobe/s3mock:2.1.28
+STORAGE_IMAGE ?= bitnami/minio:2021.4.6
 STORAGE_CONTAINER_NAME ?= queridodiario-s3
-STORAGE_PORT ?= 9090
+STORAGE_ACCESS_KEY ?= minio-access-key
+STORAGE_ACCESS_SECRET ?= minio-secret-key
+STORAGE_PORT ?= 9000
 # Database info user to run the tests
 DATABASE_CONTAINER_NAME ?= queridodiario-db
 POSTGRES_PASSWORD ?= queridodiario
@@ -152,7 +154,8 @@ start-s3:
 	podman run -d --rm -ti \
 		--name $(STORAGE_CONTAINER_NAME) \
 		--pod $(POD_NAME) \
-		-e initialBuckets=$(STORAGE_BUCKET) \
+		-e MINIO_ACCESS_KEY=$(STORAGE_ACCESS_KEY) \
+		-e MINIO_SECRET_KEY=$(STORAGE_ACCESS_SECRET) \
         $(STORAGE_IMAGE)
 
 .PHONY: stop-database
@@ -208,6 +211,7 @@ shell-run: set-run-variable-values
 	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
+		--env-file .env \
 		--user=$(UID):$(UID) $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) bash
 
 elasticsearch: stop-elasticsearch start-elasticsearch wait-elasticsearch
