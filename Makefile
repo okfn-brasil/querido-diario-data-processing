@@ -199,7 +199,7 @@ sql: set-run-variable-values
 		$(POSTGRES_IMAGE) psql -h localhost -U $(POSTGRES_USER) $(POSTGRES_DB)
 
 .PHONY: run
-run: set-run-variable-values create-pod start-s3 database elasticsearch load-database
+run: set-run-variable-values create-pod start-s3 database apache-tika-server elasticsearch load-database
 	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
