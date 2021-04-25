@@ -70,6 +70,7 @@ def define_gazette_raw_text(
     file_raw_txt = f"{file_raw_txt}.txt"
     logging.debug(f"file_raw_txt uploaded {file_raw_txt}")
     storage.upload_content(file_raw_txt, gazette["source_text"])
+    gazette["file_raw_txt"] = file_raw_txt
 
 
 def try_process_gazette_file(
