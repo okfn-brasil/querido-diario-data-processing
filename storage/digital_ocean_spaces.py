@@ -66,7 +66,20 @@ class DigitalOceanSpaces(StorageInterface):
             aws_access_key_id=self._access_key,
             aws_secret_access_key=self._access_secret,
         )
+        self._resource = boto3.resource(
+            "s3",
+            region_name=self._region,
+            endpoint_url=self._endpoint,
+            aws_access_key_id=self._access_key,
+            aws_secret_access_key=self._access_secret,
+        )
 
     def get_file(self, file_key: str, destination) -> None:
         logging.debug(f"Getting {file_key}")
         self._client.download_fileobj(self._bucket, file_key, destination)
+
+
+    def upload_content(self, file_key: str, content_to_be_uploaded: str) -> None:
+        logging.debug(f"Uploading {file_key}")
+        content_object = self._resource.Object(self._bucket, file_key)
+        content_object.put(Body=content_to_be_uploaded)

@@ -31,6 +31,7 @@ class TextExtractionTaskTests(TestCase):
                 "processed": False,
                 "state_code": "SC",
                 "territory_name": "Gaspar",
+                "file_raw_txt": "sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.txt",
             }
         ]
         self.database_mock.get_pending_gazettes = MagicMock(return_value=self.data)
@@ -141,7 +142,8 @@ class TextExtractionTaskTests(TestCase):
                 "processed": False,
                 "state_code": "SC",
                 "territory_name": "Gaspar",
-                "url" : "http://test.com/tests/data/fake_gazette.txt"
+                "url" : "http://test.com/tests/data/fake_gazette.txt",
+                "file_raw_txt": "tests/data/fake_gazette.txt",
             }
         ]
         expected_data = data[0].copy()
@@ -206,7 +208,8 @@ class TextExtractionTaskTests(TestCase):
                 "processed": False,
                 "state_code": "SC",
                 "territory_name": "Gaspar",
-                "url" : "http://test.com/sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.pdf"
+                "url" : "http://test.com/sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.pdf",
+                "file_raw_txt": "sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.txt",
             },
             {
                 "id": 2,
@@ -224,7 +227,8 @@ class TextExtractionTaskTests(TestCase):
                 "processed": False,
                 "state_code": "SC",
                 "territory_name": "Gaspar",
-                "url" : "http://test.com/sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.pdf"
+                "url" : "http://test.com/sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.pdf",
+                "file_raw_txt": "sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.txt",
             },
         ]
         database_mock.get_pending_gazettes = MagicMock(return_value=data)
