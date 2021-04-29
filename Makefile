@@ -141,7 +141,7 @@ shell: set-run-variable-values
 	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
-		--env-file .env \
+		--env-file envvars \
 		--user=$(UID):$(UID) $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) bash
 
 .PHONY: coverage
@@ -198,7 +198,7 @@ else
 endif
 
 set-run-variable-values:
-	cp --no-clobber contrib/sample.env .env
+	cp --no-clobber contrib/sample.env envvars
 	$(eval POD_NAME=run-$(POD_NAME))
 	$(eval DATABASE_CONTAINER_NAME=run-$(DATABASE_CONTAINER_NAME))
 	$(eval ELASTICSEARCH_CONTAINER_NAME=run-$(ELASTICSEARCH_CONTAINER_NAME))
@@ -217,7 +217,7 @@ re-run: set-run-variable-values
 	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
-		--env-file .env \
+		--env-file envvars \
 		--user=$(UID):$(UID) $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python main
 
 .PHONY: run
@@ -228,7 +228,7 @@ shell-run: set-run-variable-values
 	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
-		--env-file .env \
+		--env-file envvars \
 		--user=$(UID):$(UID) $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) bash
 
 .PHONY: shell-database
