@@ -59,7 +59,7 @@ def get_gazette_text_and_define_url(
     file_endpoint = get_file_endpoint()
     gazette["url"] = f"{file_endpoint}/{gazette['file_path']}"
 
-def define_gazette_raw_text(
+def upload_gazette_raw_text(
     gazette: Dict, storage
 ):
     """
