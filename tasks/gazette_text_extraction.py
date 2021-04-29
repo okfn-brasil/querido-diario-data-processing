@@ -86,7 +86,7 @@ def try_process_gazette_file(
     logging.debug(f"Processing gazette {gazette['file_path']}")
     gazette_file = download_gazette_file(gazette, storage)
     get_gazette_text_and_define_url(gazette, gazette_file, text_extractor)
-    define_gazette_raw_text(gazette, storage)
+    upload_gazette_raw_text(gazette, storage)
     index.index_document(gazette)
     database.set_gazette_as_processed(gazette["id"], gazette["file_checksum"])
     delete_gazette_files(gazette_file)
