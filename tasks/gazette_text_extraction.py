@@ -1,7 +1,7 @@
 import logging
 import tempfile
 import os
-import re
+from pathlib import Path
 from typing import Dict
 
 from .interfaces import DatabaseInterface, StorageInterface, IndexInterface, TextExtractorInterface
@@ -65,9 +65,7 @@ def upload_gazette_raw_text(
     """
     Define gazette raw text
     """
-    file_raw_txt = re.sub('\.pdf$', '', gazette['file_path'])
-    file_raw_txt = re.sub('\.doc$', '', file_raw_txt)
-    file_raw_txt = f"{file_raw_txt}.txt"
+    file_raw_txt = Path(gazette['file_path']).with_suffix(".txt").as_posix()
     logging.debug(f"file_raw_txt uploaded {file_raw_txt}")
     storage.upload_content(file_raw_txt, gazette["source_text"])
     gazette["file_raw_txt"] = file_raw_txt
