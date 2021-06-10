@@ -193,8 +193,8 @@ ifneq ("$(wildcard $(DATABASE_RESTORE_FILE))","")
 	podman cp $(DATABASE_RESTORE_FILE) $(DATABASE_CONTAINER_NAME):/mnt/dump_file
 	podman exec $(DATABASE_CONTAINER_NAME) bash -c "pg_restore -v -c -h localhost -U $(POSTGRES_USER) -d $(POSTGRES_DB) /mnt/dump_file || true"
 else
-	echo "cannot restore because file does not exists '$(DATABASE_RESTORE_FILE)'"
-	exit 1
+	@echo "cannot restore because file does not exists '$(DATABASE_RESTORE_FILE)'"
+	@exit 1
 endif
 
 set-run-variable-values:
