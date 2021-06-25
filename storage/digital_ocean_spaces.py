@@ -1,6 +1,7 @@
 import logging
 import os
 from typing import Generator
+from io import BytesIO
 
 import boto3
 
@@ -66,13 +67,6 @@ class DigitalOceanSpaces(StorageInterface):
             aws_access_key_id=self._access_key,
             aws_secret_access_key=self._access_secret,
         )
-        self._resource = boto3.resource(
-            "s3",
-            region_name=self._region,
-            endpoint_url=self._endpoint,
-            aws_access_key_id=self._access_key,
-            aws_secret_access_key=self._access_secret,
-        )
 
     def get_file(self, file_key: str, destination) -> None:
         logging.debug(f"Getting {file_key}")
@@ -81,5 +75,5 @@ class DigitalOceanSpaces(StorageInterface):
 
     def upload_content(self, file_key: str, content_to_be_uploaded: str) -> None:
         logging.debug(f"Uploading {file_key}")
-        content_object = self._resource.Object(self._bucket, file_key)
-        content_object.put(Body=content_to_be_uploaded)
+        f = BytesIO(content_to_be_uploaded.encode())
+        self._client.upload_fileobj(f, self._bucket, file_key)
