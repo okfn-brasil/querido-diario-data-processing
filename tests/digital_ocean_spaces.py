@@ -6,6 +6,7 @@ import tempfile
 
 from botocore.stub import Stubber
 import boto3
+from io import BytesIO
 
 from storage import DigitalOceanSpaces, create_storage_interface
 from tasks import StorageInterface
@@ -112,3 +113,24 @@ class DigitalOceanSpacesIntegrationTests(TestCase):
             file_to_be_downloaded = "test/sc_gaspar/2020/09/10/fake_gazette.pdf"
             with tempfile.TemporaryFile() as tmpfile:
                 spaces.get_file(file_to_be_downloaded, tmpfile)
+
+    def test_should_upload_content(self):
+        with patch("boto3.s3.inject.upload_fileobj") as mock:
+            spaces = DigitalOceanSpaces(
+                self.REGION,
+                self.ENDPOINT,
+                self.ACCESS_KEY,
+                self.ACCESS_SECRET,
+                self.BUCKET,
+            )
+            file_key = "test/sc_gaspar/2020/09/10/fake_gazette.txt"
+            content_to_be_uploaded = "content of bucket"
+            spaces.upload_content(file_key, content_to_be_uploaded)
+            mock.assert_called_once()
+            self.assertIsInstance(
+                mock.call_args.args[0],
+                BytesIO,
+                msg="Should convert to bytes",
+            )
+            self.assertEqual(mock.call_args.args[1], self.BUCKET)
+            self.assertEqual(mock.call_args.args[2], file_key)
