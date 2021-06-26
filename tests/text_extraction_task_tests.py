@@ -5,7 +5,7 @@ import logging
 from datetime import date, datetime
 import tempfile
 
-from tasks import extract_text_pending_gazettes, TextExtractorInterface
+from tasks import extract_text_pending_gazettes, upload_gazette_raw_text, TextExtractorInterface
 
 
 @patch.dict(
@@ -38,7 +38,7 @@ class TextExtractionTaskTests(TestCase):
         self.database_mock.set_gazette_as_processed = MagicMock()
         self.storage_mock = MagicMock()
         self.storage_mock.get_file = MagicMock()
-        self.storage_mock.upload_file = MagicMock()
+        self.storage_mock.upload_content = MagicMock()
         with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
             self.tmpfile_returned_by_text_extraction_function_mock = tmpfile.name
         self.text_extraction_function = MagicMock(spec=TextExtractorInterface)
@@ -86,15 +86,6 @@ class TextExtractionTaskTests(TestCase):
         self.text_extraction_function.extract_text.assert_called_once()
         self.assertEqual(len(self.text_extraction_function.extract_text.call_args.args), 1)
         self.assertIsInstance(self.text_extraction_function.extract_text.call_args.args[0], str)
-
-    def test_text_file_upload_should_not_be_called(self):
-        extract_text_pending_gazettes(
-            self.database_mock,
-            self.storage_mock,
-            self.index_mock,
-            self.text_extraction_function,
-        )
-        self.storage_mock.upload_file.assert_not_called()
 
     def test_set_gazette_as_processed(self):
         extract_text_pending_gazettes(
@@ -266,3 +257,10 @@ class TextExtractionTaskTests(TestCase):
             self.database_mock, self.storage_mock, self.index_mock, self.text_extraction_function,
         )
         self.index_mock.index_document.assert_called_once_with(expected_data)
+
+    def test_upload_gazette_raw_text(self):
+        content="some content"
+        gazette = dict(file_path="some_file.pdf",source_text=content)
+        upload_gazette_raw_text(gazette, self.storage_mock)
+        self.assertEqual(gazette["file_raw_txt"], "some_file.txt")
+        self.storage_mock.upload_content.assert_called_once_with("some_file.txt", content)
