@@ -1,4 +1,4 @@
-FROM python:3.8
+FROM docker.io/python:3.8
 
 RUN adduser --system gazette && \
 	apt-get update -y && \

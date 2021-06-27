@@ -3,6 +3,10 @@
 ## Setup
 
 - [Install podman](https://podman.io/getting-started/installation)
+- execute build stage (only the first time):
+```console
+make build
+```
 - execute setup stage:
 ```console
 make setup
