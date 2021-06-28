@@ -66,8 +66,8 @@ def upload_gazette_raw_text(
     Define gazette raw text
     """
     file_raw_txt = Path(gazette['file_path']).with_suffix(".txt").as_posix()
-    logging.debug(f"file_raw_txt uploaded {file_raw_txt}")
     storage.upload_content(file_raw_txt, gazette["source_text"])
+    logging.debug(f"file_raw_txt uploaded {file_raw_txt}")
     gazette["file_raw_txt"] = file_raw_txt
 
 
