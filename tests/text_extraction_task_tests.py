@@ -262,5 +262,5 @@ class TextExtractionTaskTests(TestCase):
         content="some content"
         gazette = dict(file_path="some_file.pdf",source_text=content)
         upload_gazette_raw_text(gazette, self.storage_mock)
-        self.assertEqual(gazette["file_raw_txt"], "some_file.txt")
+        self.assertEqual(gazette["file_raw_txt"], "http://test.com/some_file.txt")
         self.storage_mock.upload_content.assert_called_once_with("some_file.txt", content)
