@@ -134,7 +134,7 @@ class TextExtractionTaskTests(TestCase):
                 "state_code": "SC",
                 "territory_name": "Gaspar",
                 "url" : "http://test.com/tests/data/fake_gazette.txt",
-                "file_raw_txt": "tests/data/fake_gazette.txt",
+                "file_raw_txt": "http://test.com/tests/data/fake_gazette.txt",
             }
         ]
         expected_data = data[0].copy()
