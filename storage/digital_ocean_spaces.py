@@ -1,6 +1,7 @@
 import logging
 import os
 from typing import Generator
+from io import BytesIO
 
 import boto3
 
@@ -70,3 +71,9 @@ class DigitalOceanSpaces(StorageInterface):
     def get_file(self, file_key: str, destination) -> None:
         logging.debug(f"Getting {file_key}")
         self._client.download_fileobj(self._bucket, file_key, destination)
+
+
+    def upload_content(self, file_key: str, content_to_be_uploaded: str) -> None:
+        logging.debug(f"Uploading {file_key}")
+        f = BytesIO(content_to_be_uploaded.encode())
+        self._client.upload_fileobj(f, self._bucket, file_key)

@@ -1,6 +1,7 @@
 import logging
 import tempfile
 import os
+from pathlib import Path
 from typing import Dict
 
 from .interfaces import DatabaseInterface, StorageInterface, IndexInterface, TextExtractorInterface
@@ -58,6 +59,18 @@ def get_gazette_text_and_define_url(
     file_endpoint = get_file_endpoint()
     gazette["url"] = f"{file_endpoint}/{gazette['file_path']}"
 
+def upload_gazette_raw_text(
+    gazette: Dict, storage
+):
+    """
+    Define gazette raw text
+    """
+    file_raw_txt = Path(gazette['file_path']).with_suffix(".txt").as_posix()
+    storage.upload_content(file_raw_txt, gazette["source_text"])
+    logging.debug(f"file_raw_txt uploaded {file_raw_txt}")
+    file_endpoint = get_file_endpoint()
+    gazette["file_raw_txt"] = f"{file_endpoint}/{file_raw_txt}"
+
 
 def try_process_gazette_file(
     gazette: Dict,
@@ -72,6 +85,7 @@ def try_process_gazette_file(
     logging.debug(f"Processing gazette {gazette['file_path']}")
     gazette_file = download_gazette_file(gazette, storage)
     get_gazette_text_and_define_url(gazette, gazette_file, text_extractor)
+    upload_gazette_raw_text(gazette, storage)
     index.index_document(gazette)
     database.set_gazette_as_processed(gazette["id"], gazette["file_checksum"])
     delete_gazette_files(gazette_file)
