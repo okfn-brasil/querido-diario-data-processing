@@ -91,7 +91,7 @@ create-pod: destroy-pod
 					  -p $(STORAGE_PORT):$(STORAGE_PORT) \
 	                  --name $(POD_NAME)
 
-prepare-test-env: create-pod elasticsearch database apache-tika-server
+prepare-test-env: create-pod storage apache-tika-server elasticsearch database
 
 .PHONY: test
 test: prepare-test-env retest
@@ -188,7 +188,7 @@ start-database:
 wait-database:
 	$(call wait-for, localhost:5432)
 
-load-database:
+load-database: set-run-variable-values
 ifneq ("$(wildcard $(DATABASE_RESTORE_FILE))","")
 	podman cp $(DATABASE_RESTORE_FILE) $(DATABASE_CONTAINER_NAME):/mnt/dump_file
 	podman exec $(DATABASE_CONTAINER_NAME) bash -c "pg_restore -v -c -h localhost -U $(POSTGRES_USER) -d $(POSTGRES_DB) /mnt/dump_file || true"
@@ -250,3 +250,8 @@ stop-elasticsearch:
 
 wait-elasticsearch:
 	$(call wait-for, localhost:9200)
+
+.PHONY: publish-tag
+publish-tag:
+	podman tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG} $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
+	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
