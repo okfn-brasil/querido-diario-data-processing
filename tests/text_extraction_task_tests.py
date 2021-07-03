@@ -31,7 +31,7 @@ class TextExtractionTaskTests(TestCase):
                 "processed": False,
                 "state_code": "SC",
                 "territory_name": "Gaspar",
-                "file_raw_txt": "sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.txt",
+                "file_raw_txt": "http://test.com/sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.txt",
             }
         ]
         self.database_mock.get_pending_gazettes = MagicMock(return_value=self.data)
