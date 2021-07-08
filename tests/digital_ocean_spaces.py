@@ -1,5 +1,5 @@
 from unittest import TestCase, expectedFailure
-from unittest.mock import patch
+from unittest.mock import patch, sentinel
 import datetime
 import hashlib
 import tempfile
@@ -114,23 +114,18 @@ class DigitalOceanSpacesIntegrationTests(TestCase):
             with tempfile.TemporaryFile() as tmpfile:
                 spaces.get_file(file_to_be_downloaded, tmpfile)
 
-    def test_should_upload_content(self):
-        with patch("boto3.s3.inject.upload_fileobj") as mock:
-            spaces = DigitalOceanSpaces(
-                self.REGION,
-                self.ENDPOINT,
-                self.ACCESS_KEY,
-                self.ACCESS_SECRET,
-                self.BUCKET,
-            )
-            file_key = "test/sc_gaspar/2020/09/10/fake_gazette.txt"
-            content_to_be_uploaded = "content of bucket"
-            spaces.upload_content(file_key, content_to_be_uploaded)
-            mock.assert_called_once()
-            self.assertIsInstance(
-                mock.call_args.args[0],
-                BytesIO,
-                msg="Should convert to bytes",
-            )
-            self.assertEqual(mock.call_args.args[1], self.BUCKET)
-            self.assertEqual(mock.call_args.args[2], file_key)
+    @patch("storage.digital_ocean_spaces.BytesIO")
+    @patch("boto3.s3.inject.upload_fileobj")
+    def test_should_upload_content(self, upload_fileobj_mock, bytesio_mock):
+        bytesio_mock.return_value = sentinel.bytesio
+        spaces = DigitalOceanSpaces(
+            self.REGION,
+            self.ENDPOINT,
+            self.ACCESS_KEY,
+            self.ACCESS_SECRET,
+            self.BUCKET,
+        )
+        file_key = "test/sc_gaspar/2020/09/10/fake_gazette.txt"
+        content_to_be_uploaded = "content of bucket"
+        spaces.upload_content(file_key, content_to_be_uploaded)
+        upload_fileobj_mock.assert_called_once_with(sentinel.bytesio, self.BUCKET, file_key, ExtraArgs={"ACL": "public-read"})
