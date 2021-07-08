@@ -72,8 +72,7 @@ class DigitalOceanSpaces(StorageInterface):
         logging.debug(f"Getting {file_key}")
         self._client.download_fileobj(self._bucket, file_key, destination)
 
-
-    def upload_content(self, file_key: str, content_to_be_uploaded: str) -> None:
+    def upload_content(self, file_key: str, content_to_be_uploaded: str, permission: str ="public-read") -> None:
         logging.debug(f"Uploading {file_key}")
         f = BytesIO(content_to_be_uploaded.encode())
-        self._client.upload_fileobj(f, self._bucket, file_key)
+        self._client.upload_fileobj(f, self._bucket, file_key, ExtraArgs={"ACL": permission})
