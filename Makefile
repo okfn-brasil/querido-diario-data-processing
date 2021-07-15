@@ -7,7 +7,7 @@ POD_NAME ?= querido-diario-data-extraction
 
 # S3 mock
 STORAGE_BUCKET ?= queridodiariobucket
-STORAGE_IMAGE ?= bitnami/minio:2021.4.6
+STORAGE_IMAGE ?= docker.io/bitnami/minio:2021.4.6
 STORAGE_CONTAINER_NAME ?= queridodiario-storage
 STORAGE_ACCESS_KEY ?= minio-access-key
 STORAGE_ACCESS_SECRET ?= minio-secret-key
@@ -19,7 +19,7 @@ POSTGRES_USER ?= $(POSTGRES_PASSWORD)
 POSTGRES_DB ?= queridodiariodb
 POSTGRES_HOST ?= localhost
 POSTGRES_PORT ?= 5432
-POSTGRES_IMAGE ?= postgres:10
+POSTGRES_IMAGE ?= docker.io/postgres:10
 DATABASE_RESTORE_FILE ?= contrib/data/queridodiariodb.tar
 # Elasticsearch info to run the tests
 ELASTICSEARCH_PORT1 ?= 9200
@@ -243,7 +243,7 @@ start-elasticsearch:
 		--name $(ELASTICSEARCH_CONTAINER_NAME) \
 		--pod $(POD_NAME) \
 		--env discovery.type=single-node \
-		elasticsearch:7.9.1
+		docker.io/elasticsearch:7.9.1
 
 stop-elasticsearch:
 	podman rm --force --ignore $(ELASTICSEARCH_CONTAINER_NAME)
