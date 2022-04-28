@@ -50,10 +50,16 @@ class IndexInterface(abc.ABC):
         Create the index used by the application
         """
 
-    def index_document(document: Dict, index: str) -> None:
+    def index_document(document: Dict, document_id: str, index: str) -> None:
         """
         Upload document to the index
         """
+
+    def search(query: Dict, index: str) -> Dict:
+        """
+        Searches the index with the provided query
+        """
+
 
 class TextExtractorInterface(abc.ABC):
     def extract_text(self, filepath: str) -> str:

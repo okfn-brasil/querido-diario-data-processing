@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 import os
 
 import elasticsearch
@@ -35,11 +35,18 @@ class ElasticSearchInterface(IndexInterface):
             timeout=self._timeout,
         )
 
-    def index_document(self, document, index: str = None) -> None:
+    def index_document(self, document: Dict, document_id: str = None, index: str = None) -> None:
         index = self.get_index_name(index)
         result = self._es.index(
-            index=index, body=document, id=document["file_checksum"]
+            index=index, body=document, id=document_id
         )
+
+    def search(self, query: Dict, index: str = None) -> Dict:
+        index = self.get_index_name(index)
+        result = self._es.search(
+            index=index, body=query
+        )
+        return result
 
 
 def get_elasticsearch_host():

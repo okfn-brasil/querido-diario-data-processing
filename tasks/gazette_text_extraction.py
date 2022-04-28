@@ -2,7 +2,7 @@ import logging
 import tempfile
 import os
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Generator, Union
 
 from .interfaces import DatabaseInterface, StorageInterface, IndexInterface, TextExtractorInterface
 
@@ -78,7 +78,7 @@ def try_process_gazette_file(
     storage: StorageInterface,
     index: IndexInterface,
     text_extractor: TextExtractorInterface,
-) -> None:
+) -> Dict:
     """
     Do all the work to extract the content from the gazette files
     """
@@ -86,9 +86,10 @@ def try_process_gazette_file(
     gazette_file = download_gazette_file(gazette, storage)
     get_gazette_text_and_define_url(gazette, gazette_file, text_extractor)
     upload_gazette_raw_text(gazette, storage)
-    index.index_document(gazette)
+    index.index_document(gazette, document_id=gazette["file_checksum"])
     database.set_gazette_as_processed(gazette["id"], gazette["file_checksum"])
     delete_gazette_files(gazette_file)
+    return gazette
 
 
 def process_gazette_file(
@@ -97,31 +98,36 @@ def process_gazette_file(
     storage: StorageInterface,
     index: IndexInterface,
     text_extractor: TextExtractorInterface,
-) -> None:
+) -> Union[Dict, None]:
     """
-    Try to process the gazette file. If an exception happen log a warning message
-    and return.
+    Process the gazette file to extract the text
+
+    Try to process the gazette file to extract its text. If an exception happens
+    log a warning message and return.
     """
     try:
-        try_process_gazette_file(
+        processed_gazette = try_process_gazette_file(
             gazette, database, storage, index, text_extractor
         )
     except Exception as e:
-        logging.warning(f"Could process gazette: {gazette['file_path']}. Cause: {e}")
+        logging.warning(f"Could not process gazette: {gazette['file_path']}. Cause: {e}")
+        processed_gazette = None
 
+    return processed_gazette
 
-def extract_text_pending_gazettes(
+def extract_text_from_gazettes(
+    gazettes: Generator,
     database: DatabaseInterface,
     storage: StorageInterface,
     index: IndexInterface,
     text_extractor: TextExtractorInterface,
-) -> None:
+) -> Generator:
     """
-    Process the gazettes files waiting to extract the text
+    Extracts the text from a list of gazettes 
+    """
+    logging.info("Starting text extraction from gazettes")
+    for gazette in gazettes:
+        processed_gazette = process_gazette_file(gazette, database, storage, index, text_extractor)
+        if processed_gazette is not None:
+            yield processed_gazette
 
-    This function access the database containing all the gazettes files found by
-    the spider and extract the text from the gazettes marked as not processed yet.
-    """
-    logging.info("Starting text extraction from pending gazettes")
-    for gazette in database.get_pending_gazettes():
-        process_gazette_file(gazette, database, storage, index, text_extractor)

@@ -1,3 +1,4 @@
+import collections
 from os import environ
 import logging
 
@@ -5,7 +6,7 @@ from data_extraction import create_apache_tika_text_extraction
 from database import create_database_interface
 from storage import create_storage_interface
 from index import create_index_interface
-from tasks import extract_text_pending_gazettes
+from tasks import extract_text_from_gazettes, extract_themed_excerpts_from_gazettes, get_pending_gazettes, get_themes
 
 
 def is_debug_enabled():
@@ -21,6 +22,13 @@ def enable_debug_if_necessary():
         logging.debug("Debug enabled")
 
 
+def consume(iterator):
+    """
+    Consumes an entire iterator
+    """
+    collections.deque(iterator, maxlen=0)
+
+
 def start_to_process_pending_gazettes():
     """
     Setup objects necessary to extract text from the gazettes and call the
@@ -31,8 +39,13 @@ def start_to_process_pending_gazettes():
     storage = create_storage_interface()
     index = create_index_interface()
     text_extractor = create_apache_tika_text_extraction()
-    extract_text_pending_gazettes(database, storage, index, text_extractor)
-
+    pending_gazettes = get_pending_gazettes(database)
+    text_extracted_gazettes = extract_text_from_gazettes(pending_gazettes, database, storage, index, text_extractor)
+    themes = get_themes()
+    for theme in themes:
+        themed_excerpts = extract_themed_excerpts_from_gazettes(theme, text_extracted_gazettes, index)
+        yield from themed_excerpts
+        
 
 if __name__ == "__main__":
-    start_to_process_pending_gazettes()
+    consume(start_to_process_pending_gazettes())
