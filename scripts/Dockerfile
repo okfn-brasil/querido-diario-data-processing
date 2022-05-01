@@ -12,4 +12,6 @@ ENV PYTHONPATH=/mnt/code
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+RUN python -m nltk.downloader stopwords
+
 USER gazette

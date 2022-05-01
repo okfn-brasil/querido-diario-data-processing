@@ -115,13 +115,3 @@ def extract_themed_excerpts_from_gazettes(theme: Dict, gazettes: Generator, inde
     gazette_ids = extract_gazette_ids(gazettes)
     yield from extract_themed_excerpts(theme, gazette_ids, index)
 
-
-def get_themes() -> List[Dict]:
-    ROOT = pathlib.Path(__file__).parent.parent
-    themes_config = ROOT / "config" / "themes_config.json"
-
-    with themes_config.open() as f:
-        themes = json.load(f)["themes"]
-
-    return themes
-

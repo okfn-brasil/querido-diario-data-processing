@@ -3,6 +3,7 @@
     {
       "name": "Políticas ambientais nacionais",
       "index": "ambiental",
+      "stopwords": ["lei", "n°", "no."],
       "queries": [
         {
           "term_sets": [["decreto federal", "decreto"], ["24.643", "24643"], ["10 de julho de 1934", "1934", "34"]]

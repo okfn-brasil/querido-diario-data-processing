@@ -1,4 +1,6 @@
-from .gazette_themed_excerpts_extraction import extract_themed_excerpts_from_gazettes, get_themes
 from .gazette_pending_listing import get_pending_gazettes
-from .gazette_text_extraction import extract_text_from_gazettes, upload_gazette_raw_text
+from .gazette_text_extraction import extract_text_from_gazettes
+from .gazette_themed_excerpts_extraction import extract_themed_excerpts_from_gazettes
+from .gazette_excerpts_tfidf_reranking import tfidf_rerank_excerpts
+from .gazette_themes_listing import get_themes
 from .interfaces import DatabaseInterface, StorageInterface, IndexInterface, TextExtractorInterface

@@ -6,7 +6,7 @@ from data_extraction import create_apache_tika_text_extraction
 from database import create_database_interface
 from storage import create_storage_interface
 from index import create_index_interface
-from tasks import extract_text_from_gazettes, extract_themed_excerpts_from_gazettes, get_pending_gazettes, get_themes
+from tasks import extract_text_from_gazettes, extract_themed_excerpts_from_gazettes, get_pending_gazettes, get_themes, tfidf_rerank_excerpts
 
 
 def is_debug_enabled():
@@ -44,8 +44,9 @@ def start_to_process_pending_gazettes():
     themes = get_themes()
     for theme in themes:
         themed_excerpts = extract_themed_excerpts_from_gazettes(theme, text_extracted_gazettes, index)
-        yield from themed_excerpts
-        
+        tfidf_reranked_excerpts = tfidf_rerank_excerpts(theme, index)
+        yield from tfidf_reranked_excerpts
+
 
 if __name__ == "__main__":
     consume(start_to_process_pending_gazettes())

@@ -6,3 +6,6 @@ psycopg2==2.8.6
 botocore==1.18.16
 elasticsearch==7.9.1
 requests==2.25.0
+nltk==3.7
+scikit-learn==1.0.2 
+https://github.com/explosion/spacy-models/releases/download/pt_core_news_sm-3.3.0/pt_core_news_sm-3.3.0-py3-none-any.whl
