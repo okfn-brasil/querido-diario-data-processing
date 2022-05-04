@@ -38,7 +38,9 @@ def get_database_port():
 )
 class CreationDatabaseInterfaceFunctionTests(TestCase):
     def test_create_database_interface_passing_valid_arguments(self):
-        with patch("psycopg2.connect",) as mock:
+        with patch(
+            "psycopg2.connect",
+        ) as mock:
             pgsql = create_database_interface()
             self.assertIsInstance(
                 pgsql,
@@ -57,7 +59,9 @@ class PostgreSQLConnectionTests(TestCase):
         USER = get_database_user()
         PASSWORD = get_database_password()
         PORT = get_database_port()
-        with patch("psycopg2.connect",) as mock:
+        with patch(
+            "psycopg2.connect",
+        ) as mock:
             pgsql = PostgreSQL(HOST, DATABASE, USER, PASSWORD, PORT)
             self.assertIsInstance(
                 pgsql,

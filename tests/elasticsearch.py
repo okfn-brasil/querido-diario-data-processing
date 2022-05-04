@@ -12,7 +12,10 @@ from tasks import IndexInterface
 class IndexInterfaceFactoryFunctionTests(TestCase):
     @patch.dict(
         "os.environ",
-        {"ELASTICSEARCH_HOST": "127.0.0.1", "ELASTICSEARCH_INDEX": "index_name",},
+        {
+            "ELASTICSEARCH_HOST": "127.0.0.1",
+            "ELASTICSEARCH_INDEX": "index_name",
+        },
     )
     def test_create_index_interface_factory_method_with_valid_arguments(self):
         interface = create_index_interface()
@@ -24,28 +27,42 @@ class IndexInterfaceFactoryFunctionTests(TestCase):
         interface = create_index_interface()
 
     @patch.dict(
-        "os.environ", {"ELASTICSEARCH_INDEX": "index_name",},
+        "os.environ",
+        {
+            "ELASTICSEARCH_INDEX": "index_name",
+        },
     )
     @expectedFailure
     def test_index_interface_factory_method_failed_with_no_hosts(self):
         interface = create_index_interface()
 
     @patch.dict(
-        "os.environ", {"ELASTICSEARCH_HOST": "127.0.0.1",},
+        "os.environ",
+        {
+            "ELASTICSEARCH_HOST": "127.0.0.1",
+        },
     )
     @expectedFailure
     def test_create_index_interface_factory_method_with_no_index(self):
         interface = create_index_interface()
 
     @patch.dict(
-        "os.environ", {"ELASTICSEARCH_HOST": "127.0.0.1", "ELASTICSEARCH_INDEX": "",},
+        "os.environ",
+        {
+            "ELASTICSEARCH_HOST": "127.0.0.1",
+            "ELASTICSEARCH_INDEX": "",
+        },
     )
     @expectedFailure
     def test_create_index_interface_factory_method_with_empty_index(self):
         interface = create_index_interface()
 
     @patch.dict(
-        "os.environ", {"ELASTICSEARCH_HOST": "", "ELASTICSEARCH_INDEX": "index_name",},
+        "os.environ",
+        {
+            "ELASTICSEARCH_HOST": "",
+            "ELASTICSEARCH_INDEX": "index_name",
+        },
     )
     @expectedFailure
     def test_create_index_interface_factory_method_with_empty_hosts(self):

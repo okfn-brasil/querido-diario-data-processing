@@ -71,4 +71,3 @@ class PostgreSQL(DatabaseInterface):
         logging.debug(f"Deleting: {cursor.query}")
         self._commit_changes(command, data)
         logging.debug(f"Finished deleting: {cursor.query}")
-

@@ -92,4 +92,3 @@ def format_gazette_data(data):
         "territory_name": data[13],
         "state_code": data[14],
     }
-

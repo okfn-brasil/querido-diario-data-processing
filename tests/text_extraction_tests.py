@@ -1,4 +1,3 @@
-
 from unittest import TestCase, skip
 from unittest.mock import patch, mock_open, MagicMock
 import os
@@ -8,7 +7,6 @@ from tasks import TextExtractorInterface
 
 
 class ApacheTikaTextExtractorTest(TestCase):
-
     def setUp(self):
         self.url = "http://localhost:9998"
         self.extractor = ApacheTikaTextExtractor(self.url)
@@ -19,13 +17,17 @@ class ApacheTikaTextExtractorTest(TestCase):
     @patch("requests.put")
     @patch("builtins.open", new_callable=mock_open, read_data="")
     @patch("magic.from_file", return_value="application/pdf")
-    def test_request_is_sent_to_apache_tika_server(self, magic_mock, open_mock, request_get_mock):
+    def test_request_is_sent_to_apache_tika_server(
+        self, magic_mock, open_mock, request_get_mock
+    ):
         filepath = "tests/data/fake_gazette.pdf"
         expected_headers = {"Content-Type": "application/pdf"}
         self.extractor.extract_text(filepath)
         open_mock.assert_called_with(filepath, "rb")
         magic_mock.assert_called_with(filepath, mime=True)
-        request_get_mock.assert_called_with(f"{self.url}/tika", data=open_mock(), headers=expected_headers)
+        request_get_mock.assert_called_with(
+            f"{self.url}/tika", data=open_mock(), headers=expected_headers
+        )
 
     @patch("requests.put", return_value=MagicMock(text="Fake gazette content"))
     @patch("builtins.open", new_callable=mock_open, read_data="")
@@ -63,7 +65,10 @@ class ApacheTikaTextExtractorTest(TestCase):
 
     def test_extract_text_from_invalid_file(self):
         self.assertRaisesRegex(
-            Exception, "File does not exists", self.extractor.extract_text, "file/does/not/exits"
+            Exception,
+            "File does not exists",
+            self.extractor.extract_text,
+            "file/does/not/exits",
         )
 
     def test_extract_from_invalid_file_type_should_fail(self):
@@ -76,7 +81,7 @@ class ApacheTikaTextExtractorTest(TestCase):
 
     def check_if_text_has_the_fake_text(self, text):
         self.assertIsNotNone(text, msg="Extracted text should not be None")
-        self.assertNotEqual(0, len(text),msg="Extracted text should not be empty")
+        self.assertNotEqual(0, len(text), msg="Extracted text should not be empty")
         self.assertIn(
             "Hi this is a document created to test the text extraction for the Querido Diário project.",
             text,

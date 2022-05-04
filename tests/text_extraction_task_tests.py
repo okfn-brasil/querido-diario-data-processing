@@ -5,11 +5,18 @@ import logging
 from datetime import date, datetime
 import tempfile
 
-from tasks import extract_text_pending_gazettes, upload_gazette_raw_text, TextExtractorInterface
+from tasks import (
+    extract_text_pending_gazettes,
+    upload_gazette_raw_text,
+    TextExtractorInterface,
+)
 
 
 @patch.dict(
-        "os.environ", {"QUERIDO_DIARIO_FILES_ENDPOINT": "http://test.com",},
+    "os.environ",
+    {
+        "QUERIDO_DIARIO_FILES_ENDPOINT": "http://test.com",
+    },
 )
 class TextExtractionTaskTests(TestCase):
     def setUp(self):
@@ -84,8 +91,12 @@ class TextExtractionTaskTests(TestCase):
         )
 
         self.text_extraction_function.extract_text.assert_called_once()
-        self.assertEqual(len(self.text_extraction_function.extract_text.call_args.args), 1)
-        self.assertIsInstance(self.text_extraction_function.extract_text.call_args.args[0], str)
+        self.assertEqual(
+            len(self.text_extraction_function.extract_text.call_args.args), 1
+        )
+        self.assertIsInstance(
+            self.text_extraction_function.extract_text.call_args.args[0], str
+        )
 
     def test_set_gazette_as_processed(self):
         extract_text_pending_gazettes(
@@ -133,7 +144,7 @@ class TextExtractionTaskTests(TestCase):
                 "processed": False,
                 "state_code": "SC",
                 "territory_name": "Gaspar",
-                "url" : "http://test.com/tests/data/fake_gazette.txt",
+                "url": "http://test.com/tests/data/fake_gazette.txt",
                 "file_raw_txt": "http://test.com/tests/data/fake_gazette.txt",
             }
         ]
@@ -148,10 +159,15 @@ class TextExtractionTaskTests(TestCase):
             "tests/data/fake_gazette.txt"
         )
         text_extraction_function = MagicMock(spec=TextExtractorInterface)
-        text_extraction_function.extract_text.return_value=expected_data["source_text"]
+        text_extraction_function.extract_text.return_value = expected_data[
+            "source_text"
+        ]
 
         extract_text_pending_gazettes(
-            database_mock, self.storage_mock, self.index_mock, text_extraction_function,
+            database_mock,
+            self.storage_mock,
+            self.index_mock,
+            text_extraction_function,
         )
         self.index_mock.index_document.assert_called_once_with(expected_data)
 
@@ -163,7 +179,9 @@ class TextExtractionTaskTests(TestCase):
     def test_invalid_file_type_should_be_skipped(self):
 
         text_extraction_function = MagicMock(spec=TextExtractorInterface)
-        text_extraction_function.extract_text.side_effect=Exception("Unsupported file type")
+        text_extraction_function.extract_text.side_effect = Exception(
+            "Unsupported file type"
+        )
 
         extract_text_pending_gazettes(
             self.database_mock,
@@ -175,7 +193,9 @@ class TextExtractionTaskTests(TestCase):
         self.database_mock.get_pending_gazettes.assert_called_once()
         self.database_mock.set_gazette_as_processed.assert_not_called()
         self.index_mock.index_document.assert_not_called()
-        self.file_should_not_exist(text_extraction_function.extract_text.call_args.args[0])
+        self.file_should_not_exist(
+            text_extraction_function.extract_text.call_args.args[0]
+        )
 
     def assert_called_twice(self, mock):
         self.assertEqual(mock.call_count, 2, msg="Mock should be called twice")
@@ -199,7 +219,7 @@ class TextExtractionTaskTests(TestCase):
                 "processed": False,
                 "state_code": "SC",
                 "territory_name": "Gaspar",
-                "url" : "http://test.com/sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.pdf",
+                "url": "http://test.com/sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.pdf",
                 "file_raw_txt": "http://test.com/sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.txt",
             },
             {
@@ -218,7 +238,7 @@ class TextExtractionTaskTests(TestCase):
                 "processed": False,
                 "state_code": "SC",
                 "territory_name": "Gaspar",
-                "url" : "http://test.com/sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.pdf",
+                "url": "http://test.com/sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.pdf",
                 "file_raw_txt": "http://test.com/sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.txt",
             },
         ]
@@ -230,14 +250,16 @@ class TextExtractionTaskTests(TestCase):
             file_content_returned_by_text_extraction_function_mock = f.read()
 
         text_extraction_function = MagicMock(spec=TextExtractorInterface)
-        text_extraction_function.extract_text.side_effect=[
-                Exception("Unsupported file type"),
-                file_content_returned_by_text_extraction_function_mock,
-            ]
-
+        text_extraction_function.extract_text.side_effect = [
+            Exception("Unsupported file type"),
+            file_content_returned_by_text_extraction_function_mock,
+        ]
 
         extract_text_pending_gazettes(
-            database_mock, self.storage_mock, self.index_mock, text_extraction_function,
+            database_mock,
+            self.storage_mock,
+            self.index_mock,
+            text_extraction_function,
         )
 
         database_mock.get_pending_gazettes.assert_called_once()
@@ -254,13 +276,18 @@ class TextExtractionTaskTests(TestCase):
         expected_data["url"] = f"http://test.com/{expected_data['file_path']}"
 
         extract_text_pending_gazettes(
-            self.database_mock, self.storage_mock, self.index_mock, self.text_extraction_function,
+            self.database_mock,
+            self.storage_mock,
+            self.index_mock,
+            self.text_extraction_function,
         )
         self.index_mock.index_document.assert_called_once_with(expected_data)
 
     def test_upload_gazette_raw_text(self):
-        content="some content"
-        gazette = dict(file_path="some_file.pdf",source_text=content)
+        content = "some content"
+        gazette = dict(file_path="some_file.pdf", source_text=content)
         upload_gazette_raw_text(gazette, self.storage_mock)
         self.assertEqual(gazette["file_raw_txt"], "http://test.com/some_file.txt")
-        self.storage_mock.upload_content.assert_called_once_with("some_file.txt", content)
+        self.storage_mock.upload_content.assert_called_once_with(
+            "some_file.txt", content
+        )

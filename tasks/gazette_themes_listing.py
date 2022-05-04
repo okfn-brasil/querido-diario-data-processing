@@ -11,4 +11,3 @@ def get_themes() -> List[Dict]:
         themes = json.load(f)["themes"]
 
     return themes
-

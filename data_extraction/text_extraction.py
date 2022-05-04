@@ -8,8 +8,6 @@ import requests
 from tasks import TextExtractorInterface
 
 
-
-
 class ApacheTikaTextExtractor(TextExtractorInterface):
     def __init__(self, url: str):
         self._url = url
@@ -46,11 +44,13 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         if not os.path.exists(filepath):
             raise Exception(f"File does not exists: {filepath}")
 
-
-    def check_file_type_supported(self,filepath: str) -> None:
-        if not self.is_doc(filepath) and not self.is_pdf(filepath) and not self.is_txt(filepath):
+    def check_file_type_supported(self, filepath: str) -> None:
+        if (
+            not self.is_doc(filepath)
+            and not self.is_pdf(filepath)
+            and not self.is_txt(filepath)
+        ):
             raise Exception("Unsupported file type: " + self.get_file_type(filepath))
-
 
     def is_pdf(self, filepath):
         """
@@ -58,7 +58,6 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         returns False
         """
         return self.is_file_type(filepath, file_types=["application/pdf"])
-
 
     def is_doc(self, filepath):
         """
@@ -72,7 +71,6 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         ]
         return self.is_file_type(filepath, file_types)
 
-
     def is_txt(self, filepath):
         """
         If the file type is txt returns True. Otherwise,
@@ -80,13 +78,11 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         """
         return self.is_file_type(filepath, file_types=["text/plain"])
 
-
     def get_file_type(self, filepath):
         """
         Returns the file's type
         """
         return magic.from_file(filepath, mime=True)
-
 
     def is_file_type(self, filepath, file_types):
         """
@@ -97,6 +93,7 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
 
 def get_apache_tika_server_url():
     return os.environ["APACHE_TIKA_SERVER"]
+
 
 def create_apache_tika_text_extraction() -> TextExtractorInterface:
     apache_tika_server_url = get_apache_tika_server_url()

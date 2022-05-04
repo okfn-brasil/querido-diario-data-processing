@@ -24,7 +24,9 @@ from tasks import StorageInterface
 )
 class StorageInterfaceCreationTests(TestCase):
     def test_create_storage_interface_creation_function(self):
-        with patch("boto3.Session.client",) as mock:
+        with patch(
+            "boto3.Session.client",
+        ) as mock:
             storage = create_storage_interface()
             self.assertIsInstance(
                 storage,
@@ -50,7 +52,9 @@ class DigitalOceanSpacesIntegrationTests(TestCase):
     BUCKET = "querido-diario"
 
     def test_if_digital_ocean_spaces_class_implements_the_right_tasks_interface(self):
-        with patch("boto3.Session.client",) as mock:
+        with patch(
+            "boto3.Session.client",
+        ) as mock:
             spaces = DigitalOceanSpaces(
                 self.REGION,
                 self.ENDPOINT,
@@ -65,7 +69,9 @@ class DigitalOceanSpacesIntegrationTests(TestCase):
             )
 
     def test_object_create(self):
-        with patch("boto3.Session.client",) as mock:
+        with patch(
+            "boto3.Session.client",
+        ) as mock:
             spaces = DigitalOceanSpaces(
                 self.REGION,
                 self.ENDPOINT,
@@ -128,4 +134,6 @@ class DigitalOceanSpacesIntegrationTests(TestCase):
         file_key = "test/sc_gaspar/2020/09/10/fake_gazette.txt"
         content_to_be_uploaded = "content of bucket"
         spaces.upload_content(file_key, content_to_be_uploaded)
-        upload_fileobj_mock.assert_called_once_with(sentinel.bytesio, self.BUCKET, file_key, ExtraArgs={"ACL": "public-read"})
+        upload_fileobj_mock.assert_called_once_with(
+            sentinel.bytesio, self.BUCKET, file_key, ExtraArgs={"ACL": "public-read"}
+        )
