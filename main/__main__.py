@@ -74,7 +74,7 @@ def process_all():
 
 
 def execute_pipeline():
-    pipeline = os.environ.get("PIPELINE")
+    pipeline = environ.get("PIPELINE")
     if pipeline == "DAILY":
         daily_processing()
     elif pipeline == "ALL":

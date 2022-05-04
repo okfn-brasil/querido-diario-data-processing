@@ -2,7 +2,7 @@ import logging
 import tempfile
 import os
 from pathlib import Path
-from typing import Dict, Iterable, Union
+from typing import Dict, Iterable
 
 from .interfaces import StorageInterface, IndexInterface, TextExtractorInterface
 
