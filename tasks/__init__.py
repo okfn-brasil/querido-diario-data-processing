@@ -4,4 +4,4 @@ from .gazette_text_extraction import extract_text_from_gazettes
 from .gazette_themed_excerpts_extraction import extract_themed_excerpts_from_gazettes
 from .gazette_themes_listing import get_themes
 from .interfaces import DatabaseInterface, StorageInterface, IndexInterface, TextExtractorInterface
-from .list_gazettes_to_be_processed import get_gazettes_extracted_since_yesterday
+from .list_gazettes_to_be_processed import get_all_gazettes_extracted, get_gazettes_extracted_since_yesterday

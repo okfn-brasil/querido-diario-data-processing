@@ -17,6 +17,7 @@ def extract_text_from_gazettes(
     Extracts the text from a list of gazettes
     """
     logging.info("Starting text extraction from gazettes")
+    create_index(index)
     for gazette in gazettes:
         try:
             processed_gazette = try_process_gazette_file(gazette, storage, index, text_extractor)
@@ -41,6 +42,125 @@ def try_process_gazette_file(
     index.index_document(gazette, document_id=gazette["file_checksum"])
     delete_gazette_files(gazette_file)
     return gazette
+
+
+def create_index(index: IndexInterface) -> None:
+    body = {
+        "mappings" : {
+            "properties" : {
+                "created_at" : {
+                    "type" : "date"
+                },
+                "date" : {
+                    "type" : "date"
+                },
+                "edition_number" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "file_checksum" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "file_path" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "file_url" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "id" : {
+                    "type" : "long"
+                },
+                "is_extra_edition" : {
+                    "type" : "boolean"
+                },
+                "power" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "processed" : {
+                    "type" : "boolean"
+                },
+                "scraped_at" : {
+                    "type" : "date"
+                },
+                "source_text" : {
+                    "type" : "text",
+                    "index_options": "offsets",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "state_code" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "territory_id" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "territory_name" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "url" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                }
+            }
+        }
+    }
+    index.create_index(body=body)
 
 
 def upload_gazette_raw_text(

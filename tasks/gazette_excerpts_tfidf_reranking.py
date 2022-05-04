@@ -17,8 +17,10 @@ def tfidf_rerank_excerpts(theme: Dict, index: IndexInterface) -> None:
 def get_all_excerpts(theme: Dict, index: IndexInterface) -> List[Dict]:
     index.refresh_index(theme['index'])
     query_match_all = {"query": {"match_all": {}}, "size": 10000}
-    excerpts = index.search(query_match_all, index=theme['index'])
-    return [excerpt['_source'] for excerpt in excerpts['hits']['hits']]
+    excerpts = []
+    for result in index.paginated_search(query_match_all, index=theme['index']):
+        excerpts.extend([excerpt['_source'] for excerpt in result['hits']['hits']])
+    return excerpts
 
 
 def tfidf_score_excerpts(theme: Dict, excerpts: List[Dict], index: IndexInterface) -> None:

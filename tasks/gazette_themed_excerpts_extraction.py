@@ -16,15 +16,148 @@ def create_index(theme: Dict, index: IndexInterface) -> None:
     body = {
         "mappings": {
             "properties": {
-                "source_date": {
-                    "type": "date",
-                },
                 "excerpt_embedding_score" : {
                     "type": "rank_feature",
                 },
                 "excerpt_tfidf_score": {
                     "type": "rank_feature",
                 },
+                "excerpt": {
+                    "type" : "text",
+                    "index_options": "offsets",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "excerpt_id": {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "source_database_id" : {
+                    "type" : "long"
+                },
+                "source_index_id" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "source_created_at" : {
+                    "type" : "date"
+                },
+                "source_date" : {
+                    "type" : "date"
+                },
+                "source_edition_number" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "source_file_checksum" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "source_file_path" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "source_file_raw_txt" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "source_file_url" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "source_is_extra_edition" : {
+                    "type" : "boolean"
+                },
+                "source_power" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "source_processed" : {
+                    "type" : "boolean"
+                },
+                "source_scraped_at" : {
+                    "type" : "date"
+                },
+                "source_state_code" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "source_territory_id" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "source_territory_name" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                },
+                "source_url" : {
+                    "type" : "text",
+                    "fields" : {
+                        "keyword" : {
+                            "type" : "keyword",
+                            "ignore_above" : 256
+                        }
+                    }
+                }
             }
         }
     }
@@ -50,22 +183,22 @@ def get_excerpts_from_gazettes_with_themed_query(query: Dict, gazette_ids: List[
                 "excerpt": excerpt,
                 "excerpt_id": generate_excerpt_id(excerpt, gazette),
                 "source_index_id": gazette["file_checksum"],
+                "source_created_at": gazette["created_at"],
                 "source_database_id": gazette["id"],
                 "source_date": gazette["date"],
                 "source_edition_number": gazette["date"],
+                "source_file_raw_txt": gazette["file_raw_txt"],
                 "source_is_extra_edition": gazette["is_extra_edition"],
-                "source_power": gazette["power"],
                 "source_file_checksum": gazette["file_checksum"],
                 "source_file_path": gazette["file_path"],
                 "source_file_url": gazette["file_url"],
-                "source_scraped_at": gazette["scraped_at"],
-                "source_created_at": gazette["created_at"],
-                "source_territory_id": gazette["territory_id"],
+                "source_power": gazette["power"],
                 "source_processed": gazette["processed"],
-                "source_territory_name": gazette["territory_name"],
+                "source_scraped_at": gazette["scraped_at"],
                 "source_state_code": gazette["state_code"],
+                "source_territory_id": gazette["territory_id"],
+                "source_territory_name": gazette["territory_name"],
                 "source_url": gazette["url"],
-                "source_file_raw_txt": gazette["file_raw_txt"],
             }
 
 

@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, Iterable, List
 import os
 
 import elasticsearch
@@ -43,10 +43,10 @@ class ElasticSearchInterface(IndexInterface):
             index=index_name,
         )
 
-    def index_document(self, document: Dict, document_id: str = None, index: str = None) -> None:
+    def index_document(self, document: Dict, document_id: str = None, index: str = None, refresh: bool = False) -> None:
         index = self.get_index_name(index)
         result = self._es.index(
-            index=index, body=document, id=document_id
+            index=index, body=document, id=document_id, refresh=refresh
         )
 
     def search(self, query: Dict, index: str = None) -> Dict:
@@ -55,6 +55,17 @@ class ElasticSearchInterface(IndexInterface):
             index=index, body=query
         )
         return result
+
+    def paginated_search(self, query: Dict, index: str = None, keep_alive: str = "1m") -> Iterable[Dict]:
+        index = self.get_index_name(index)
+        result = self._es.search(index=index, body=query, scroll=keep_alive)
+        yield result
+
+        scroll_id = result["_scroll_id"]
+        while len(result["hits"]["hits"]) > 0:
+            result = self._es.scroll(scroll_id=scroll_id, scroll=keep_alive)
+            yield result
+        self._es.clear_scroll(scroll_id=scroll_id)
 
 
 def get_elasticsearch_host():

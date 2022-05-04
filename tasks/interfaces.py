@@ -74,7 +74,7 @@ class IndexInterface(abc.ABC):
         Refreshes the index to make it up-to-date for future searches
         """
 
-    def index_document(document: Dict, document_id: str, index: str) -> None:
+    def index_document(document: Dict, document_id: str, index: str, refresh: bool) -> None:
         """
         Upload document to the index
         """
@@ -82,6 +82,11 @@ class IndexInterface(abc.ABC):
     def search(query: Dict, index: str) -> Dict:
         """
         Searches the index with the provided query
+        """
+
+    def paginated_search(self, query: Dict, index: str, keep_alive: str) -> Iterable[Dict]:
+        """
+        Searches the index with the provided query, with pagination
         """
 
 
