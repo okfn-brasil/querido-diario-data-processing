@@ -1,4 +1,4 @@
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Tuple
 import abc
 
 
@@ -9,15 +9,33 @@ class DatabaseInterface(abc.ABC):
     """
 
     @abc.abstractmethod
-    def get_pending_gazettes() -> Iterable[Dict]:
+    def _commit_changes(self, command: str, data: Dict) -> None:
         """
-        Get all gazettes waitning to be processed by the data processing pipeline
+        Make a change in the database and commit it
         """
 
     @abc.abstractmethod
-    def set_gazette_as_processed(id: int, gazette_file_checksum: str) -> None:
+    def select(self, command: str) -> Iterable[Tuple]:
         """
-        Set the gazette of the given ID and file checksum as processed
+        Select entries from the database
+        """
+
+    @abc.abstractmethod
+    def insert(self, command: str, data: Dict) -> None:
+        """
+        Insert entries into the database
+        """
+
+    @abc.abstractmethod
+    def update(self, command: str, data: Dict) -> None:
+        """
+        Update entries from the database
+        """
+
+    @abc.abstractmethod
+    def delete(self, command: str, data: Dict) -> None:
+        """
+        Delete entries from the database
         """
 
 
@@ -48,6 +66,12 @@ class IndexInterface(abc.ABC):
     def create_index(index_name: str, body: Dict) -> None:
         """
         Create the index used by the application
+        """
+
+    @abc.abstractmethod
+    def refresh_index(self, index_name: str) -> None:
+        """
+        Refreshes the index to make it up-to-date for future searches
         """
 
     def index_document(document: Dict, document_id: str, index: str) -> None:

@@ -35,6 +35,14 @@ class ElasticSearchInterface(IndexInterface):
             timeout=self._timeout,
         )
 
+    def refresh_index(self, index_name: str = None) -> None:
+        index_name = self.get_index_name(index_name)
+        if self.index_exists(index_name):
+            return
+        self._es.indices.refresh(
+            index=index_name,
+        )
+
     def index_document(self, document: Dict, document_id: str = None, index: str = None) -> None:
         index = self.get_index_name(index)
         result = self._es.index(
