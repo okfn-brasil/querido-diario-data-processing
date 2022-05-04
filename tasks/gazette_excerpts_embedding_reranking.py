@@ -1,3 +1,4 @@
+import os
 from typing import Dict, Iterable, List
 
 import sentence_transformers
@@ -8,8 +9,9 @@ from .interfaces import IndexInterface
 def embedding_rerank_excerpts(
     theme: Dict, excerpts: Iterable[Dict], index: IndexInterface
 ) -> None:
+    user_folder = os.environ["HOME"]
     model = sentence_transformers.SentenceTransformer(
-        "/root/models/bert-base-portuguese-cased"
+        f"{user_folder}/models/bert-base-portuguese-cased"
     )
     queries = get_natural_language_queries(theme)
     queries_vectors = model.encode(queries, convert_to_tensor=True)
