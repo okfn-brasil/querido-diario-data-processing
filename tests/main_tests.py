@@ -16,7 +16,10 @@ class MainModuleTests(TestCase):
         return has_text
 
     @patch.dict(
-        "os.environ", {"DEBUG": "1",},
+        "os.environ",
+        {
+            "DEBUG": "1",
+        },
     )
     def test_run_with_debug_enabled(self):
         with self.assertLogs(level=logging.DEBUG) as logs:
@@ -27,7 +30,8 @@ class MainModuleTests(TestCase):
             self.assertTrue(has_expected_text)
 
     @patch.dict(
-        "os.environ", {"DEBUG": "0"},
+        "os.environ",
+        {"DEBUG": "0"},
     )
     def test_run_with_debug_disabled(self):
         with patch("logging.debug") as mock:

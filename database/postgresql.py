@@ -1,4 +1,4 @@
-from typing import Generator
+from typing import Dict, Iterable, Tuple
 import os
 import logging
 
@@ -38,69 +38,36 @@ def create_database_interface() -> DatabaseInterface:
 
 
 class PostgreSQL(DatabaseInterface):
-
-    SELECT_PENDING_GAZETTES = """SELECT gazettes.id,
-                                        gazettes.source_text,
-                                        gazettes.date,
-                                        gazettes.edition_number,
-                                        gazettes.is_extra_edition,
-                                        gazettes.power,
-                                        gazettes.file_checksum,
-                                        gazettes.file_path,
-                                        gazettes.file_url,
-                                        gazettes.scraped_at,
-                                        gazettes.created_at,
-                                        gazettes.territory_id,
-                                        gazettes.processed,
-                                        territories.name as territory_name,
-                                        territories.state_code
-                                    FROM gazettes
-                                    INNER JOIN territories ON territories.id = gazettes.territory_id
-                                    WHERE processed is False;"""
-
-    UPDATE_GAZETTE_AS_PROCESSED = """UPDATE gazettes
-                                        SET processed = True
-                                        WHERE id = %(id)s
-                                        AND file_checksum = %(file_checksum)s;"""
-
     def __init__(self, host, database, user, password, port):
         self._connection = psycopg2.connect(
             dbname=database, user=user, password=password, host=host, port=port
         )
 
-    def format_gazette_data(self, data):
-        return {
-            "id": data[0],
-            "source_text": data[1],
-            "date": data[2],
-            "edition_number": data[3],
-            "is_extra_edition": data[4],
-            "power": data[5],
-            "file_checksum": data[6],
-            "file_path": data[7],
-            "file_url": data[8],
-            "scraped_at": data[9],
-            "created_at": data[10],
-            "territory_id": data[11],
-            "processed": data[12],
-            "territory_name": data[13],
-            "state_code": data[14],
-        }
-
-    def get_pending_gazettes(self) -> Generator:
+    def _commit_changes(self, command: str, data: Dict = {}) -> None:
         with self._connection.cursor() as cursor:
-            cursor.execute(self.SELECT_PENDING_GAZETTES)
-            logging.debug(cursor.query)
-            for gazette_data in cursor:
-                logging.debug(gazette_data)
-                yield self.format_gazette_data(gazette_data)
-            logging.debug("No more gazettes to be processed")
-
-    def set_gazette_as_processed(self, id: int, gazette_file_checksum: str) -> None:
-        logging.debug(f"Marking {id}({gazette_file_checksum}) as processed")
-        with self._connection.cursor() as cursor:
-            cursor.execute(
-                self.UPDATE_GAZETTE_AS_PROCESSED,
-                {"id": id, "file_checksum": gazette_file_checksum},
-            )
+            cursor.execute(command, data)
             self._connection.commit()
+
+    def select(self, command: str) -> Iterable[Tuple]:
+        with self._connection.cursor() as cursor:
+            cursor.execute(command)
+            logging.debug(f"Starting query: {cursor.query}")
+            for entry in cursor:
+                logging.debug(entry)
+                yield entry
+            logging.debug(f"Finished query: {cursor.query}")
+
+    def insert(self, command: str, data: Dict = {}):
+        logging.debug(f"Inserting: {cursor.query}")
+        self._commit_changes(command, data)
+        logging.debug(f"Finished inserting: {cursor.query}")
+
+    def update(self, command: str, data: Dict = {}):
+        logging.debug(f"Updating: {cursor.query}")
+        self._commit_changes(command, data)
+        logging.debug(f"Finished updating: {cursor.query}")
+
+    def delete(self, command: str, data: Dict = {}):
+        logging.debug(f"Deleting: {cursor.query}")
+        self._commit_changes(command, data)
+        logging.debug(f"Finished deleting: {cursor.query}")

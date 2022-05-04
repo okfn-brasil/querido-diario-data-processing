@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, Iterable, List
 import os
 
 import elasticsearch
@@ -25,21 +25,53 @@ class ElasticSearchInterface(IndexInterface):
             raise Exception("Index name not defined")
         return self._default_index
 
-    def create_index(self, index_name: str = None) -> None:
+    def create_index(self, index_name: str = None, body: Dict = {}) -> None:
         index_name = self.get_index_name(index_name)
         if self.index_exists(index_name):
             return
         self._es.indices.create(
             index=index_name,
-            body={"mappings": {"properties": {"date": {"type": "date"}}}},
+            body=body,
             timeout=self._timeout,
         )
 
-    def index_document(self, document, index: str = None) -> None:
+    def refresh_index(self, index_name: str = None) -> None:
+        index_name = self.get_index_name(index_name)
+        if self.index_exists(index_name):
+            return
+        self._es.indices.refresh(
+            index=index_name,
+        )
+
+    def index_document(
+        self,
+        document: Dict,
+        document_id: str = None,
+        index: str = None,
+        refresh: bool = False,
+    ) -> None:
         index = self.get_index_name(index)
         result = self._es.index(
-            index=index, body=document, id=document["file_checksum"]
+            index=index, body=document, id=document_id, refresh=refresh
         )
+
+    def search(self, query: Dict, index: str = None) -> Dict:
+        index = self.get_index_name(index)
+        result = self._es.search(index=index, body=query)
+        return result
+
+    def paginated_search(
+        self, query: Dict, index: str = None, keep_alive: str = "1m"
+    ) -> Iterable[Dict]:
+        index = self.get_index_name(index)
+        result = self._es.search(index=index, body=query, scroll=keep_alive)
+        yield result
+
+        scroll_id = result["_scroll_id"]
+        while len(result["hits"]["hits"]) > 0:
+            result = self._es.scroll(scroll_id=scroll_id, scroll=keep_alive)
+            yield result
+        self._es.clear_scroll(scroll_id=scroll_id)
 
 
 def get_elasticsearch_host():

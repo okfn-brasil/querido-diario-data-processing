@@ -2,8 +2,10 @@ FROM docker.io/python:3.8
 
 RUN adduser --system gazette && \
 	apt-get update -y && \
-	apt-get -y install wait-for-it && \
+  curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash && \
+	apt-get -y install git-lfs wait-for-it && \
 	apt-get clean && \
+  git lfs install && \
 	mkdir /mnt/code
 
 COPY . /mnt/code
@@ -11,5 +13,9 @@ WORKDIR /mnt/code
 ENV PYTHONPATH=/mnt/code
 
 RUN pip install --no-cache-dir -r requirements.txt
+
+RUN python -m nltk.downloader stopwords
+
+RUN python -c "import sentence_transformers; sentence_transformers.SentenceTransformer('neuralmind/bert-base-portuguese-cased').save('/root/models/bert-base-portuguese-cased')"
 
 USER gazette
