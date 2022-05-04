@@ -1,4 +1,3 @@
-import collections
 from os import environ
 import logging
 
@@ -6,7 +5,7 @@ from data_extraction import create_apache_tika_text_extraction
 from database import create_database_interface
 from storage import create_storage_interface
 from index import create_index_interface
-from tasks import extract_text_from_gazettes, extract_themed_excerpts_from_gazettes, get_pending_gazettes, get_themes, tfidf_rerank_excerpts
+from tasks import extract_text_from_gazettes, extract_themed_excerpts_from_gazettes, get_pending_gazettes, get_themes, rerank_excerpts
 
 
 def is_debug_enabled():
@@ -20,13 +19,6 @@ def enable_debug_if_necessary():
     if is_debug_enabled():
         logging.basicConfig(level=logging.DEBUG)
         logging.debug("Debug enabled")
-
-
-def consume(iterator):
-    """
-    Consumes an entire iterator
-    """
-    collections.deque(iterator, maxlen=0)
 
 
 def start_to_process_pending_gazettes():
@@ -44,9 +36,8 @@ def start_to_process_pending_gazettes():
     themes = get_themes()
     for theme in themes:
         themed_excerpts = extract_themed_excerpts_from_gazettes(theme, text_extracted_gazettes, index)
-        tfidf_reranked_excerpts = tfidf_rerank_excerpts(theme, index)
-        yield from tfidf_reranked_excerpts
+        rerank_excerpts(theme, themed_excerpts, index)
 
 
 if __name__ == "__main__":
-    consume(start_to_process_pending_gazettes())
+    start_to_process_pending_gazettes()

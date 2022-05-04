@@ -1,12 +1,12 @@
 import logging
-from typing import Generator
+from typing import Dict, Iterable
 
 from .interfaces import DatabaseInterface
 
 
 def get_pending_gazettes(
     database: DatabaseInterface,
-) -> Generator:
+) -> Iterable[Dict]:
     """
     List the gazettes which are waiting to be processed 
 

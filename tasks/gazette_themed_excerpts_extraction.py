@@ -1,15 +1,12 @@
 import hashlib
-import json
 import logging
-import pathlib
-from typing import Dict, Generator, List
+from typing import Dict, Iterable, List
 
 from .interfaces import IndexInterface
 
 
 def get_es_query_from_themed_query(
-    query: Dict,
-    gazette_ids: List[str],
+    query: Dict, gazette_ids: List[str],
 ) -> Dict:
     es_query = {
         "query": {
@@ -36,19 +33,21 @@ def get_es_query_from_themed_query(
         },
     }
 
-    near_block = {"span_near": {"clauses": [], "slop": 20, "in_order": False}}
-    for term_set in query['term_sets']:
-        synonym_block = {"span_or" : {"clauses" : []}}
-        for term in term_set:
-            phrase_block = {"span_near": {"clauses": [], "slop": 0, "in_order": True}}
-            for word in term.split():
-                word_block = {"span_term": {"source_text" : word}}
-                phrase_block["span_near"]["clauses"].append(word_block)
-            synonym_block["span_or"]["clauses"].append(phrase_block)
-        near_block["span_near"]["clauses"].append(synonym_block) 
+    macro_synonym_block = {"span_or" : {"clauses" : []}}
+    for macro_set in query['term_sets']:
+        proximity_block = {"span_near": {"clauses": [], "slop": 20, "in_order": False}}
+        for term_set in macro_set:
+            synonym_block = {"span_or" : {"clauses" : []}}
+            for term in term_set:
+                phrase_block = {"span_near": {"clauses": [], "slop": 0, "in_order": True}}
+                for word in term.split():
+                    word_block = {"span_term": {"source_text" : word}}
+                    phrase_block["span_near"]["clauses"].append(word_block)
+                synonym_block["span_or"]["clauses"].append(phrase_block)
+            proximity_block["span_near"]["clauses"].append(synonym_block) 
+        macro_synonym_block["span_or"]["clauses"].append(proximity_block)
 
-    es_query["query"]["bool"]["must"].append(near_block)
-
+    es_query["query"]["bool"]["must"].append(macro_synonym_block)
     return es_query
 
 
@@ -58,7 +57,7 @@ def generate_excerpt_id(excerpt: str, gazette: Dict) -> str:
     return f"{gazette['file_checksum']}_{hash.hexdigest()}"
 
 
-def get_excerpts_from_gazettes_with_themed_query(query: Dict, gazette_ids: List[str], index: IndexInterface) -> Generator:
+def get_excerpts_from_gazettes_with_themed_query(query: Dict, gazette_ids: List[str], index: IndexInterface) -> Iterable[Dict]:
     es_query = get_es_query_from_themed_query(query, gazette_ids)
     result = index.search(es_query)
     hits = result["hits"]["hits"]
@@ -92,26 +91,35 @@ def get_excerpts_from_gazettes_with_themed_query(query: Dict, gazette_ids: List[
             }
 
 
-def try_extract_themed_excerpts(theme: Dict, gazette_ids: List[str], index: IndexInterface) -> Generator:
+def extract_gazette_ids(gazettes: Iterable[Dict]) -> List[str]:
+    return [gazette["file_checksum"] for gazette in gazettes]
+
+
+def create_index(theme: Dict, index: IndexInterface) -> None:
+    body = {
+        "mappings": {
+            "properties": {
+                "source_date": {
+                    "type": "date",
+                },
+                "excerpt_embedding_score" : {
+                    "type": "rank_feature",
+                },
+                "excerpt_tfidf_score": {
+                    "type": "rank_feature",
+                },
+            }
+        }
+    }
+    index.create_index(index_name=theme['index'], body=body)
+
+
+def extract_themed_excerpts_from_gazettes(theme: Dict, gazettes: Iterable[Dict], index: IndexInterface) -> Iterable[Dict]:
+    create_index(theme, index)
+    gazette_ids = extract_gazette_ids(gazettes)
     for theme_query in theme['queries']:
         excerpts = get_excerpts_from_gazettes_with_themed_query(theme_query, gazette_ids, index)
         for excerpt in excerpts:
             index.index_document(excerpt, document_id=excerpt['excerpt_id'], index=theme['index'])
             yield excerpt
-
-
-def extract_themed_excerpts(theme: Dict, gazette_ids: List[str], index: IndexInterface) -> Generator:
-    try:
-        yield from try_extract_themed_excerpts(theme, gazette_ids, index)
-    except Exception as e:
-        logging.warning(f"Could not extract theme \"{theme['name']}\". Cause: {e}")
-
-
-def extract_gazette_ids(gazettes: Generator) -> List[str]:
-    return [gazette["file_checksum"] for gazette in gazettes]
-
-
-def extract_themed_excerpts_from_gazettes(theme: Dict, gazettes: Generator, index: IndexInterface) -> Generator:
-    gazette_ids = extract_gazette_ids(gazettes)
-    yield from extract_themed_excerpts(theme, gazette_ids, index)
 

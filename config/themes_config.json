@@ -1,117 +1,137 @@
 {
   "themes": [
     {
-      "name": "Políticas ambientais nacionais",
+      "name": "políticas ambientais nacionais",
       "index": "ambiental",
       "stopwords": ["lei", "n°", "no."],
       "queries": [
         {
-          "term_sets": [["decreto federal", "decreto"], ["24.643", "24643"], ["10 de julho de 1934", "1934", "34"]]
+          "natural_language": "código de águas",
+          "term_sets": [
+            [["decreto federal", "decreto"], ["24.643", "24643"], ["10 de julho de 1934", "1934", "34"]],
+            [["código de águas"]]
+          ]
         },
         {
-          "term_sets": [["código de águas"]]
+          "natural_language": "código de pesca",
+          "term_sets": [
+            [["decreto-lei federal", "decreto-lei"], ["794", "794"], ["19 de outubro de 1938", "1938", "38"]],
+            [["código de pesca"]]
+          ]
         },
         {
-          "term_sets": [["decreto-lei federal", "decreto-lei"], ["794", "794"], ["19 de outubro de 1938", "1938", "38"]]
+          "natural_language": "código de minas",
+          "term_sets": [
+            [["decreto-lei federal", "decreto-lei"], ["1.985", "1985"], ["29 de março de 1940", "1940", "40"]],
+            [["código de minas"]]
+          ] 
         },
         {
-          "term_sets": [["decreto-lei federal", "decreto-lei"], ["1.985", "1985"], ["29 de março de 1940", "1940", "40"]]
+          "natural_language": "política nuclear brasileira",
+          "term_sets": [
+            [["decreto federal", "decreto"], ["9.600", "9600"], ["5 de dezembro de 2018", "2018", "18"]],
+            [["política nuclear brasileira"]]
+          ]
         },
         {
-          "term_sets": [["código de minas"]]
+          "natural_language": "proteção à fauna",
+          "term_sets": [
+            [["lei federal", "lei"], ["5.197", "5197"], ["3 de janeiro de 1967", "1967", "67"]],
+            [["proteção à fauna"]]
+          ]
         },
         {
-          "term_sets": [["lei federal", "lei"], ["14.222", "14222"], ["15 de outubro de 2021", "2021", "21"]]
+          "natural_language": "política nacional de saneamento",
+          "term_sets": [
+            [["lei federal", "lei"], ["5.318", "5318"], ["26 de setembro de 1967", "1967", "67"]],
+            [["política nacional de saneamento", "conselho nacional de saneamento"]]
+          ]
         },
         {
-          "term_sets": [["lei federal", "lei"], ["5.197", "5197"], ["3 de janeiro de 1967", "1967", "67"]]
+          "natural_language": "proteção e estímulos à pesca",
+          "term_sets": [
+            [["decreto-lei federal", "decreto-lei"], ["221", "221"], ["28 de fevereiro de 1967", "1967", "67"]],
+            [["proteção e estímulos à pesca"]]
+          ]
         },
         {
-          "term_sets": [["proteção à fauna"]]
+          "natural_language": "crimes ambientais",
+          "term_sets": [
+            [["lei federal", "lei"], ["9.605", "9605"], ["12 de fevereiro de 1998", "1998", "98"]],
+            [["crimes ambientais", "lei de crimes ambientais"]]
+          ]
         },
         {
-          "term_sets": [["lei federal", "lei"], ["5.318", "5318"], ["26 de setembro de 1967", "1967", "67"]]
+          "natural_language": "política nacional de educação ambiental",
+          "term_sets": [
+            [["lei federal", "lei"], ["9.795", "9795"], ["27 de abril de 1999", "1999", "99"]],
+            [["política nacional de educação ambiental"]]
+          ]
         },
         {
-          "term_sets": [["política nacional de saneamento", "conselho nacional de saneamento"]]
+          "natural_language": "política nacional de resíduos sólidos",
+          "term_sets": [
+            [["lei federal", "lei"], ["12.305", "12305"], ["02 de agosto de 2010", "2010", "10"]],
+            [["política nacional de resíduos sólidos", "pnrs"]]
+          ]
         },
         {
-          "term_sets": [["decreto-lei federal", "decreto-lei"], ["221", "221"], ["28 de fevereiro de 1967", "1967", "67"]]
+          "natural_language": "programa nacional da diversidade biológica",
+          "term_sets": [
+            [["decreto federal", "decreto"], ["4.703", "4703"], ["21 de maio de 2003", "2003", "03"]],
+            [["programa nacional de diversidade biológica", "comissão nacional da biodiversidade ", "pronabio"]]
+          ]
         },
         {
-          "term_sets": [["proteção e estímulos à pesca"]]
+          "natural_language": "código florestal brasileiro",
+          "term_sets": [
+            [["lei federal", "lei"], ["12.651", "12651"], ["25 de maio de 2012", "2012", "12"]],
+            [["lei federal", "lei"], ["12.727", "12727"], ["17 de outubro de 2012", "2012", "12"]],
+            [["proteção vegetação nativa", "código florestal brasileiro"]]
+          ]
         },
         {
-          "term_sets": [["lei federal", "lei"], ["9.605", "9605"], ["12 de fevereiro de 1998", "1998", "98"]]
+          "natural_language": "política nacional de desenvolvimento sustentável da aquicultura e pesca",
+          "term_sets": [
+            [["lei federal", "lei"], ["11.959", "11959"], ["29 de junho de 2009", "2009", "09"]],
+            [["política nacional de desenvolvimento sustentável da aquicultura e pesca", "pndsap"]]
+          ]
         },
         {
-          "term_sets": [["lei federal", "lei"], ["9.795", "9795"], ["27 de abril de 1999", "1999", "99"]]
+          "natural_language": "marco legal do saneamento",
+          "term_sets": [
+            [["lei federal", "lei"], ["11.445", "11445"], ["05 de janeiro de 2007", "2007", "07"]],
+            [["lei federal", "lei"], ["14.026", "14026"], ["15 de julho de 2020", "2020", "20"]],
+            [["marco legal do saneamento", "novo marco legal do saneamento"]]
+          ]
         },
         {
-          "term_sets": [["política nacional de educação ambiental"]]
+          "natural_language": "política nacional do meio ambiente",
+          "term_sets": [
+            [["lei federal", "lei"], ["6.938", "6938"], ["31 de agosto de 1981", "1981", "81"]],
+            [["lei federal", "lei"], ["7.804", "7804"], ["18 de julho de 1989", "1989", "89"]],
+            [["lei federal", "lei"], ["10.165", "10165"], ["27 de dezembro de 2000", "2000", "00"]],
+            [["política nacional do meio ambiente", "pnma"]]
+          ]
         },
         {
-          "term_sets": [["lei federal", "lei"], ["12.305", "12305"], ["02 de agosto de 2010", "2010", "10"]]
+          "natural_language": "redução de emissão de poluentes por veículos automotores",
+          "term_sets": [
+            [["lei federal", "lei"], ["8.723", "8723"], ["28 de outubro de 1993", "1993", "93"]]
+          ]
         },
         {
-          "term_sets": [["política nacional de resíduos sólidos", "pnrs"]]
+          "natural_language": "comercialização de amianto",
+          "term_sets": [
+            [["lei federal", "lei"], ["9.055", "9055"], ["01 de junho de 1995", "1995", "95"]]
+          ]
         },
         {
-          "term_sets": [["decreto federal", "decreto"], ["4.703", "4703"], ["21 de maio de 2003", "2003", "03"]]
-        },
-        {
-          "term_sets": [["programa nacional de diversidade biológica", "comissão nacional da biodiversidade ", "pronabio"]]
-        },
-        {
-          "term_sets": [["lei federal", "lei"], ["12.651", "12651"], ["25 de maio de 2012", "2012", "12"]]
-        },
-        {
-          "term_sets": [["proteção vegetação nativa"]]
-        },
-        {
-          "term_sets": [["lei federal", "lei"], ["11.959", "11959"], ["29 de junho de 2009", "2009", "09"]]
-        },
-        {
-          "term_sets": [["política nacional de desenvolvimento sustentável da aquicultura e pesca", "pndsap"]]
-        },
-        {
-          "term_sets": [["lei federal", "lei"], ["14.026", "14026"], ["15 de julho de 2020", "2020", "20"]]
-        },
-        {
-          "term_sets": [["novo marco legal do saneamento"]]
-        },
-        {
-          "term_sets": [["lei federal", "lei"], ["6.938", "6938"], ["31 de agosto de 1981", "1981", "81"]]
-        },
-        {
-          "term_sets": [["política nacional do meio ambiente", "pnma"]]
-        },
-        {
-          "term_sets": [["lei federal", "lei"], ["7.804", "7804"], ["18 de julho de 1989", "1989", "89"]]
-        },
-        {
-          "term_sets": [["lei federal", "lei"], ["8.723", "8723"], ["28 de outubro de 1993", "1993", "93"]]
-        },
-        {
-          "term_sets": [["lei federal", "lei"], ["9.055", "9055"], ["01 de junho de 1995", "1995", "95"]]
-        },
-        {
-          "term_sets": [["lei federal", "lei"], ["9.605", "9605"], ["12 de fevereiro de 1998", "1998", "98"]]
-        },
-        {
-          "term_sets": [["lei federal", "lei"], ["10.165", "10165"], ["27 de dezembro de 2000", "2000", "00"]]
-        },
-        {
-          "term_sets": [["lei federal", "lei"], ["11.445", "11445"], ["05 de janeiro de 2007", "2007", "07"]]
-        },
-        {
-          "term_sets": [["marco legal do saneamento"]]
-        },
-        {
-          "term_sets": [["lei federal", "lei"], ["12.187", "12187"], ["29 de dezembro de 2009", "2009", "09"]]
-        },
-        {
-          "term_sets": [["política nacional sobre mudança do clima", "pnmc"]]
+          "natural_language": "política nacional sobre mudança do clima",
+          "term_sets": [
+            [["lei federal", "lei"], ["12.187", "12187"], ["29 de dezembro de 2009", "2009", "09"]],
+            [["política nacional sobre mudança do clima", "pnmc"]]
+          ]
         }
       ]
     }

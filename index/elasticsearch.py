@@ -25,13 +25,13 @@ class ElasticSearchInterface(IndexInterface):
             raise Exception("Index name not defined")
         return self._default_index
 
-    def create_index(self, index_name: str = None) -> None:
+    def create_index(self, index_name: str = None, body: Dict = {}) -> None:
         index_name = self.get_index_name(index_name)
         if self.index_exists(index_name):
             return
         self._es.indices.create(
             index=index_name,
-            body={"mappings": {"properties": {"date": {"type": "date"}}}},
+            body=body,
             timeout=self._timeout,
         )
 

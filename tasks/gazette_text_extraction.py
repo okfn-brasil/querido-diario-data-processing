@@ -2,7 +2,7 @@ import logging
 import tempfile
 import os
 from pathlib import Path
-from typing import Dict, Generator, Union
+from typing import Dict, Iterable, Union
 
 from .interfaces import DatabaseInterface, StorageInterface, IndexInterface, TextExtractorInterface
 
@@ -43,11 +43,13 @@ def try_to_extract_content(gazette_file: str, text_extractor: TextExtractorInter
         os.remove(gazette_file)
         raise e
 
+
 def get_file_endpoint() -> str:
     """
     Get the endpoint where the gazette files can be downloaded.
     """
     return os.environ["QUERIDO_DIARIO_FILES_ENDPOINT"]
+
 
 def get_gazette_text_and_define_url(
     gazette: Dict, gazette_file: str, text_extractor: TextExtractorInterface
@@ -58,6 +60,7 @@ def get_gazette_text_and_define_url(
     gazette["source_text"] = try_to_extract_content(gazette_file, text_extractor)
     file_endpoint = get_file_endpoint()
     gazette["url"] = f"{file_endpoint}/{gazette['file_path']}"
+
 
 def upload_gazette_raw_text(
     gazette: Dict, storage
@@ -115,13 +118,14 @@ def process_gazette_file(
 
     return processed_gazette
 
+
 def extract_text_from_gazettes(
-    gazettes: Generator,
+    gazettes: Iterable[Dict],
     database: DatabaseInterface,
     storage: StorageInterface,
     index: IndexInterface,
     text_extractor: TextExtractorInterface,
-) -> Generator:
+) -> Iterable[Dict]:
     """
     Extracts the text from a list of gazettes 
     """

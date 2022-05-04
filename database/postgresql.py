@@ -1,4 +1,4 @@
-from typing import Generator
+from typing import Dict, Iterable
 import os
 import logging
 
@@ -87,7 +87,7 @@ class PostgreSQL(DatabaseInterface):
             "state_code": data[14],
         }
 
-    def get_pending_gazettes(self) -> Generator:
+    def get_pending_gazettes(self) -> Iterable[Dict]:
         with self._connection.cursor() as cursor:
             cursor.execute(self.SELECT_PENDING_GAZETTES)
             logging.debug(cursor.query)

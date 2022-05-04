@@ -1,4 +1,4 @@
-from typing import Generator, Dict
+from typing import Dict, Iterable
 import abc
 
 
@@ -9,7 +9,7 @@ class DatabaseInterface(abc.ABC):
     """
 
     @abc.abstractmethod
-    def get_pending_gazettes() -> Generator:
+    def get_pending_gazettes() -> Iterable[Dict]:
         """
         Get all gazettes waitning to be processed by the data processing pipeline
         """
@@ -45,7 +45,7 @@ class IndexInterface(abc.ABC):
     """
 
     @abc.abstractmethod
-    def create_index(index_name: str) -> None:
+    def create_index(index_name: str, body: Dict) -> None:
         """
         Create the index used by the application
         """
