@@ -51,7 +51,12 @@ def tfidf_score_excerpts(
                 if term in indexed_terms
             ]
         )
-        excerpt["excerpt_tfidf_score"] = excerpt_score
+
+        # Elasticsearch only accepts strictly positive values for rank_features
+        excerpt["excerpt_tfidf_score"] = (
+            0.000001 if excerpt_score == 0.0 else excerpt_score
+        )
+
         index.index_document(
             excerpt, document_id=excerpt["excerpt_id"], index=theme["index"]
         )
