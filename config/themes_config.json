@@ -4,6 +4,24 @@
       "name": "políticas ambientais nacionais",
       "index": "ambiental",
       "stopwords": ["lei", "n°", "no."],
+      "entities": {
+        "categories": [
+          {"name": "primeiro-setor", "description": "teste"},
+          {"name": "segundo-setor", "description": "teste"},
+          {"name": "terceiro-setor", "description": "teste"},
+          {"name": "legislacao", "description": "teste"}
+        ],
+        "cases": [
+          {"category": "primeiro-setor", "value": "funai"},
+          {"category": "primeiro-setor", "value": "icmbio"},
+          {"category": "primeiro-setor", "value": "ibama"},
+          {"category": "primeiro-setor", "value": "conama"},
+          {"category": "primeiro-setor", "value": "secretaria de meio ambiente"},
+          {"category": "legislacao", "value": "política nacional de resíduos sólidos"},
+          {"category": "legislacao", "value": "pnrs"},
+          {"category": "legislacao", "value": "fundo nacional sobre mudança do clima"}
+        ]
+      },
       "queries": [
         {
           "natural_language": "código de águas",

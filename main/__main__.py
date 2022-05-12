@@ -12,6 +12,7 @@ from tasks import (
     get_all_gazettes_extracted,
     get_gazettes_extracted_since_yesterday,
     get_themes,
+    tag_entities_in_excerpts,
     tfidf_rerank_excerpts,
 )
 
@@ -47,7 +48,10 @@ def daily_processing():
         themed_excerpts = extract_themed_excerpts_from_gazettes(
             theme, indexed_gazettes, index
         )
-        embedding_rerank_excerpts(theme, themed_excerpts, index)
+        embedding_reranked_excerpts = embedding_rerank_excerpts(
+            theme, themed_excerpts, index
+        )
+        tag_entities_in_excerpts(theme, embedding_reranked_excerpts, index)
         tfidf_rerank_excerpts(theme, index)
 
 
@@ -69,7 +73,10 @@ def process_all():
         themed_excerpts = extract_themed_excerpts_from_gazettes(
             theme, indexed_gazettes, index
         )
-        embedding_rerank_excerpts(theme, themed_excerpts, index)
+        embedding_reranked_excerpts = embedding_rerank_excerpts(
+            theme, themed_excerpts, index
+        )
+        tag_entities_in_excerpts(theme, embedding_reranked_excerpts, index)
         tfidf_rerank_excerpts(theme, index)
 
 

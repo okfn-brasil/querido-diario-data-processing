@@ -7,13 +7,27 @@ from .interfaces import IndexInterface
 
 def extract_themed_excerpts_from_gazettes(
     theme: Dict, gazettes: Iterable[Dict], index: IndexInterface
-) -> Iterable[Dict]:
+) -> List[Dict]:
     create_index(theme, index)
     gazette_ids = extract_gazette_ids(gazettes)
-    for theme_query in theme["queries"]:
-        yield from get_excerpts_from_gazettes_with_themed_query(
+
+    excerpts = [
+        excerpt
+        for theme_query in theme["queries"]
+        for excerpt in get_excerpts_from_gazettes_with_themed_query(
             theme_query, gazette_ids, index
         )
+    ]
+
+    for excerpt in excerpts:
+        index.index_document(
+            excerpt,
+            document_id=excerpt["excerpt_id"],
+            index=theme["index"],
+            refresh=True,
+        )
+
+    return excerpts
 
 
 def create_index(theme: Dict, index: IndexInterface) -> None:
@@ -29,6 +43,7 @@ def create_index(theme: Dict, index: IndexInterface) -> None:
                 "excerpt": {
                     "type": "text",
                     "index_options": "offsets",
+                    "term_vector": "with_positions_offsets",
                     "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
                 },
                 "excerpt_id": {
