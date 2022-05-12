@@ -40,6 +40,10 @@ def create_index(theme: Dict, index: IndexInterface) -> None:
                 "excerpt_tfidf_score": {
                     "type": "rank_feature",
                 },
+                "excerpt_subthemes": {
+                    "type": "text",
+                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                },
                 "excerpt": {
                     "type": "text",
                     "index_options": "offsets",
@@ -125,6 +129,7 @@ def get_excerpts_from_gazettes_with_themed_query(
         for excerpt in excerpts:
             yield {
                 "excerpt": excerpt,
+                "excerpt_subthemes": [query["natural_language"]],
                 "excerpt_id": generate_excerpt_id(excerpt, gazette),
                 "source_index_id": gazette["file_checksum"],
                 "source_created_at": gazette["created_at"],

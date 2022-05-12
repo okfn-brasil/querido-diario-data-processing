@@ -21,7 +21,18 @@ def embedding_rerank_excerpts(
         excerpt_max_score = sentence_transformers.util.semantic_search(
             excerpt_vector, queries_vectors, top_k=1
         )
-        excerpt["excerpt_embedding_score"] = excerpt_max_score[0][0]["score"]
+        subthemes = list(
+            set(
+                excerpt["excerpt_subthemes"]
+                + [queries[excerpt_max_score[0][0]["corpus_id"]]]
+            )
+        )
+        excerpt.update(
+            {
+                "excerpt_embedding_score": excerpt_max_score[0][0]["score"],
+                "excerpt_subthemes": subthemes,
+            }
+        )
         index.index_document(
             excerpt,
             document_id=excerpt["excerpt_id"],
