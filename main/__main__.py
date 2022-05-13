@@ -41,7 +41,7 @@ def daily_processing():
     text_extractor = create_apache_tika_text_extraction()
     gazettes_to_be_processed = get_gazettes_extracted_since_yesterday(database)
     indexed_gazette_ids = extract_text_from_gazettes(
-        gazettes_to_be_processed, storage, index, text_extractor
+        gazettes_to_be_processed, database, storage, index, text_extractor
     )
     themes = get_themes()
     for theme in themes:
@@ -66,7 +66,7 @@ def process_all():
     text_extractor = create_apache_tika_text_extraction()
     gazettes_to_be_processed = get_all_gazettes_extracted(database)
     indexed_gazette_ids = extract_text_from_gazettes(
-        gazettes_to_be_processed, storage, index, text_extractor
+        gazettes_to_be_processed, database, storage, index, text_extractor
     )
     themes = get_themes()
     for theme in themes:
