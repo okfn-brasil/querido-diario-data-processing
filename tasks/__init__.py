@@ -12,5 +12,6 @@ from .interfaces import (
 )
 from .list_gazettes_to_be_processed import (
     get_all_gazettes_extracted,
+    get_unprocessed_gazettes,
     get_gazettes_extracted_since_yesterday,
 )
