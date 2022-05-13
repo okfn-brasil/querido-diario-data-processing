@@ -45,6 +45,7 @@ class PostgreSQL(DatabaseInterface):
 
     def _commit_changes(self, command: str, data: Dict = {}) -> None:
         with self._connection.cursor() as cursor:
+            logging.debug(f"Making change: {cursor.query}")
             cursor.execute(command, data)
             self._connection.commit()
 
@@ -58,16 +59,16 @@ class PostgreSQL(DatabaseInterface):
             logging.debug(f"Finished query: {cursor.query}")
 
     def insert(self, command: str, data: Dict = {}):
-        logging.debug(f"Inserting: {cursor.query}")
+        logging.debug(f"Inserting:")
         self._commit_changes(command, data)
-        logging.debug(f"Finished inserting: {cursor.query}")
+        logging.debug(f"Finished inserting")
 
     def update(self, command: str, data: Dict = {}):
-        logging.debug(f"Updating: {cursor.query}")
+        logging.debug(f"Updating:")
         self._commit_changes(command, data)
-        logging.debug(f"Finished updating: {cursor.query}")
+        logging.debug(f"Finished updating")
 
     def delete(self, command: str, data: Dict = {}):
-        logging.debug(f"Deleting: {cursor.query}")
+        logging.debug(f"Deleting:")
         self._commit_changes(command, data)
-        logging.debug(f"Finished deleting: {cursor.query}")
+        logging.debug(f"Finished deleting")
