@@ -57,20 +57,23 @@ class ElasticSearchInterface(IndexInterface):
 
     def search(self, query: Dict, index: str = None) -> Dict:
         index = self.get_index_name(index)
-        result = self._es.search(index=index, body=query)
+        result = self._es.search(index=index, body=query, request_timeout=60)
         return result
 
     def paginated_search(
-        self, query: Dict, index: str = None, keep_alive: str = "1m"
+        self, query: Dict, index: str = None, keep_alive: str = "5m"
     ) -> Iterable[Dict]:
         index = self.get_index_name(index)
-        result = self._es.search(index=index, body=query, scroll=keep_alive)
-        yield result
+        result = self._es.search(index=index, body=query, scroll=keep_alive, request_timeout=60)
 
-        scroll_id = result["_scroll_id"]
+        if len(result["hits"]["hits"]) == 0:
+            return
+
         while len(result["hits"]["hits"]) > 0:
-            result = self._es.scroll(scroll_id=scroll_id, scroll=keep_alive)
             yield result
+            scroll_id = result["_scroll_id"]
+            result = self._es.scroll(scroll_id=scroll_id, scroll=keep_alive, request_timeout=60)
+
         self._es.clear_scroll(scroll_id=scroll_id)
 
 
