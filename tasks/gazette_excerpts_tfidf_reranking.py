@@ -16,16 +16,22 @@ def tfidf_rerank_excerpts(theme: Dict, index: IndexInterface) -> None:
 
 def get_all_excerpts(theme: Dict, index: IndexInterface) -> List[Dict]:
     index.refresh_index(theme["index"])
-    query_match_all = {"query": {"match_all": {}}, "size": 10000}
+    query_match_all = {"query": {"match_all": {}}, "size": 100}
     excerpts = []
     for result in index.paginated_search(query_match_all, index=theme["index"]):
-        excerpts.extend([excerpt["_source"] for excerpt in result["hits"]["hits"]])
+        hits = [hit for hit in result["hits"]["hits"]]
+        for hit in hits:
+            excerpt = hit["_source"]
+            excerpts.append(excerpt)
     return excerpts
 
 
 def tfidf_score_excerpts(
     theme: Dict, excerpts: List[Dict], index: IndexInterface
 ) -> None:
+    if len(excerpts) == 0:
+        return
+
     pt_corpus = spacy.load("pt_core_news_sm")
     stopwords = (
         set(nltk.corpus.stopwords.words("portuguese"))

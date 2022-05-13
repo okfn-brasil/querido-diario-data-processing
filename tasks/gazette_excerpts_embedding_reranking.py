@@ -7,14 +7,15 @@ from .interfaces import IndexInterface
 
 
 def embedding_rerank_excerpts(
-    theme: Dict, excerpts: List[Dict], index: IndexInterface
-) -> List[Dict]:
+    theme: Dict, excerpt_ids: List[str], index: IndexInterface
+) -> List[str]:
     user_folder = os.environ["HOME"]
     model = sentence_transformers.SentenceTransformer(
         f"{user_folder}/models/bert-base-portuguese-cased"
     )
     queries = get_natural_language_queries(theme)
     queries_vectors = model.encode(queries, convert_to_tensor=True)
+    excerpts = get_excerpts_with_ids(theme, excerpt_ids, index)
 
     for excerpt in excerpts:
         excerpt_vector = model.encode(excerpt["excerpt"], convert_to_tensor=True)
@@ -40,7 +41,17 @@ def embedding_rerank_excerpts(
             refresh=True,
         )
 
-    return excerpts
+    return excerpt_ids
+
+
+def get_excerpts_with_ids(theme: Dict, excerpt_ids: List[str], index: IndexInterface) -> List[Dict]:
+    index.refresh_index(theme["index"])
+    query_filter_by_ids = {"query": {"bool": {"filter": {"ids": {"values": excerpt_ids}}}}, "size": 100}
+    for result in index.paginated_search(query_filter_by_ids, index=theme["index"]):
+        hits = [hit for hit in result["hits"]["hits"]]
+        for hit in hits:
+            excerpt = hit["_source"]
+            yield excerpt
 
 
 def get_natural_language_queries(theme: Dict) -> List[str]:

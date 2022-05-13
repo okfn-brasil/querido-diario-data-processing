@@ -6,28 +6,24 @@ from .interfaces import IndexInterface
 
 
 def extract_themed_excerpts_from_gazettes(
-    theme: Dict, gazettes: Iterable[Dict], index: IndexInterface
-) -> List[Dict]:
+    theme: Dict, gazette_ids: List[str], index: IndexInterface
+) -> List[str]:
     create_index(theme, index)
-    gazette_ids = extract_gazette_ids(gazettes)
 
-    excerpts = [
-        excerpt
-        for theme_query in theme["queries"]
+    ids = []
+    for theme_query in theme["queries"]:
         for excerpt in get_excerpts_from_gazettes_with_themed_query(
             theme_query, gazette_ids, index
-        )
-    ]
+        ):
+            index.index_document(
+                excerpt,
+                document_id=excerpt["excerpt_id"],
+                index=theme["index"],
+                refresh=True,
+            )
+            ids.append(excerpt["excerpt_id"])
 
-    for excerpt in excerpts:
-        index.index_document(
-            excerpt,
-            document_id=excerpt["excerpt_id"],
-            index=theme["index"],
-            refresh=True,
-        )
-
-    return excerpts
+    return ids
 
 
 def create_index(theme: Dict, index: IndexInterface) -> None:
@@ -110,45 +106,38 @@ def create_index(theme: Dict, index: IndexInterface) -> None:
     index.create_index(index_name=theme["index"], body=body)
 
 
-def extract_gazette_ids(gazettes: Iterable[Dict]) -> List[str]:
-    return [gazette["file_checksum"] for gazette in gazettes]
-
-
 def get_excerpts_from_gazettes_with_themed_query(
     query: Dict, gazette_ids: List[str], index: IndexInterface
 ) -> Iterable[Dict]:
     es_query = get_es_query_from_themed_query(query, gazette_ids)
-    result = index.search(es_query)
-    hits = result["hits"]["hits"]
-    for hit in hits:
-        if not hit.get("highlight"):
-            continue
-
-        gazette = hit["_source"]
-        excerpts = hit["highlight"]["source_text"]
-        for excerpt in excerpts:
-            yield {
-                "excerpt": excerpt,
-                "excerpt_subthemes": [query["natural_language"]],
-                "excerpt_id": generate_excerpt_id(excerpt, gazette),
-                "source_index_id": gazette["file_checksum"],
-                "source_created_at": gazette["created_at"],
-                "source_database_id": gazette["id"],
-                "source_date": gazette["date"],
-                "source_edition_number": gazette["date"],
-                "source_file_raw_txt": gazette["file_raw_txt"],
-                "source_is_extra_edition": gazette["is_extra_edition"],
-                "source_file_checksum": gazette["file_checksum"],
-                "source_file_path": gazette["file_path"],
-                "source_file_url": gazette["file_url"],
-                "source_power": gazette["power"],
-                "source_processed": gazette["processed"],
-                "source_scraped_at": gazette["scraped_at"],
-                "source_state_code": gazette["state_code"],
-                "source_territory_id": gazette["territory_id"],
-                "source_territory_name": gazette["territory_name"],
-                "source_url": gazette["url"],
-            }
+    for result in index.paginated_search(es_query):
+        hits = [hit for hit in result["hits"]["hits"] if hit.get("highlight")]
+        for hit in hits:
+            gazette = hit["_source"]
+            excerpts = hit["highlight"]["source_text"]
+            for excerpt in excerpts:
+                yield {
+                    "excerpt": excerpt,
+                    "excerpt_subthemes": [query["natural_language"]],
+                    "excerpt_id": generate_excerpt_id(excerpt, gazette),
+                    "source_index_id": gazette["file_checksum"],
+                    "source_created_at": gazette["created_at"],
+                    "source_database_id": gazette["id"],
+                    "source_date": gazette["date"],
+                    "source_edition_number": gazette["date"],
+                    "source_file_raw_txt": gazette["file_raw_txt"],
+                    "source_is_extra_edition": gazette["is_extra_edition"],
+                    "source_file_checksum": gazette["file_checksum"],
+                    "source_file_path": gazette["file_path"],
+                    "source_file_url": gazette["file_url"],
+                    "source_power": gazette["power"],
+                    "source_processed": gazette["processed"],
+                    "source_scraped_at": gazette["scraped_at"],
+                    "source_state_code": gazette["state_code"],
+                    "source_territory_id": gazette["territory_id"],
+                    "source_territory_name": gazette["territory_name"],
+                    "source_url": gazette["url"],
+                }
 
 
 def generate_excerpt_id(excerpt: str, gazette: Dict) -> str:
@@ -163,7 +152,7 @@ def get_es_query_from_themed_query(
 ) -> Dict:
     es_query = {
         "query": {"bool": {"must": [], "filter": {"ids": {"values": gazette_ids}}}},
-        "size": 10000,
+        "size": 100,
         "highlight": {
             "fields": {
                 "source_text": {

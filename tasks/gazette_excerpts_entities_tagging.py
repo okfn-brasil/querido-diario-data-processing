@@ -7,14 +7,13 @@ from .interfaces import IndexInterface
 
 
 def tag_entities_in_excerpts(
-    theme: Dict, excerpts: List[Dict], index: IndexInterface
+    theme: Dict, excerpt_ids: List[str], index: IndexInterface
 ) -> None:
-    excerpts_ids = get_excerpts_ids(excerpts)
     for category in theme["entities"]["categories"]:
         cases = get_entities_cases_of_same_category(
             theme["entities"]["cases"], category
         )
-        es_query = get_es_query_from_entity_cases(cases, category, excerpts_ids)
+        es_query = get_es_query_from_entity_cases(cases, category, excerpt_ids)
         for result in index.paginated_search(es_query, index=theme["index"]):
             hits = [hit for hit in result["hits"]["hits"] if hit.get("highlight")]
             for hit in hits:
@@ -29,12 +28,6 @@ def tag_entities_in_excerpts(
                 )
 
 
-def get_excerpts_ids(
-    excerpts: List[Dict],
-) -> List[str]:
-    return [excerpt["excerpt_id"] for excerpt in excerpts]
-
-
 def get_entities_cases_of_same_category(
     cases: List[Dict], category: Dict
 ) -> List[Dict]:
@@ -44,11 +37,11 @@ def get_entities_cases_of_same_category(
 def get_es_query_from_entity_cases(
     cases: List[Dict],
     category: Dict,
-    excerpts_ids: List[str],
+    excerpt_ids: List[str],
 ) -> Dict:
     es_query = {
-        "query": {"bool": {"should": [], "filter": {"ids": {"values": excerpts_ids}}}},
-        "size": 10000,
+        "query": {"bool": {"should": [], "filter": {"ids": {"values": excerpt_ids}}}},
+        "size": 100,
         "highlight": {
             "fields": {
                 "excerpt": {
