@@ -11,17 +11,26 @@ def extract_themed_excerpts_from_gazettes(
     create_index(theme, index)
 
     ids = []
-    for theme_query in theme["queries"]:
-        for excerpt in get_excerpts_from_gazettes_with_themed_query(
-            theme_query, gazette_ids, index
-        ):
-            index.index_document(
-                excerpt,
-                document_id=excerpt["excerpt_id"],
-                index=theme["index"],
-                refresh=True,
-            )
-            ids.append(excerpt["excerpt_id"])
+    import csv
+    with open("dataset.csv", "w") as f:
+        flag = True
+        for theme_query in theme["queries"]:
+            for excerpt in get_excerpts_from_gazettes_with_themed_query(
+                theme_query, gazette_ids, index
+            ):
+                if flag:
+                    flag = False
+                    csvfile = csv.DictWriter(f, fieldnames=excerpt.keys())
+                    csvfile.writeheader()
+
+                csvfile.writerow(excerpt)
+                # index.index_document(
+                #     excerpt,
+                #     document_id=excerpt["excerpt_id"],
+                #     index=theme["index"],
+                #     refresh=True,
+                # )
+                ids.append(excerpt["excerpt_id"])
 
     return ids
 
@@ -142,7 +151,48 @@ def get_es_query_from_themed_query(
     gazette_ids: List[str],
 ) -> Dict:
     es_query = {
-        "query": {"bool": {"must": [], "filter": {"ids": {"values": gazette_ids}}}},
+        "query": {
+            "bool": {
+                "must": [],
+                "filter": [
+                    {"range": {"date": {"gte": "2020-01-01", "lte": "2022-04-30"}}},
+                    {
+                        "terms": {
+                            "territory_id": [
+                                "1302603",
+                                "1400100",
+                                "1501402",
+                                "1702109",
+                                "1721000",
+                                "2103000",
+                                "2211001",
+                                "2408003",
+                                "2408102",
+                                "2507507",
+                                "2607901",
+                                "2611101",
+                                "2611606",
+                                "2704302",
+                                "2910800",
+                                "2927408",
+                                "3106200",
+                                "3304557",
+                                "3525904",
+                                "3552403",
+                                "4106902",
+                                "4205407",
+                                "4314902",
+                                "5002704",
+                                "5103403",
+                                "5208707",
+                                "5300108",
+                            ]
+                        }
+                    },
+                    {"ids": {"values": gazette_ids}},
+                ],
+            }
+        },
         "size": 100,
         "highlight": {
             "fields": {
@@ -151,8 +201,8 @@ def get_es_query_from_themed_query(
                     "boundary_scanner_locale": "pt-BR",
                     "fragment_size": 2000,
                     "number_of_fragments": 10000,
-                    "pre_tags": [""],
-                    "post_tags": [""],
+                    "pre_tags": ["<__"],
+                    "post_tags": ["__>"],
                 }
             },
         },

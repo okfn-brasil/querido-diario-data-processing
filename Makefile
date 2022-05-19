@@ -1,7 +1,7 @@
-IMAGE_NAMESPACE ?= serenata
+IMAGE_NAMESPACE ?= okfn-brasil
 IMAGE_NAME ?= querido-diario-data-processing
-IMAGE_TAG ?= latest
-APACHE_TIKA_IMAGE_NAME ?=  querido-diario-apache-tika-server
+IMAGE_TAG ?= v0.9.3
+APACHE_TIKA_IMAGE_NAME ?= querido-diario-apache-tika-server
 APACHE_TIKA_IMAGE_TAG ?= latest
 POD_NAME ?= querido-diario-data-extraction
 
@@ -219,6 +219,7 @@ re-run: set-run-variable-values
 		--env PYTHONPATH=/mnt/code \
 		--env-file envvars \
 		--user=$(UID):$(UID) $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python main
+		# $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python main
 
 .PHONY: run
 run: setup re-run

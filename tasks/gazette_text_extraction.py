@@ -51,13 +51,13 @@ def try_process_gazette_file(
     """
     Do all the work to extract the content from the gazette files
     """
-    logging.debug(f"Processing gazette {gazette['file_path']}")
-    gazette_file = download_gazette_file(gazette, storage)
-    get_gazette_text_and_define_url(gazette, gazette_file, text_extractor)
-    upload_gazette_raw_text(gazette, storage)
-    index.index_document(gazette, document_id=gazette["file_checksum"])
-    delete_gazette_files(gazette_file)
-    set_gazette_as_processed(gazette, database)
+    # logging.debug(f"Processing gazette {gazette['file_path']}")
+    # gazette_file = download_gazette_file(gazette, storage)
+    # get_gazette_text_and_define_url(gazette, gazette_file, text_extractor)
+    # upload_gazette_raw_text(gazette, storage)
+    # index.index_document(gazette, document_id=gazette["file_checksum"])
+    # delete_gazette_files(gazette_file)
+    # set_gazette_as_processed(gazette, database)
     return gazette
 
 

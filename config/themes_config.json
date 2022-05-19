@@ -50,7 +50,7 @@
           "term_sets": [
             [["decreto-lei federal", "decreto-lei"], ["1.985", "1985"], ["29 de março de 1940", "1940", "40"]],
             [["código de minas"]]
-          ] 
+          ]
         },
         {
           "title": "Política Nuclear Brasileira",
@@ -157,6 +157,92 @@
           "term_sets": [
             [["lei federal", "lei"], ["12.187", "12187"], ["29 de dezembro de 2009", "2009", "09"]],
             [["política nacional sobre mudança do clima", "pnmc"]]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Implantação de Tecnologias na Educação",
+      "index": "educacao",
+      "stopwords": [],
+      "entities": {
+        "categories": [ ],
+        "cases": [ ]
+      },
+      "queries": [
+        {
+          "title": "Conectividade",
+          "term_sets": [
+            [
+              ["contrato", "licitação", "pregão", "aquisição", "prestação de serviços", "decreto", "lei", "regimento", "plano", "portaria", "resolução", "acordo de cooperação", "termo de convênio", "despacho", "termo de colaboração", "termo de fomento", "chamamento público", "parceria", "deliberação", "edital", "extrato", "comodato", "instrução normativa", "aditivo"],
+              ["ensino", "educação", "educacional", "escola"],
+              ["switch", "access point", "ponto de acesso", "firewall", "roteador", "internet", "conectividade", "dados móveis", "3G", "4G", "5G", "via rádio", "banda larga", "fibra ótica", "satélite", "ADSL", "bluetooth", "wi-fi", "wifi", "wi fi", "wireless"]
+            ],
+            [
+              ["contrato", "licitação", "pregão", "aquisição", "prestação de serviços", "decreto", "lei", "regimento", "plano", "portaria", "resolução", "acordo de cooperação", "termo de convênio", "despacho", "termo de colaboração", "termo de fomento", "chamamento público", "parceria", "deliberação", "edital", "extrato", "comodato", "instrução normativa", "aditivo"],
+              ["ensino", "educação", "educacional", "escola"],
+              ["tim", "oi", "vivo", "claro", "nextel", "correios", "telecom", "telecomunicações", "tplink", "tp-link", "tp link", "dlink", "d-link", "d link", "intelbras", "dell", "multilaser", "asus", "google", "mercusys", "tenda"]
+            ]
+          ]
+        },
+        {
+          "title": "Formação e Aprendizagem",
+          "term_sets": [
+            [
+              ["contrato", "licitação", "pregão", "aquisição", "prestação de serviços", "decreto", "lei", "regimento", "plano", "portaria", "resolução", "acordo de cooperação", "termo de convênio", "despacho", "termo de colaboração", "termo de fomento", "chamamento público", "parceria", "deliberação", "edital", "extrato", "comodato", "instrução normativa", "aditivo"],
+              ["ensino", "educação", "educacional", "escola"],
+              ["ava", "aplicativo", "plataforma", "ambiente virtual", "sistema", "virtual", "ensino remoto", "ensino à distância", "ead"]
+            ],
+            [
+              ["contrato", "licitação", "pregão", "aquisição", "prestação de serviços", "decreto", "lei", "regimento", "plano", "portaria", "resolução", "acordo de cooperação", "termo de convênio", "despacho", "termo de colaboração", "termo de fomento", "chamamento público", "parceria", "deliberação", "edital", "extrato", "comodato", "instrução normativa", "aditivo"],
+              ["ensino", "educação", "educacional", "escola"],
+              ["zoom", "youtube", "kahoot", "moodle", "khan academy", "superensino", "super ensino", "superprof", "super prof", "Eduedu", "eduplay", "liber", "brainy", "stoodi", "lemann", "cogna", "ânima", "passei direto", "árvore de livros", "udemy", "veduca", "coursera", "alura", "aprimora", "google", "meet", "microsoft", "teams", "g suite", "gsuite", "edtech", "ed tech", "ed-tech", "dragon learn", "foreducation", "mangahigh", "classroom", "amazon", "jovens genios"]
+            ]
+          ]
+        },
+        {
+          "title": "Gestão",
+          "term_sets": [
+            [
+              ["contrato", "licitação", "pregão", "aquisição", "prestação de serviços", "decreto", "lei", "regimento", "plano", "portaria", "resolução", "acordo de cooperação", "termo de convênio", "despacho", "termo de colaboração", "termo de fomento", "chamamento público", "parceria", "deliberação", "edital", "extrato", "comodato", "instrução normativa", "aditivo"],
+              ["ensino", "educação", "educacional", "escola"],
+              ["office", "google", "microsoft", "portabilis", "i-educar", "eduqo", "amazon", "aws", "i-diario", "idiario", "i diario", "diário de classe online", "diário de classe on-line", "diário de classe virtual", "apple"]
+            ]
+          ]
+        },
+        {
+          "title": "Infraestrutura e Dispositivos",
+          "term_sets": [
+            [
+              ["contrato", "licitação", "pregão", "aquisição", "prestação de serviços", "decreto", "lei", "regimento", "plano", "portaria", "resolução", "acordo de cooperação", "termo de convênio", "despacho", "termo de colaboração", "termo de fomento", "chamamento público", "parceria", "deliberação", "edital", "extrato", "comodato", "instrução normativa", "aditivo"],
+              ["ensino", "educação", "educacional", "escola"],
+              ["tablet", "mobile", "smartphone", "notebook", "celular", "computador", "chromebook", "laptop", "ipad", "iphone", "fone de ouvido", "mesa digitalizadora", "projetor", "mouse", "desktop", "teclado", "cpu", "impressora 3d"]
+            ],
+            [
+              ["contrato", "licitação", "pregão", "aquisição", "prestação de serviços", "decreto", "lei", "regimento", "plano", "portaria", "resolução", "acordo de cooperação", "termo de convênio", "despacho", "termo de colaboração", "termo de fomento", "chamamento público", "parceria", "deliberação", "edital", "extrato", "comodato", "instrução normativa", "aditivo"],
+              ["ensino", "educação", "educacional", "escola"],
+              ["positivo", "lenovo", "samsung", "LG", "HP", "acer", "apple", "wacom", "asus", "dell", "google"]
+            ]
+          ]
+        },
+        {
+          "title": "Robótica",
+          "term_sets": [
+            [
+              ["contrato", "licitação", "pregão", "aquisição", "prestação de serviços", "decreto", "lei", "regimento", "plano", "portaria", "resolução", "acordo de cooperação", "termo de convênio", "despacho", "termo de colaboração", "termo de fomento", "chamamento público", "parceria", "deliberação", "edital", "extrato", "comodato", "instrução normativa", "aditivo"],
+              ["ensino", "educação", "educacional", "escola"],
+              ["PCB", "protoboard", "microcontrolador", "arduino", "raspberry pi", "robótica"]
+            ]
+          ]
+        },
+        {
+          "title": "Acessibilidade",
+          "term_sets": [
+            [
+              ["contrato", "licitação", "pregão", "aquisição", "prestação de serviços", "decreto", "lei", "regimento", "plano", "portaria", "resolução", "acordo de cooperação", "termo de convênio", "despacho", "termo de colaboração", "termo de fomento", "chamamento público", "parceria", "deliberação", "edital", "extrato", "comodato", "instrução normativa", "aditivo"],
+              ["ensino", "educação", "educacional", "escola"],
+              ["recursos de acessibilidade", "leitor de tela", "jaws", "virtual vision", "nvda", "voiceover", "dosvox", "orca", "dolphin", "talkback", "vischeck", "tradutor automático de libras", "avatar", "prodeaf", "handtalk", "vlibras", "rybena", "legenda descritiva", "legenda oculta", "janela de libras", "audiodescrição", "livro acessível", "livro audiovisual", "livro digital", "inclusão digital"]
+            ]
           ]
         }
       ]
