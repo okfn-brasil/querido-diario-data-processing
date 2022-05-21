@@ -4,6 +4,19 @@ from typing import Dict, Iterable
 from .interfaces import DatabaseInterface
 
 
+def get_gazettes_to_be_processed(
+    execution_mode: str, database: DatabaseInterface
+) -> Iterable[Dict]:
+    if execution_mode == "DAILY":
+        yield from get_gazettes_extracted_since_yesterday(database)
+    elif execution_mode == "ALL":
+        yield from get_all_gazettes_extracted(database)
+    elif execution_mode == "UNPROCESSED":
+        yield from get_unprocessed_gazettes(database)
+    else:
+        raise Exception(f'Execution mode "{execution_mode}" is invalid.')
+
+
 def get_gazettes_extracted_since_yesterday(
     database: DatabaseInterface,
 ) -> Iterable[Dict]:
