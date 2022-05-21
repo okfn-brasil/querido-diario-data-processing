@@ -45,13 +45,13 @@ class StorageInterface(abc.ABC):
     """
 
     @abc.abstractmethod
-    def get_file(file_to_be_downloaded: str, destination) -> None:
+    def get_file(self, file_to_be_downloaded: str, destination) -> None:
         """
         Download the given file key in the destination on the host
         """
 
     @abc.abstractmethod
-    def upload_content(file_key: str, content_to_be_uploaded: str) -> None:
+    def upload_content(self, file_key: str, content_to_be_uploaded: str) -> None:
         """
         Upload the given content to the destination on the host
         """
@@ -63,7 +63,7 @@ class IndexInterface(abc.ABC):
     """
 
     @abc.abstractmethod
-    def create_index(index_name: str, body: Dict) -> None:
+    def create_index(self, index_name: str, body: Dict) -> None:
         """
         Create the index used by the application
         """
@@ -74,18 +74,21 @@ class IndexInterface(abc.ABC):
         Refreshes the index to make it up-to-date for future searches
         """
 
+    @abc.abstractmethod
     def index_document(
-        document: Dict, document_id: str, index: str, refresh: bool
+        self, document: Dict, document_id: str, index: str, refresh: bool
     ) -> None:
         """
         Upload document to the index
         """
 
-    def search(query: Dict, index: str) -> Dict:
+    @abc.abstractmethod
+    def search(self, query: Dict, index: str) -> Dict:
         """
         Searches the index with the provided query
         """
 
+    @abc.abstractmethod
     def paginated_search(
         self, query: Dict, index: str, keep_alive: str
     ) -> Iterable[Dict]:
@@ -95,6 +98,7 @@ class IndexInterface(abc.ABC):
 
 
 class TextExtractorInterface(abc.ABC):
+    @abc.abstractmethod
     def extract_text(self, filepath: str) -> str:
         """
         Extract the text from the given file
