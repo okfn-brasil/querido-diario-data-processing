@@ -2,36 +2,48 @@ import logging
 import tempfile
 import os
 from pathlib import Path
-from typing import Dict, Iterable
+from typing import Dict, Iterable, List
 
-from .interfaces import StorageInterface, IndexInterface, TextExtractorInterface
+from .interfaces import (
+    DatabaseInterface,
+    IndexInterface,
+    StorageInterface,
+    TextExtractorInterface,
+)
 
 
 def extract_text_from_gazettes(
     gazettes: Iterable[Dict],
+    database: DatabaseInterface,
     storage: StorageInterface,
     index: IndexInterface,
     text_extractor: TextExtractorInterface,
-) -> Iterable[Dict]:
+) -> List[str]:
     """
     Extracts the text from a list of gazettes
     """
     logging.info("Starting text extraction from gazettes")
     create_index(index)
+
+    ids = []
     for gazette in gazettes:
         try:
             processed_gazette = try_process_gazette_file(
-                gazette, storage, index, text_extractor
+                gazette, database, storage, index, text_extractor
             )
-            yield processed_gazette
         except Exception as e:
             logging.warning(
                 f"Could not process gazette: {gazette['file_path']}. Cause: {e}"
             )
+        else:
+            ids.append(processed_gazette["file_checksum"])
+
+    return ids
 
 
 def try_process_gazette_file(
     gazette: Dict,
+    database: DatabaseInterface,
     storage: StorageInterface,
     index: IndexInterface,
     text_extractor: TextExtractorInterface,
@@ -45,6 +57,7 @@ def try_process_gazette_file(
     upload_gazette_raw_text(gazette, storage)
     index.index_document(gazette, document_id=gazette["file_checksum"])
     delete_gazette_files(gazette_file)
+    set_gazette_as_processed(gazette, database)
     return gazette
 
 
@@ -155,7 +168,7 @@ def delete_gazette_files(gazette_file: str) -> None:
     os.remove(gazette_file)
 
 
-def download_gazette_file(gazette, storage: StorageInterface) -> str:
+def download_gazette_file(gazette: Dict, storage: StorageInterface) -> str:
     """
     Download the file from the object storage and write it down in the local
     disk to allow the text extraction
@@ -166,8 +179,23 @@ def download_gazette_file(gazette, storage: StorageInterface) -> str:
         return tmpfile.name
 
 
-def get_gazette_file_key_used_in_storage(gazette) -> str:
+def get_gazette_file_key_used_in_storage(gazette: Dict) -> str:
     """
     Get the file key used to store the gazette in the object storage
     """
     return gazette["file_path"]
+
+
+def set_gazette_as_processed(gazette: Dict, database: DatabaseInterface) -> None:
+    command = """
+        UPDATE gazettes
+        SET processed = True
+        WHERE id = %(id)s
+        AND file_checksum = %(file_checksum)s
+    ;
+    """
+    id = gazette["id"]
+    checksum = gazette["file_checksum"]
+    data = {"id": id, "file_checksum": checksum}
+    logging.debug(f"Marking {id}({checksum}) as processed")
+    database.update(command, data)

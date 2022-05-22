@@ -1,13 +1,14 @@
 import os
-from typing import Dict, Iterable, List
+from typing import Dict, List
 
 import sentence_transformers
 
 from .interfaces import IndexInterface
+from .utils import get_documents_with_ids
 
 
 def embedding_rerank_excerpts(
-    theme: Dict, excerpts: Iterable[Dict], index: IndexInterface
+    theme: Dict, excerpt_ids: List[str], index: IndexInterface
 ) -> None:
     user_folder = os.environ["HOME"]
     model = sentence_transformers.SentenceTransformer(
@@ -15,6 +16,11 @@ def embedding_rerank_excerpts(
     )
     queries = get_natural_language_queries(theme)
     queries_vectors = model.encode(queries, convert_to_tensor=True)
+
+    excerpts = (
+        excerpt["_source"]
+        for excerpt in get_documents_with_ids(excerpt_ids, index, theme["index"])
+    )
     for excerpt in excerpts:
         excerpt_vector = model.encode(excerpt["excerpt"], convert_to_tensor=True)
         excerpt_max_score = sentence_transformers.util.semantic_search(
@@ -30,4 +36,4 @@ def embedding_rerank_excerpts(
 
 
 def get_natural_language_queries(theme: Dict) -> List[str]:
-    return [query["natural_language"] for query in theme["queries"]]
+    return [query["title"] for query in theme["queries"]]
