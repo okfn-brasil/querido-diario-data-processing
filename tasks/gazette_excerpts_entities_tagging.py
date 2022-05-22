@@ -1,42 +1,50 @@
-import os
+import re
 from typing import Dict, List
 
-import sentence_transformers
-
 from .interfaces import IndexInterface
+from .utils import (
+    get_documents_from_query_with_highlights,
+    get_documents_with_ids,
+)
 
 
 def tag_entities_in_excerpts(
     theme: Dict, excerpt_ids: List[str], index: IndexInterface
 ) -> None:
-    for category in theme["entities"]["categories"]:
-        cases = get_entities_cases_of_same_category(
-            theme["entities"]["cases"], category
+    tag_theme_cases(theme, excerpt_ids, index)
+    tag_cnpjs(theme, excerpt_ids, index)
+
+
+def tag_theme_cases(theme: Dict, excerpt_ids: List[str], index: IndexInterface) -> None:
+    cases = theme["entities"]["cases"]
+    es_queries = [get_es_query_from_entity_case(case, excerpt_ids) for case in cases]
+    for case, es_query in zip(cases, es_queries):
+        documents = get_documents_from_query_with_highlights(
+            es_query, index, theme["index"]
         )
-        es_query = get_es_query_from_entity_cases(cases, category, excerpt_ids)
-        for result in index.paginated_search(es_query, index=theme["index"]):
-            hits = [hit for hit in result["hits"]["hits"] if hit.get("highlight")]
-            for hit in hits:
-                excerpt = hit["_source"]
-                tagged_excerpt = hit["highlight"]["excerpt"][0]
-                excerpt["excerpt"] = tagged_excerpt
-                index.index_document(
-                    excerpt,
-                    document_id=excerpt["excerpt_id"],
-                    index=theme["index"],
-                    refresh=True,
-                )
+        for document in documents:
+            excerpt = document["_source"]
+            highlight = document["highlight"][
+                "excerpt.portuguese_without_stopwords_removal"
+            ][0]
+            excerpt.update(
+                {
+                    "excerpt_entities": list(
+                        set(excerpt.get("excerpt_entities", [])) | {case["title"]}
+                    ),
+                    "excerpt": highlight,
+                }
+            )
+            index.index_document(
+                excerpt,
+                document_id=excerpt["excerpt_id"],
+                index=theme["index"],
+                refresh=True,
+            )
 
 
-def get_entities_cases_of_same_category(
-    cases: List[Dict], category: Dict
-) -> List[Dict]:
-    return [case for case in cases if case["category"] == category["name"]]
-
-
-def get_es_query_from_entity_cases(
-    cases: List[Dict],
-    category: Dict,
+def get_es_query_from_entity_case(
+    case: Dict,
     excerpt_ids: List[str],
 ) -> Dict:
     es_query = {
@@ -44,21 +52,53 @@ def get_es_query_from_entity_cases(
         "size": 100,
         "highlight": {
             "fields": {
-                "excerpt": {
-                    "type": "fvh",  # Only highlighter to tag phrases correctly
+                "excerpt.portuguese_without_stopwords_removal": {  # Allows tagging phrases containing stopwords correctly
+                    "type": "fvh",  # Only highlighter to tag phrases correctly and not the tokens individually
                     "fragment_size": 10000,
                     "number_of_fragments": 1,
-                    "pre_tags": [
-                        f"<{category['name']} description={category['description']}>"
-                    ],
-                    "post_tags": [f"</{category['name']}>"],
+                    "pre_tags": [f"<{case['category']}>"],
+                    "post_tags": [f"</{case['category']}>"],
                 }
             },
         },
     }
-    for case in cases:
+    for value in case["values"]:
         es_query["query"]["bool"]["should"].append(
-            {"match_phrase": {"excerpt": case["value"]}}
+            {"match_phrase": {"excerpt.portuguese_without_stopwords_removal": value}}
         )
 
     return es_query
+
+
+def tag_cnpjs(theme: Dict, excerpt_ids: List[str], index: IndexInterface) -> None:
+    excerpts = (
+        document["_source"]
+        for document in get_documents_with_ids(excerpt_ids, index, theme["index"])
+    )
+    cnpj_regex = re.compile(
+        r"""
+        (^|[^\d])                                              # left boundary: start of string or not-a-digit
+        (\d\.?\d\.?\d\.?\d\.?\d\.?\d\.?\d\.?\d/?\d{4}-?\d{2})  # cnpj
+        ($|[^\d])                                              # right boundary: end of string or not-a-digit
+        """,
+        re.VERBOSE,
+    )
+    for excerpt in excerpts:
+        found_cnpjs = re.findall(cnpj_regex, excerpt["excerpt"])
+        if not found_cnpjs:
+            continue
+
+        for _, cnpj, _ in set(found_cnpjs):
+            excerpt["excerpt"] = excerpt["excerpt"].replace(
+                cnpj, f"<entidadecnpj>{cnpj}</entidadecnpj>"
+            )
+
+        excerpt["excerpt_entities"] = list(
+            set(excerpt.get("excerpt_entities", [])) | {"CNPJ"}
+        )
+        index.index_document(
+            excerpt,
+            document_id=excerpt["excerpt_id"],
+            index=theme["index"],
+            refresh=True,
+        )

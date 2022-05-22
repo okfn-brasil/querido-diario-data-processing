@@ -1,107 +1,115 @@
 {
   "themes": [
     {
-      "name": "políticas ambientais nacionais",
+      "name": "Políticas Ambientais Nacionais",
       "index": "ambiental",
       "stopwords": ["lei", "n°", "no."],
       "entities": {
         "categories": [
-          {"name": "primeiro-setor", "description": "teste"},
-          {"name": "segundo-setor", "description": "teste"},
-          {"name": "terceiro-setor", "description": "teste"},
-          {"name": "legislacao", "description": "teste"}
+          {"name": "entidadeambiental", "description": "Instituições ou termos relevantes para a temática ambiental."}
         ],
         "cases": [
-          {"category": "primeiro-setor", "value": "funai"},
-          {"category": "primeiro-setor", "value": "icmbio"},
-          {"category": "primeiro-setor", "value": "ibama"},
-          {"category": "primeiro-setor", "value": "conama"},
-          {"category": "primeiro-setor", "value": "secretaria de meio ambiente"},
-          {"category": "legislacao", "value": "política nacional de resíduos sólidos"},
-          {"category": "legislacao", "value": "pnrs"},
-          {"category": "legislacao", "value": "fundo nacional sobre mudança do clima"}
+          {"category": "entidadeambiental", "title": "FUNAI", "values": ["fundação nacional do índio", "funai"]},
+          {"category": "entidadeambiental", "title": "ICMBio", "values": ["instituto chico mendes de conservação da biodiversidade", "icmbio"]},
+          {"category": "entidadeambiental", "title": "IBAMA", "values": ["instituto brasileiro do meio ambiente e dos recursos naturais renováveis", "ibama"]},
+          {"category": "entidadeambiental", "title": "CONAMA", "values": ["conselho nacional do meio ambiente", "conama"]},
+          {"category": "entidadeambiental", "title": "SISNAMA", "values": ["sistema nacional do meio ambiente", "sisnama"]},
+          {"category": "entidadeambiental", "title": "SINIMA", "values": ["sistema nacional de informação sobre meio ambiente", "sinima"]},
+          {"category": "entidadeambiental", "title": "CEMADEN", "values": ["centro nacional de monitoramento e alertas de desastres naturais", "cemaden"]},
+          {"category": "entidadeambiental", "title": "INPE", "values": ["instituto nacional de pesquisas espaciais", "inpe"]},
+          {"category": "entidadeambiental", "title": "CNUC", "values": ["cadastro nacional de unidades de conservação", "cnuc"]},
+          {"category": "entidadeambiental", "title": "SNUC", "values": ["sistema nacional de unidades de conservação", "snuc"]},
+          {"category": "entidadeambiental", "title": "Parque Ecológico", "values": ["parque ecológico"]},
+          {"category": "entidadeambiental", "title": "Unidade de Conservação", "values": ["unidade de conservação"]},
+          {"category": "entidadeambiental", "title": "Reserva Particular do Patrimônio Natural", "values": ["reserva particular do patrimônio natural", "rppn"]},
+          {"category": "entidadeambiental", "title": "Área de Preservação Permanente", "values": ["área de preservação permanente"]},
+          {"category": "entidadeambiental", "title": "Área de Proteção Ambiental", "values": ["área de proteção ambiental"]},
+          {"category": "entidadeambiental", "title": "Secretaria de Meio Ambiente", "values": ["secretaria de meio ambiente"]},
+          {"category": "entidadeambiental", "title": "Fundo Nacional sobre Mudança do Clima", "values": ["fundo nacional sobre mudança do clima", "fnmc"]},
+          {"category": "entidadeambiental", "title": "Fundo Socioambiental", "values": ["fundo socioambiental"]},
+          {"category": "entidadeambiental", "title": "Programa de Regularização Ambiental", "values": ["programa de regularização ambiental"]}
         ]
       },
       "queries": [
         {
-          "natural_language": "código de águas",
+          "title": "Código de Águas",
           "term_sets": [
             [["decreto federal", "decreto"], ["24.643", "24643"], ["10 de julho de 1934", "1934", "34"]],
             [["código de águas"]]
           ]
         },
         {
-          "natural_language": "código de pesca",
+          "title": "Código de Pesca",
           "term_sets": [
             [["decreto-lei federal", "decreto-lei"], ["794", "794"], ["19 de outubro de 1938", "1938", "38"]],
             [["código de pesca"]]
           ]
         },
         {
-          "natural_language": "código de minas",
+          "title": "Código de Minas",
           "term_sets": [
             [["decreto-lei federal", "decreto-lei"], ["1.985", "1985"], ["29 de março de 1940", "1940", "40"]],
             [["código de minas"]]
           ] 
         },
         {
-          "natural_language": "política nuclear brasileira",
+          "title": "Política Nuclear Brasileira",
           "term_sets": [
             [["decreto federal", "decreto"], ["9.600", "9600"], ["5 de dezembro de 2018", "2018", "18"]],
             [["política nuclear brasileira"]]
           ]
         },
         {
-          "natural_language": "proteção à fauna",
+          "title": "Proteção à Fauna",
           "term_sets": [
             [["lei federal", "lei"], ["5.197", "5197"], ["3 de janeiro de 1967", "1967", "67"]],
             [["proteção à fauna"]]
           ]
         },
         {
-          "natural_language": "política nacional de saneamento",
+          "title": "Política Nacional de Saneamento",
           "term_sets": [
             [["lei federal", "lei"], ["5.318", "5318"], ["26 de setembro de 1967", "1967", "67"]],
             [["política nacional de saneamento", "conselho nacional de saneamento"]]
           ]
         },
         {
-          "natural_language": "proteção e estímulos à pesca",
+          "title": "Proteção e Estímulos à Pesca",
           "term_sets": [
             [["decreto-lei federal", "decreto-lei"], ["221", "221"], ["28 de fevereiro de 1967", "1967", "67"]],
             [["proteção e estímulos à pesca"]]
           ]
         },
         {
-          "natural_language": "crimes ambientais",
+          "title": "Crimes Ambientais",
           "term_sets": [
             [["lei federal", "lei"], ["9.605", "9605"], ["12 de fevereiro de 1998", "1998", "98"]],
             [["crimes ambientais", "lei de crimes ambientais"]]
           ]
         },
         {
-          "natural_language": "política nacional de educação ambiental",
+          "title": "Política Nacional de Educação Ambiental",
           "term_sets": [
             [["lei federal", "lei"], ["9.795", "9795"], ["27 de abril de 1999", "1999", "99"]],
             [["política nacional de educação ambiental"]]
           ]
         },
         {
-          "natural_language": "política nacional de resíduos sólidos",
+          "title": "Política Nacional de Resíduos Sólidos",
           "term_sets": [
             [["lei federal", "lei"], ["12.305", "12305"], ["02 de agosto de 2010", "2010", "10"]],
             [["política nacional de resíduos sólidos", "pnrs"]]
           ]
         },
         {
-          "natural_language": "programa nacional da diversidade biológica",
+          "title": "Programa Nacional da Diversidade Biológica",
           "term_sets": [
             [["decreto federal", "decreto"], ["4.703", "4703"], ["21 de maio de 2003", "2003", "03"]],
             [["programa nacional de diversidade biológica", "comissão nacional da biodiversidade ", "pronabio"]]
           ]
         },
         {
-          "natural_language": "código florestal brasileiro",
+          "title": "Código Florestal Brasileiro",
           "term_sets": [
             [["lei federal", "lei"], ["12.651", "12651"], ["25 de maio de 2012", "2012", "12"]],
             [["lei federal", "lei"], ["12.727", "12727"], ["17 de outubro de 2012", "2012", "12"]],
@@ -109,14 +117,14 @@
           ]
         },
         {
-          "natural_language": "política nacional de desenvolvimento sustentável da aquicultura e pesca",
+          "title": "Política Nacional de Desenvolvimento Sustentável da Aquicultura e Pesca",
           "term_sets": [
             [["lei federal", "lei"], ["11.959", "11959"], ["29 de junho de 2009", "2009", "09"]],
             [["política nacional de desenvolvimento sustentável da aquicultura e pesca", "pndsap"]]
           ]
         },
         {
-          "natural_language": "marco legal do saneamento",
+          "title": "Marco Legal do Saneamento",
           "term_sets": [
             [["lei federal", "lei"], ["11.445", "11445"], ["05 de janeiro de 2007", "2007", "07"]],
             [["lei federal", "lei"], ["14.026", "14026"], ["15 de julho de 2020", "2020", "20"]],
@@ -124,7 +132,7 @@
           ]
         },
         {
-          "natural_language": "política nacional do meio ambiente",
+          "title": "Política Nacional do Meio Ambiente",
           "term_sets": [
             [["lei federal", "lei"], ["6.938", "6938"], ["31 de agosto de 1981", "1981", "81"]],
             [["lei federal", "lei"], ["7.804", "7804"], ["18 de julho de 1989", "1989", "89"]],
@@ -133,19 +141,19 @@
           ]
         },
         {
-          "natural_language": "redução de emissão de poluentes por veículos automotores",
+          "title": "Redução de Emissão de Poluentes por Veículos Automotores",
           "term_sets": [
             [["lei federal", "lei"], ["8.723", "8723"], ["28 de outubro de 1993", "1993", "93"]]
           ]
         },
         {
-          "natural_language": "comercialização de amianto",
+          "title": "Comercialização de Amianto",
           "term_sets": [
             [["lei federal", "lei"], ["9.055", "9055"], ["01 de junho de 1995", "1995", "95"]]
           ]
         },
         {
-          "natural_language": "política nacional sobre mudança do clima",
+          "title": "Política Nacional sobre Mudança do Clima",
           "term_sets": [
             [["lei federal", "lei"], ["12.187", "12187"], ["29 de dezembro de 2009", "2009", "09"]],
             [["política nacional sobre mudança do clima", "pnmc"]]

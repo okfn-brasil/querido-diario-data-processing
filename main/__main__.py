@@ -51,10 +51,8 @@ def execute_pipeline():
         themed_excerpt_ids = extract_themed_excerpts_from_gazettes(
             theme, indexed_gazette_ids, index
         )
-        embedding_reranked_excerpts_ids = embedding_rerank_excerpts(
-            theme, themed_excerpt_ids, index
-        )
-        tag_entities_in_excerpts(theme, embedding_reranked_excerpts_ids, index)
+        embedding_rerank_excerpts(theme, themed_excerpt_ids, index)
+        tag_entities_in_excerpts(theme, themed_excerpt_ids, index)
         tfidf_rerank_excerpts(theme, index)
 
 

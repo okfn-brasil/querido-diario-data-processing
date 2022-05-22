@@ -4,7 +4,12 @@ import os
 from pathlib import Path
 from typing import Dict, Iterable, List
 
-from .interfaces import DatabaseInterface, IndexInterface, StorageInterface, TextExtractorInterface
+from .interfaces import (
+    DatabaseInterface,
+    IndexInterface,
+    StorageInterface,
+    TextExtractorInterface,
+)
 
 
 def extract_text_from_gazettes(
@@ -194,4 +199,3 @@ def set_gazette_as_processed(gazette: Dict, database: DatabaseInterface) -> None
     data = {"id": id, "file_checksum": checksum}
     logging.debug(f"Marking {id}({checksum}) as processed")
     database.update(command, data)
-

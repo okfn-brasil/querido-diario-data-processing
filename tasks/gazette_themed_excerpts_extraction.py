@@ -1,8 +1,8 @@
 import hashlib
-import logging
 from typing import Dict, Iterable, List
 
 from .interfaces import IndexInterface
+from .utils import clean_extra_whitespaces, get_documents_from_query_with_highlights
 
 
 def extract_themed_excerpts_from_gazettes(
@@ -37,71 +37,85 @@ def create_index(theme: Dict, index: IndexInterface) -> None:
                     "type": "rank_feature",
                 },
                 "excerpt_subthemes": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword",
+                },
+                "excerpt_entities": {
+                    "type": "keyword",
                 },
                 "excerpt": {
                     "type": "text",
+                    "analyzer": "portuguese",
                     "index_options": "offsets",
                     "term_vector": "with_positions_offsets",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "fields": {
+                        "portuguese_without_stopwords_removal": {
+                            "type": "text",
+                            "analyzer": "portuguese_without_stopwords_removal",
+                            "index_options": "offsets",
+                            "term_vector": "with_positions_offsets",
+                        }
+                    },
                 },
                 "excerpt_id": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword",
                 },
                 "source_database_id": {"type": "long"},
                 "source_index_id": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword",
                 },
                 "source_created_at": {"type": "date"},
                 "source_date": {"type": "date"},
                 "source_edition_number": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword",
                 },
                 "source_file_checksum": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword",
                 },
                 "source_file_path": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword",
                 },
                 "source_file_raw_txt": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword",
                 },
                 "source_file_url": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword",
                 },
                 "source_is_extra_edition": {"type": "boolean"},
                 "source_power": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword",
                 },
                 "source_processed": {"type": "boolean"},
                 "source_scraped_at": {"type": "date"},
                 "source_state_code": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword",
                 },
                 "source_territory_id": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword",
                 },
                 "source_territory_name": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword",
                 },
                 "source_url": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword",
                 },
             }
-        }
+        },
+        "settings": {
+            "analysis": {
+                "filter": {
+                    "portuguese_stemmer": {
+                        "type": "stemmer",
+                        "language": "light_portuguese",
+                    }
+                },
+                "analyzer": {
+                    "portuguese_without_stopwords_removal": {
+                        "tokenizer": "standard",
+                        "filter": ["lowercase", "portuguese_stemmer"],
+                    }
+                },
+            }
+        },
     }
     index.create_index(index_name=theme["index"], body=body)
 
@@ -110,34 +124,33 @@ def get_excerpts_from_gazettes_with_themed_query(
     query: Dict, gazette_ids: List[str], index: IndexInterface
 ) -> Iterable[Dict]:
     es_query = get_es_query_from_themed_query(query, gazette_ids)
-    for result in index.paginated_search(es_query):
-        hits = [hit for hit in result["hits"]["hits"] if hit.get("highlight")]
-        for hit in hits:
-            gazette = hit["_source"]
-            excerpts = hit["highlight"]["source_text"]
-            for excerpt in excerpts:
-                yield {
-                    "excerpt": excerpt,
-                    "excerpt_subthemes": [query["natural_language"]],
-                    "excerpt_id": generate_excerpt_id(excerpt, gazette),
-                    "source_index_id": gazette["file_checksum"],
-                    "source_created_at": gazette["created_at"],
-                    "source_database_id": gazette["id"],
-                    "source_date": gazette["date"],
-                    "source_edition_number": gazette["date"],
-                    "source_file_raw_txt": gazette["file_raw_txt"],
-                    "source_is_extra_edition": gazette["is_extra_edition"],
-                    "source_file_checksum": gazette["file_checksum"],
-                    "source_file_path": gazette["file_path"],
-                    "source_file_url": gazette["file_url"],
-                    "source_power": gazette["power"],
-                    "source_processed": gazette["processed"],
-                    "source_scraped_at": gazette["scraped_at"],
-                    "source_state_code": gazette["state_code"],
-                    "source_territory_id": gazette["territory_id"],
-                    "source_territory_name": gazette["territory_name"],
-                    "source_url": gazette["url"],
-                }
+    documents = get_documents_from_query_with_highlights(es_query, index)
+    for document in documents:
+        gazette = document["_source"]
+        excerpts = document["highlight"]["source_text"]
+        for excerpt in excerpts:
+            yield {
+                "excerpt": preprocess_excerpt(excerpt),
+                "excerpt_subthemes": [query["title"]],
+                "excerpt_id": generate_excerpt_id(excerpt, gazette),
+                "source_index_id": gazette["file_checksum"],
+                "source_created_at": gazette["created_at"],
+                "source_database_id": gazette["id"],
+                "source_date": gazette["date"],
+                "source_edition_number": gazette["date"],
+                "source_file_raw_txt": gazette["file_raw_txt"],
+                "source_is_extra_edition": gazette["is_extra_edition"],
+                "source_file_checksum": gazette["file_checksum"],
+                "source_file_path": gazette["file_path"],
+                "source_file_url": gazette["file_url"],
+                "source_power": gazette["power"],
+                "source_processed": gazette["processed"],
+                "source_scraped_at": gazette["scraped_at"],
+                "source_state_code": gazette["state_code"],
+                "source_territory_id": gazette["territory_id"],
+                "source_territory_name": gazette["territory_name"],
+                "source_url": gazette["url"],
+            }
 
 
 def generate_excerpt_id(excerpt: str, gazette: Dict) -> str:
@@ -157,6 +170,7 @@ def get_es_query_from_themed_query(
             "fields": {
                 "source_text": {
                     "type": "unified",
+                    "boundary_scanner_locale": "pt-BR",
                     "fragment_size": 2000,
                     "number_of_fragments": 10000,
                     "pre_tags": [""],
@@ -184,3 +198,7 @@ def get_es_query_from_themed_query(
 
     es_query["query"]["bool"]["must"].append(macro_synonym_block)
     return es_query
+
+
+def preprocess_excerpt(excerpt: str) -> str:
+    return clean_extra_whitespaces(excerpt)
