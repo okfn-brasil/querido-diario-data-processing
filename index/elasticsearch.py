@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Union
 import os
 
 import elasticsearch
@@ -7,7 +7,7 @@ from tasks import IndexInterface
 
 
 class ElasticSearchInterface(IndexInterface):
-    def __init__(self, hosts: List, timeout: str = "30s", default_index: str = None):
+    def __init__(self, hosts: List, timeout: str = "30s", default_index: str = ""):
         self._es = elasticsearch.Elasticsearch(hosts=hosts)
         self._timeout = timeout
         self._default_index = default_index
@@ -21,11 +21,11 @@ class ElasticSearchInterface(IndexInterface):
     def get_index_name(self, index_name: str) -> str:
         if self.is_valid_index_name(index_name):
             return index_name
-        if self._default_index is None:
+        if self._default_index == "":
             raise Exception("Index name not defined")
         return self._default_index
 
-    def create_index(self, index_name: str = None, body: Dict = {}) -> None:
+    def create_index(self, index_name: str = "", body: Dict = {}) -> None:
         index_name = self.get_index_name(index_name)
         if self.index_exists(index_name):
             return
@@ -35,7 +35,7 @@ class ElasticSearchInterface(IndexInterface):
             timeout=self._timeout,
         )
 
-    def refresh_index(self, index_name: str = None) -> None:
+    def refresh_index(self, index_name: str = "") -> None:
         index_name = self.get_index_name(index_name)
         if self.index_exists(index_name):
             return
@@ -46,25 +46,25 @@ class ElasticSearchInterface(IndexInterface):
     def index_document(
         self,
         document: Dict,
-        document_id: str = None,
-        index: str = None,
+        document_id: Union[str, None] = None,
+        index: str = "",
         refresh: bool = False,
     ) -> None:
         index = self.get_index_name(index)
-        result = self._es.index(
-            index=index, body=document, id=document_id, refresh=refresh
-        )
+        self._es.index(index=index, body=document, id=document_id, refresh=refresh)
 
-    def search(self, query: Dict, index: str = None) -> Dict:
+    def search(self, query: Dict, index: str = "") -> Dict:
         index = self.get_index_name(index)
         result = self._es.search(index=index, body=query, request_timeout=60)
         return result
 
     def paginated_search(
-        self, query: Dict, index: str = None, keep_alive: str = "5m"
+        self, query: Dict, index: str = "", keep_alive: str = "5m"
     ) -> Iterable[Dict]:
         index = self.get_index_name(index)
-        result = self._es.search(index=index, body=query, scroll=keep_alive, request_timeout=60)
+        result = self._es.search(
+            index=index, body=query, scroll=keep_alive, request_timeout=120
+        )
 
         if len(result["hits"]["hits"]) == 0:
             return
@@ -72,7 +72,9 @@ class ElasticSearchInterface(IndexInterface):
         while len(result["hits"]["hits"]) > 0:
             yield result
             scroll_id = result["_scroll_id"]
-            result = self._es.scroll(scroll_id=scroll_id, scroll=keep_alive, request_timeout=60)
+            result = self._es.scroll(
+                scroll_id=scroll_id, scroll=keep_alive, request_timeout=120
+            )
 
         self._es.clear_scroll(scroll_id=scroll_id)
 
