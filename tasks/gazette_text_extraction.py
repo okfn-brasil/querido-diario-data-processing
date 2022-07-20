@@ -69,49 +69,71 @@ def create_index(index: IndexInterface) -> None:
                 "date": {"type": "date"},
                 "edition_number": {
                     "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}}
                 },
                 "file_checksum": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword"
                 },
                 "file_path": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword"
                 },
                 "file_url": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword"
                 },
-                "id": {"type": "long"},
+                "id": {"type": "keyword"},
                 "is_extra_edition": {"type": "boolean"},
                 "power": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword"
                 },
                 "processed": {"type": "boolean"},
                 "scraped_at": {"type": "date"},
                 "source_text": {
                     "type": "text",
+                    "analyzer": "portuguese",
                     "index_options": "offsets",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "term_vector": "with_positions_offsets",
+                    "fields": {
+                        "exact": {
+                            "type": "text",
+                            "analyzer": "portuguese_exact",
+                            "index_options": "offsets",
+                            "term_vector": "with_positions_offsets"
+                        }
+                    }
                 },
                 "state_code": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword"
                 },
                 "territory_id": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword"
                 },
                 "territory_name": {
                     "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}}
                 },
                 "url": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    "type": "keyword"
+                }
+            }
+        },
+        "settings": {
+            "analysis": {
+                "filter": {
+                    "portuguese_stemmer": {
+                        "type": "stemmer",
+                        "language": "light_portuguese"
+                    }
                 },
+                "analyzer": {
+                    "portuguese_without_stopwords_removal": {
+                        "tokenizer": "standard",
+                        "filter": ["lowercase", "portuguese_stemmer"]
+                    },
+                    "portuguese_exact": {
+                        "tokenizer": "standard",
+                        "filter": ["lowercase"]
+                    }
+                }
             }
         }
     }

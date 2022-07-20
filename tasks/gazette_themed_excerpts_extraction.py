@@ -30,18 +30,10 @@ def create_index(theme: Dict, index: IndexInterface) -> None:
     body = {
         "mappings": {
             "properties": {
-                "excerpt_embedding_score": {
-                    "type": "rank_feature",
-                },
-                "excerpt_tfidf_score": {
-                    "type": "rank_feature",
-                },
-                "excerpt_subthemes": {
-                    "type": "keyword",
-                },
-                "excerpt_entities": {
-                    "type": "keyword",
-                },
+                "excerpt_embedding_score": {"type": "rank_feature"},
+                "excerpt_tfidf_score": {"type": "rank_feature"},
+                "excerpt_subthemes": {"type": "keyword"},
+                "excerpt_entities": {"type": "keyword"},
                 "excerpt": {
                     "type": "text",
                     "analyzer": "portuguese",
@@ -53,51 +45,33 @@ def create_index(theme: Dict, index: IndexInterface) -> None:
                             "analyzer": "portuguese_without_stopwords_removal",
                             "index_options": "offsets",
                             "term_vector": "with_positions_offsets",
-                        }
+                        },
+                        "exact": {
+                            "type": "text",
+                            "analyzer": "portuguese_exact",
+                            "index_options": "offsets",
+                            "term_vector": "with_positions_offsets",
+                        },
                     },
                 },
-                "excerpt_id": {
-                    "type": "keyword",
-                },
+                "excerpt_id": {"type": "keyword"},
                 "source_database_id": {"type": "long"},
-                "source_index_id": {
-                    "type": "keyword",
-                },
+                "source_index_id": {"type": "keyword"},
                 "source_created_at": {"type": "date"},
                 "source_date": {"type": "date"},
-                "source_edition_number": {
-                    "type": "keyword",
-                },
-                "source_file_checksum": {
-                    "type": "keyword",
-                },
-                "source_file_path": {
-                    "type": "keyword",
-                },
-                "source_file_raw_txt": {
-                    "type": "keyword",
-                },
-                "source_file_url": {
-                    "type": "keyword",
-                },
+                "source_edition_number": {"type": "keyword"},
+                "source_file_checksum": {"type": "keyword"},
+                "source_file_path": {"type": "keyword"},
+                "source_file_raw_txt": {"type": "keyword"},
+                "source_file_url": {"type": "keyword"},
                 "source_is_extra_edition": {"type": "boolean"},
-                "source_power": {
-                    "type": "keyword",
-                },
+                "source_power": {"type": "keyword"},
                 "source_processed": {"type": "boolean"},
                 "source_scraped_at": {"type": "date"},
-                "source_state_code": {
-                    "type": "keyword",
-                },
-                "source_territory_id": {
-                    "type": "keyword",
-                },
-                "source_territory_name": {
-                    "type": "keyword",
-                },
-                "source_url": {
-                    "type": "keyword",
-                },
+                "source_state_code": {"type": "keyword"},
+                "source_territory_id": {"type": "keyword"},
+                "source_territory_name": {"type": "keyword"},
+                "source_url": {"type": "keyword"},
             }
         },
         "settings": {
@@ -112,7 +86,11 @@ def create_index(theme: Dict, index: IndexInterface) -> None:
                     "portuguese_without_stopwords_removal": {
                         "tokenizer": "standard",
                         "filter": ["lowercase", "portuguese_stemmer"],
-                    }
+                    },
+                    "portuguese_exact": {
+                        "tokenizer": "standard",
+                        "filter": ["lowercase"],
+                    },
                 },
             }
         },
@@ -137,7 +115,7 @@ def get_excerpts_from_gazettes_with_themed_query(
                 "source_created_at": gazette["created_at"],
                 "source_database_id": gazette["id"],
                 "source_date": gazette["date"],
-                "source_edition_number": gazette["date"],
+                "source_edition_number": gazette["edition_number"],
                 "source_file_raw_txt": gazette["file_raw_txt"],
                 "source_is_extra_edition": gazette["is_extra_edition"],
                 "source_file_checksum": gazette["file_checksum"],
