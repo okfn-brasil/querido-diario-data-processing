@@ -16,6 +16,38 @@ def get_gazettes_to_be_processed(
     else:
         raise Exception(f'Execution mode "{execution_mode}" is invalid.')
 
+""" Método genérico que busca os diários na tabela, sem filtros como condições """
+def get_gazettes_from_territory(
+    database: DatabaseInterface,
+) -> Iterable[Dict]:
+    """
+    List the gazettes which were extracted since yesterday
+    """
+    logging.info("Listing gazettes")
+
+    command = """
+    SELECT
+        gazettes.id,
+        gazettes.source_text,
+        gazettes.date,
+        gazettes.edition_number,
+        gazettes.is_extra_edition,
+        gazettes.power,
+        gazettes.file_checksum,
+        gazettes.file_path,
+        gazettes.file_url,
+        gazettes.scraped_at,
+        gazettes.created_at,
+        gazettes.territory_id,
+        gazettes.processed,
+        territories.name as territory_name,
+        territories.state_code
+    FROM
+        gazettes
+    INNER JOIN territories ON territories.id = gazettes.territory_id
+    ;"""
+    for gazette in database.select(command):
+        yield format_gazette_data(gazette)
 
 def get_gazettes_extracted_since_yesterday(
     database: DatabaseInterface,
@@ -122,7 +154,7 @@ def get_unprocessed_gazettes(
     for gazette in database.select(command):
         yield format_gazette_data(gazette)
 
-
+""" A partir de uma lista com os conteúdos dos campos(colunas na tabela) do registro, gera um objeto tipo dicionário com os nomes dos campos como chave e o valor recebe o conteúdo para o campo """
 def format_gazette_data(data):
     return {
         "id": data[0],

@@ -14,6 +14,7 @@ from tasks import (
     tag_entities_in_excerpts,
     tfidf_rerank_excerpts,
 )
+from tasks.gazette_themed_excerpts_extraction import get_excerpts_from_gazettes_test
 
 
 def is_debug_enabled():
@@ -44,11 +45,17 @@ def execute_pipeline():
     themes = get_themes()
 
     gazettes_to_be_processed = get_gazettes_to_be_processed(execution_mode, database)
+    logging.debug("gazettes_to_be_processed:")
+    logging.debug(gazettes_to_be_processed)
+
     indexed_gazette_ids = extract_text_from_gazettes(
         gazettes_to_be_processed, database, storage, index, text_extractor
     )
+    #logging.debug("indexed_gazette_ids:")
+    #logging.debug(indexed_gazette_ids)
+
     for theme in themes:
-        if theme['index'] != 'educacao':
+        if theme['index'] != 'educação':
             continue
         themed_excerpt_ids = extract_themed_excerpts_from_gazettes(
             theme, indexed_gazette_ids, index
@@ -56,7 +63,10 @@ def execute_pipeline():
         #embedding_rerank_excerpts(theme, themed_excerpt_ids, index)
         #tag_entities_in_excerpts(theme, themed_excerpt_ids, index)
         #tfidf_rerank_excerpts(theme, index)
-
-
+    """
+        ids = get_excerpts_from_gazettes_test()
+        logging.debug("→→→ IDs:")
+        logging.debug(ids)
+    """
 if __name__ == "__main__":
     execute_pipeline()

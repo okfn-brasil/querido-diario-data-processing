@@ -146,7 +146,7 @@ def upload_gazette_raw_text(gazette: Dict, storage):
     """
     file_raw_txt = Path(gazette["file_path"]).with_suffix(".txt").as_posix()
     storage.upload_content(file_raw_txt, gazette["source_text"])
-    logging.debug(f"file_raw_txt uploaded {file_raw_txt}")
+    # logging.debug(f"file_raw_txt uploaded {file_raw_txt}")
     file_endpoint = get_file_endpoint()
     gazette["file_raw_txt"] = f"{file_endpoint}/{file_raw_txt}"
 
