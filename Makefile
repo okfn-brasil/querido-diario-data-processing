@@ -1,4 +1,4 @@
-IMAGE_NAMESPACE ?= serenata
+IMAGE_NAMESPACE ?= okfn-brasil
 IMAGE_NAME ?= querido-diario-data-processing
 IMAGE_TAG ?= latest
 APACHE_TIKA_IMAGE_NAME ?=  querido-diario-apache-tika-server
