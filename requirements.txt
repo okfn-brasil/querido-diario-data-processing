@@ -10,3 +10,4 @@ nltk==3.7
 scikit-learn==1.0.2 
 spacy==3.3.0
 sentence-transformers==2.2.0
+huggingface-hub==0.10.1  # fix: https://github.com/UKPLab/sentence-transformers/issues/1762
