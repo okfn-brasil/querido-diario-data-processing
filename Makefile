@@ -58,6 +58,7 @@ black:
 .PHONY: build-devel
 build-devel:
 	podman build --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
+		--build-arg GAZETTE_UID=$(UID) \
 		-f scripts/Dockerfile $(PWD)
 
 .PHONY: build-tika-server

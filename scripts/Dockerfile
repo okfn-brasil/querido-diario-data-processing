@@ -1,6 +1,7 @@
 FROM docker.io/python:3.8
 
-RUN adduser --system gazette && \
+ARG GAZETTE_UID
+RUN adduser --system --uid $GAZETTE_UID gazette && \
 	apt-get update -y && \
   curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash && \
 	apt-get -y install git-lfs wait-for-it && \
