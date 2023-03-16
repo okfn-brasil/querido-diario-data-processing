@@ -36,19 +36,19 @@ def create_index(theme: Dict, index: IndexInterface) -> None:
                 "excerpt_entities": {"type": "keyword"},
                 "excerpt": {
                     "type": "text",
-                    "analyzer": "portuguese",
+                    "analyzer": "brazilian",
                     "index_options": "offsets",
                     "term_vector": "with_positions_offsets",
                     "fields": {
-                        "portuguese_without_stopwords_removal": {
+                        "with_stopwords": {
                             "type": "text",
-                            "analyzer": "portuguese_without_stopwords_removal",
+                            "analyzer": "brazilian_with_stopwords",
                             "index_options": "offsets",
                             "term_vector": "with_positions_offsets",
                         },
                         "exact": {
                             "type": "text",
-                            "analyzer": "portuguese_exact",
+                            "analyzer": "exact",
                             "index_options": "offsets",
                             "term_vector": "with_positions_offsets",
                         },
@@ -75,19 +75,23 @@ def create_index(theme: Dict, index: IndexInterface) -> None:
             }
         },
         "settings": {
+            "index": {
+              "sort.field": ["source_territory_id", "source_date"],
+              "sort.order": ["asc", "desc"]
+            },
             "analysis": {
                 "filter": {
-                    "portuguese_stemmer": {
+                    "brazilian_stemmer": {
                         "type": "stemmer",
-                        "language": "light_portuguese",
+                        "language": "brazilian",
                     }
                 },
                 "analyzer": {
-                    "portuguese_without_stopwords_removal": {
+                    "brazilian_with_stopwords": {
                         "tokenizer": "standard",
-                        "filter": ["lowercase", "portuguese_stemmer"],
+                        "filter": ["lowercase", "brazilian_stemmer"],
                     },
-                    "portuguese_exact": {
+                    "exact": {
                         "tokenizer": "standard",
                         "filter": ["lowercase"],
                     },
@@ -101,11 +105,11 @@ def create_index(theme: Dict, index: IndexInterface) -> None:
 def get_excerpts_from_gazettes_with_themed_query(
     query: Dict, gazette_ids: List[str], index: IndexInterface
 ) -> Iterable[Dict]:
-    es_query = get_es_query_from_themed_query(query, gazette_ids)
+    es_query = get_es_query_from_themed_query(query, gazette_ids, index)
     documents = get_documents_from_query_with_highlights(es_query, index)
     for document in documents:
         gazette = document["_source"]
-        excerpts = document["highlight"]["source_text"]
+        excerpts = document["highlight"]["source_text.with_stopwords"]
         for excerpt in excerpts:
             yield {
                 "excerpt": preprocess_excerpt(excerpt),
@@ -140,17 +144,17 @@ def generate_excerpt_id(excerpt: str, gazette: Dict) -> str:
 def get_es_query_from_themed_query(
     query: Dict,
     gazette_ids: List[str],
+    index: IndexInterface,
 ) -> Dict:
     es_query = {
         "query": {"bool": {"must": [], "filter": {"ids": {"values": gazette_ids}}}},
         "size": 100,
         "highlight": {
             "fields": {
-                "source_text": {
+                "source_text.with_stopwords": {
                     "type": "unified",
-                    "boundary_scanner_locale": "pt-BR",
                     "fragment_size": 2000,
-                    "number_of_fragments": 10000,
+                    "number_of_fragments": 10,
                     "pre_tags": [""],
                     "post_tags": [""],
                 }
@@ -167,8 +171,9 @@ def get_es_query_from_themed_query(
                 phrase_block = {
                     "span_near": {"clauses": [], "slop": 0, "in_order": True}
                 }
-                for word in term.split():
-                    word_block = {"span_term": {"source_text": word}}
+                tokenized_term = index.analyze(text=term, field="source_text.with_stopwords")
+                for token in tokenized_term["tokens"]:
+                    word_block = {"span_term": {"source_text.with_stopwords": token["token"]}}
                     phrase_block["span_near"]["clauses"].append(word_block)
                 synonym_block["span_or"]["clauses"].append(phrase_block)
             proximity_block["span_near"]["clauses"].append(synonym_block)

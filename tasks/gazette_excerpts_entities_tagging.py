@@ -25,7 +25,7 @@ def tag_theme_cases(theme: Dict, excerpt_ids: List[str], index: IndexInterface) 
         for document in documents:
             excerpt = document["_source"]
             highlight = document["highlight"][
-                "excerpt.portuguese_without_stopwords_removal"
+                "excerpt.with_stopwords"
             ][0]
             excerpt.update(
                 {
@@ -52,8 +52,9 @@ def get_es_query_from_entity_case(
         "size": 100,
         "highlight": {
             "fields": {
-                "excerpt.portuguese_without_stopwords_removal": {  # Allows tagging phrases containing stopwords correctly
+                "excerpt.with_stopwords": {  # Allows tagging phrases containing stopwords correctly
                     "type": "fvh",  # Only highlighter to tag phrases correctly and not the tokens individually
+                    "matched_fields": ["excerpt", "excerpt.with_stopwords"],
                     "fragment_size": 10000,
                     "number_of_fragments": 1,
                     "pre_tags": [f"<{case['category']}>"],
@@ -64,7 +65,7 @@ def get_es_query_from_entity_case(
     }
     for value in case["values"]:
         es_query["query"]["bool"]["should"].append(
-            {"match_phrase": {"excerpt.portuguese_without_stopwords_removal": value}}
+            {"match_phrase": {"excerpt.with_stopwords": value}}
         )
 
     return es_query

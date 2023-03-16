@@ -58,6 +58,11 @@ class ElasticSearchInterface(IndexInterface):
         result = self._es.search(index=index, body=query, request_timeout=60)
         return result
 
+    def analyze(self, text: str, field: str, index: str = "") -> Dict:
+        index = self.get_index_name(index)
+        result = self._es.indices.analyze(body={"text": text, "field":field}, index=index)
+        return result
+
     def paginated_search(
         self, query: Dict, index: str = "", keep_alive: str = "5m"
     ) -> Iterable[Dict]:

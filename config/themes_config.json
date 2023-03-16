@@ -176,8 +176,7 @@
           {"category": "entidadeeducacao", "title": "Unidade de Ensino", "values": ["unidade de ensino"]},
           {"category": "entidadeeducacao", "title": "FNDE", "values": ["fundo nacional de desenvolvimento da educação", "fnde"]},
           {"category": "entidadeeducacao", "title": "PDDE", "values": ["programa dinheiro direto na escola", "pdde"]},
-          {"category": "entidadeeducacao", "title": "FUNDEB", "values": ["fundo de manutenção e desenvolvimento da educação básica e de valorização dos profissionais da educação", "fundeb"]},
-          {"category": "entidadeeducacao", "title": "SIGEduc", "values": ["sistema integrado de gestão na educação", "sigeduc"]}
+          {"category": "entidadeeducacao", "title": "FUNDEB", "values": ["fundo de manutenção e desenvolvimento da educação básica e de valorização dos profissionais da educação", "fundeb"]}
         ]
       },
       "queries": [

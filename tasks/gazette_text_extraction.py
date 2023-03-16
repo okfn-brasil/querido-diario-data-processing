@@ -81,13 +81,19 @@ def create_index(index: IndexInterface) -> None:
                 "scraped_at": {"type": "date"},
                 "source_text": {
                     "type": "text",
-                    "analyzer": "portuguese",
+                    "analyzer": "brazilian",
                     "index_options": "offsets",
                     "term_vector": "with_positions_offsets",
                     "fields": {
+                        "with_stopwords": {
+                            "type": "text",
+                            "analyzer": "brazilian_with_stopwords",
+                            "index_options": "offsets",
+                            "term_vector": "with_positions_offsets",
+                        },
                         "exact": {
                             "type": "text",
-                            "analyzer": "portuguese_exact",
+                            "analyzer": "exact",
                             "index_options": "offsets",
                             "term_vector": "with_positions_offsets",
                         }
@@ -103,19 +109,23 @@ def create_index(index: IndexInterface) -> None:
             }
         },
         "settings": {
+            "index": {
+              "sort.field": ["territory_id", "date"],
+              "sort.order": ["asc", "desc"]
+            },
             "analysis": {
                 "filter": {
-                    "portuguese_stemmer": {
+                    "brazilian_stemmer": {
                         "type": "stemmer",
-                        "language": "light_portuguese",
+                        "language": "brazilian",
                     }
                 },
                 "analyzer": {
-                    "portuguese_without_stopwords_removal": {
+                    "brazilian_with_stopwords": {
                         "tokenizer": "standard",
-                        "filter": ["lowercase", "portuguese_stemmer"],
+                        "filter": ["lowercase", "brazilian_stemmer"],
                     },
-                    "portuguese_exact": {
+                    "exact": {
                         "tokenizer": "standard",
                         "filter": ["lowercase"],
                     },
