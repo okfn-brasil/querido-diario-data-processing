@@ -13,7 +13,7 @@ Find out more about [technologies](https://queridodiario.ok.org.br/tecnologia) a
 - [How to contribute](#how-to-contribute)
 - [Support](#support)
 - [Thanks](#thanks)
-- [Open Knowledge Brasil](#open-knowledge-brasil)
+- [Open Knowledge Brazil](#open-knowledge-brasil)
 - [License](#license)
 
 # How to contribute
@@ -34,7 +34,7 @@ This project is maintained by Open Knowledge Brazil and made possible thanks to 
 
 Meet [who supports Querido Diário](https://queridodiario.ok.org.br/apoie#quem-apoia).
 
-# Open Knowledge Brasil
+# Open Knowledge Brazil
 <p>
   <a href="https://twitter.com/okfnbr" target="_blank">
     <img alt="Twitter Follow" src="https://img.shields.io/badge/Twitter-_-blue?style=for-the-badge&logo=twitter">
@@ -47,7 +47,7 @@ Meet [who supports Querido Diário](https://queridodiario.ok.org.br/apoie#quem-a
   </a>
 </p>
 
-[Open Knowledge Brasil](https://ok.org.br/) is a non-profit civil society organization whose mission is to use and develop civic tools, projects, public policy analysis and data journalism to promote free knowledge in the various fields of society.
+[Open Knowledge Brazil](https://ok.org.br/) is a non-profit civil society organization whose mission is to use and develop civic tools, projects, public policy analysis and data journalism to promote free knowledge in the various fields of society.
 
 All work produced by OKBR is openly and freely available.
 
