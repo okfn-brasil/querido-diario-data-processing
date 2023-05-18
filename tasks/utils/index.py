@@ -3,11 +3,6 @@ from typing import Dict, Iterable, List
 from ..interfaces import IndexInterface
 
 
-def get_all_documents(index: IndexInterface, index_name: str = "") -> Iterable[Dict]:
-    query_match_all = {"query": {"match_all": {}}, "size": 100}
-    yield from get_documents_from_query(query_match_all, index, index_name)
-
-
 def get_documents_with_ids(
     ids: List[str], index: IndexInterface, index_name: str = ""
 ) -> Iterable[Dict]:

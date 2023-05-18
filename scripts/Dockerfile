@@ -16,6 +16,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 USER gazette
 
-RUN python -m spacy download pt_core_news_sm
-RUN python -m nltk.downloader stopwords
 RUN python -c "import sentence_transformers; sentence_transformers.SentenceTransformer('neuralmind/bert-base-portuguese-cased').save('"$HOME"/models/bert-base-portuguese-cased')"

@@ -31,7 +31,6 @@ def create_index(theme: Dict, index: IndexInterface) -> None:
         "mappings": {
             "properties": {
                 "excerpt_embedding_score": {"type": "rank_feature"},
-                "excerpt_tfidf_score": {"type": "rank_feature"},
                 "excerpt_subthemes": {"type": "keyword"},
                 "excerpt_entities": {"type": "keyword"},
                 "excerpt": {

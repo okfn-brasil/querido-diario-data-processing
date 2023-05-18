@@ -12,7 +12,6 @@ from tasks import (
     get_gazettes_to_be_processed,
     get_themes,
     tag_entities_in_excerpts,
-    tfidf_rerank_excerpts,
 )
 
 
@@ -53,7 +52,6 @@ def execute_pipeline():
         )
         embedding_rerank_excerpts(theme, themed_excerpt_ids, index)
         tag_entities_in_excerpts(theme, themed_excerpt_ids, index)
-        tfidf_rerank_excerpts(theme, index)
 
 
 if __name__ == "__main__":
