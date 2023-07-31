@@ -35,7 +35,7 @@ run-command=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 	--env POSTGRES_DB=$(POSTGRES_DB) \
 	--env POSTGRES_HOST=$(POSTGRES_HOST) \
 	--env POSTGRES_PORT=$(POSTGRES_PORT) \
-	--user=$(UID):$(UID) $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) $1)
+	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) $1)
 
 wait-for=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 	--pod $(POD_NAME) \
@@ -45,14 +45,13 @@ wait-for=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 	--env POSTGRES_DB=$(POSTGRES_DB) \
 	--env POSTGRES_HOST=$(POSTGRES_HOST) \
 	--env POSTGRES_PORT=$(POSTGRES_PORT) \
-	--user=$(UID):$(UID) \
 	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) wait-for-it --timeout=60 $1)
 
 .PHONY: black
 black:
 	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 		--env PYTHONPATH=/mnt/code \
-		--user=$(UID):$(UID) $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
+		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
 		black .
 
 .PHONY: build-devel
@@ -142,7 +141,7 @@ shell: set-run-variable-values
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
 		--env-file envvars \
-		--user=$(UID):$(UID) $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) bash
+		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) bash
 
 .PHONY: coverage
 coverage: prepare-test-env
@@ -198,7 +197,7 @@ else
 endif
 
 set-run-variable-values:
-	cp --no-clobber contrib/sample.env envvars
+	cp --no-clobber contrib/sample.env envvars || true
 	$(eval POD_NAME=run-$(POD_NAME))
 	$(eval DATABASE_CONTAINER_NAME=run-$(DATABASE_CONTAINER_NAME))
 	$(eval ELASTICSEARCH_CONTAINER_NAME=run-$(ELASTICSEARCH_CONTAINER_NAME))
@@ -218,7 +217,7 @@ re-run: set-run-variable-values
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
 		--env-file envvars \
-		--user=$(UID):$(UID) $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python main
+		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python main
 
 .PHONY: run
 run: setup re-run
@@ -229,7 +228,7 @@ shell-run: set-run-variable-values
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
 		--env-file envvars \
-		--user=$(UID):$(UID) $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) bash
+		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) bash
 
 .PHONY: shell-database
 shell-database: set-run-variable-values
