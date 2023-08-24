@@ -1,7 +1,7 @@
 {
   "themes": [
     {
-      "name": "Políticas Ambientais Nacionais",
+      "name": "Políticas Ambientais",
       "index": "ambiental",
       "stopwords": ["lei", "n°", "no."],
       "entities": {
