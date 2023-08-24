@@ -15,6 +15,11 @@ def extract_themed_excerpts_from_gazettes(
         for excerpt in get_excerpts_from_gazettes_with_themed_query(
             theme_query, gazette_ids, index
         ):
+            # excerpts with less than 10% of the expected size of excerpt account for 
+            # fewer than 1% of excerpts yet their score is usually high
+            if len(excerpt["excerpt"]) < 200:
+                continue
+
             index.index_document(
                 excerpt,
                 document_id=excerpt["excerpt_id"],
