@@ -37,6 +37,16 @@ run-command=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 	--env POSTGRES_PORT=$(POSTGRES_PORT) \
 	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) $1)
 
+wait-for=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
+	--pod $(POD_NAME) \
+	--env PYTHONPATH=/mnt/code \
+	--env POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
+	--env POSTGRES_USER=$(POSTGRES_USER) \
+	--env POSTGRES_DB=$(POSTGRES_DB) \
+	--env POSTGRES_HOST=$(POSTGRES_HOST) \
+	--env POSTGRES_PORT=$(POSTGRES_PORT) \
+	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) wait-for-it --timeout=60 $1)
+
 .PHONY: black
 black:
 	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
@@ -187,7 +197,7 @@ else
 endif
 
 set-run-variable-values:
-	copy /y contrib\sample.env envvars
+	cp --no-clobber contrib/sample.env envvars || true
 	$(eval POD_NAME=run-$(POD_NAME))
 	$(eval DATABASE_CONTAINER_NAME=run-$(DATABASE_CONTAINER_NAME))
 	$(eval ELASTICSEARCH_CONTAINER_NAME=run-$(ELASTICSEARCH_CONTAINER_NAME))
