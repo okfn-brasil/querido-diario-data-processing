@@ -1,10 +1,10 @@
-FROM docker.io/python:3.8
+FROM docker.io/python:3.10
 
 ENV USER gazette
 ENV USER_HOME /home/$USER
-ENV WORKDIR /mnt/code
+ENV WORKDIR /tasks
 
-RUN adduser --system $USER --home $USER_HOME && \
+RUN net user --system $USER --home $USER_HOME && \
 	apt-get update -y && \
   curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash && \
 	apt-get -y install git-lfs wait-for-it && \
