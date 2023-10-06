@@ -44,27 +44,23 @@ Abra 2 terminais (1 com o repositório do [querido-diario-data-processing]() e o
 
 #### Usando WSL
 
-Abra um novo terminal do Ubuntu e faça o clone do repositório forked do [querido-diario](). 
+Abra um novo terminal do Ubuntu e faça o clone do repositório forked do [querido-diario](https://github.com/okfn-brasil/querido-diario). Se tiver dúvidas, acesse o [tutorial de instalação do WSL no Windows](https://github.com/Luisa-Coelho/qd-data-processing/blob/readme_update/wsl_windows.md).
 
-Para fazer a conexão você precisará ter baixado e instalado tudo que for necessário no repositório [querido-diario]() em outro lugar na sua máquina WSL. Deixe as pastas próximas uma da outra para facilitar seu trabalho. Abra uma outra máquina Ubuntu para iniciar o repositório querido-diario.
+Para fazer a conexão você precisará ter baixado e instalado tudo que for necessário no repositório [querido-diario](https://github.com/okfn-brasil/querido-diario) em outro lugar na sua máquina WSL. Deixe as pastas próximas uma da outra para facilitar seu trabalho. Abra uma outra máquina Ubuntu para iniciar o repositório querido-diario.
 
 Caso haja um erro com cython_sources, assim como na imagem:
-
-![[Pasted image 20231005102449.png]]
+![image](https://github.com/Luisa-Coelho/qd-data-processing/assets/87907716/57afdb93-26cd-4ddc-be43-53cd4fd60365)
 
 Faça esse procedimento e instale os requirements-dev novamente:
-
 ~~~Linux
 pip3 install wheel -v
 pip3 install "cython<3.0.0" pyyaml==5.4.1 --no-build-isolation -v
 ~~~
 
 Caso haja um erro com legacy-install
-![[Pasted image 20231005104343.png]]
-![[Pasted image 20231005103545.png]]
+![image](https://github.com/Luisa-Coelho/qd-data-processing/assets/87907716/2040db6a-0d47-404f-aa98-2d2204a6ff4c)
 
 Então faça o upgrade do pip e instale algumas bibliotecas essenciais do Linux:
-
 ~~~Linux
 python3 -m pip install --upgrade pip
 sudo apt-get install build-essential libssl-dev libffi-dev python3-dev
@@ -74,10 +70,10 @@ sudo apt-get install build-essential libssl-dev libffi-dev python3-dev
 
 Lembre-se que para conectar o Banco de Dados é necessário vincular o terminal Windows com o Linux. Caso você não queira conectar é possível apenas fazer essas passos....
 
-Caso haja um erro com "pinned with == "  na hora de instalar os requerimentos, utilize o pip3 install e adicione um dos comandos abaixo:
+Caso haja um erro com "pinned with == "  na hora de instalar os requerimentos, utilize o pip3 install junto com o comando --no-deps, dessa forma:
 
 ~~~Linux
-pip install -r data_collection/requirements-dev.txt --no-deps
+pip3 install -r data_collection/requirements-dev.txt --no-deps
 ~~~ 
 
 Baixe o Visual Studio Comunidade [aqui](https://visualstudio.microsoft.com/pt-br/downloads/) . Seguindo os passos [aqui](https://github.com/okfn-brasil/querido-diario/blob/main/docs/CONTRIBUTING.md#em-linux), você deverá baixar o Visual Studio e baixar as configurações … 
