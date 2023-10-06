@@ -34,7 +34,10 @@ AWS_REGION_NAME = config("AWS_REGION_NAME", default="us-east-1")
 FILES_STORE_S3_ACL = config("FILES_STORE_S3_ACL", default="public-read")
 ~~~
 
-Abra 2 terminais (1 com o repositório do [querido-diario-data-processing]() e outro com o [querido-diario](), ambos forked). Realize o **make setup** no repositório de processamento de dados e faça a busca scrapy crawl no repositório do querido-diario. Após isso, é possível
+Abra 2 terminais (1 com o repositório do [querido-diario-data-processing]() e outro com o [querido-diario](), ambos forked). Realize o **make setup** no repositório de processamento de dados e faça a busca scrapy crawl no repositório do querido-diario. Após isso, é possível...
+
+Acesse os diários baixados através desse link: http://localhost:9000/minio/queridodiariobucket
+
 ## Configurando o ambiente do querido-diario
 
 ### Linux
