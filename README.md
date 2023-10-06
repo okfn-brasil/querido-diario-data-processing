@@ -1,42 +1,28 @@
-[Configurando os diferentes ambientes](https://github.com/Luisa-Coelho/qd-data-processing/blob/readme_update/configurando_ambientes.md) | [Conectando ao querido-diario](https://github.com/Luisa-Coelho/qd-data-processing/blob/readme_update/README.md) | [Tutorial geral](https://github.com/Luisa-Coelho/qd-data-processing/blob/readme_update/README.md)
+[Configurando os diferentes ambientes](https://github.com/Luisa-Coelho/qd-data-processing/blob/readme_update/configurando_ambientes.md) | [Conectando ao querido-diario](https://github.com/Luisa-Coelho/qd-data-processing/blob/readme_update/README.md) | [Tutorial geral](https://github.com/Luisa-Coelho/qd-data-processing/blob/readme_update/tutorial.md)
 
-# querido-diario-data-processing
+## O processamento de dados
 
-## Setup
+É responsável pelo [repositório](https://github.com/okfn-brasil/querido-diario-data-processing). O repositório [querido-diario-data-processing](https://github.com/okfn-brasil/querido-diario-data-processing) tem como objetivo gerar buscas mais assertivas para o usuário por meio do uso de técnicas de processamento de linguagem natural. O processo desse repositório pode ser referenciado a partir da imagem da Infraestrutura do Querido Diário na Figura abaixo.
+![image](https://github.com/Luisa-Coelho/qd-data-processing/assets/87907716/cd6b5589-f4e7-45a0-86a9-5cbb0bf14cb7)
 
-- [Install podman](https://podman.io/getting-started/installation)
-- execute build stage (only the first time):
-```console
-make build
-```
-- execute setup stage:
-```console
-make setup
-```
+As partes referentes à indexação e extração do texto são responsabilidade desse repositório em específico. Afinal, para ter os documentos em formato de texto (.txt) disponíveis na [plataforma](https://queridodiario.ok.org.br/) é necessário que seja feito um processamento desse conteúdo (os PDFs coletados previamente pelo repositório [querido-diario](https://github.com/okfn-brasil/querido-diario)).
 
-## Populate data
-Populate data [following this instructions](https://github.com/okfn-brasil/querido-diario#run-inside-a-container).
+Veja a estrutura completa do projeto [aqui](https://docs.queridodiario.ok.org.br/pt/latest/).
 
-- you can see created data inside [storage](http://localhost:9000/minio/queridodiariobucket) using [local credentials](contrib/sample.env#L3)
-- you can see gazettes not processed yet connecting on database
-- open database console in a new terminal
-```console
-make shell-database
-```
-- and run a query to see gazettes not processed
-```sql
-select processed, count(1) from gazettes g group by processed;
-```
+### Entendendo a estrutura do querido-diario-data-processing
 
-## Run
-- execute processing stage:
-```console
-make re-run
-```
-- and see gazettes processed running the query above
-- you can search using ElasticSearch
-```console
-curl 'http://localhost:9200/querido-diario/_search' \
-  -H 'Content-Type: application/json' \
-  --data-raw '{"query":{"query_string":{"query":"*"}},"size":2}'
-```
+1. Montando o ambiente de trabalho
+
+A pasta "scripts" são responsáveis pelo ambiente de trabalho.
+
+2. Extração do texto
+
+"data_extraction"
+
+3. Processamento do texto
+
+A pasta "tasks" 
+
+4. Armazenamento
+
+"database" e "storage"
