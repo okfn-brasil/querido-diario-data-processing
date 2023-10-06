@@ -1,3 +1,7 @@
+PT/BR [Tutorial geral](https://github.com/Luisa-Coelho/qd-data-processing/blob/readme_update/tutorial.md) | [Configurando os diferentes ambientes](https://github.com/Luisa-Coelho/qd-data-processing/blob/readme_update/configurando_ambientes.md) | [Conectando ao querido-diario](https://github.com/Luisa-Coelho/qd-data-processing/blob/readme_update/conectando_qd.md)
+
+EN/US
+
 ## Configurando as credenciais para a comunicação dos dois projetos
 
 Para configurar as credenciais é necessário mudar alguns parâmetros em **settings.py**. No repositório do [querido-diario]() na sua máquina vá até data_collection depois gazette e finalmente abra no seu editor de código o arquivo settings.py.
