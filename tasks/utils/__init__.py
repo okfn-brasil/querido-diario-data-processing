@@ -3,4 +3,7 @@ from .index import (
     get_documents_with_ids,
 )
 from .iter import batched
-from .text import clean_extra_whitespaces
+from .text import (
+    clean_extra_whitespaces,
+    get_checksum,
+)
