@@ -1,4 +1,4 @@
-PT/BR [Tutorial geral](https://github.com/Luisa-Coelho/qd-data-processing/blob/readme_update/tutorial.md) | [Configurando os diferentes ambientes](https://github.com/Luisa-Coelho/qd-data-processing/blob/readme_update/configurando_ambientes.md) | [Conectando ao querido-diario](https://github.com/Luisa-Coelho/qd-data-processing/blob/readme_update/conectando_qd.md)
+PT/BR [Tutorial geral](tutorial.md) | [Configurando os diferentes ambientes](configurando_ambientes.md) | [Conectando ao querido-diario](conectando_qd.md)
 
 EN/US
 
