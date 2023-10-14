@@ -4,43 +4,21 @@ EN/US
 
 ## Configurando as credenciais para a comunicação dos dois projetos
 
-Para configurar as credenciais é necessário mudar alguns parâmetros em **settings.py**. No repositório do [querido-diario]() na sua máquina vá até data_collection depois gazette e finalmente abra no seu editor de código o arquivo settings.py.
+Para configurar as credenciais é necessário vincular os dois projetos como um só. Para isso é necessário **criar um arquivo .env** na raíz do repositório [querido-diario]() e inserir parâmetros coincidentes com o processamento do repositório [queridod-diario-data-processing](). Depois de ter realizado o fork do querido-diario, abra este repositório na sua máquina e insira um arquivo .env com as seguintes informações.
 
-Mude os seguintes parâmetros:
-
-~~~Python
-###linha 21
-FILES_STORE = config("FILES_STORE", default="data")
-
-### Substitua por:
-FILES_STORE = config("FILES_STORE", default="s3://queridodiariobucket/")
-
-### linhas 44 a 46
-QUERIDODIARIO_DATABASE_URL = config(
-    "QUERIDODIARIO_DATABASE_URL", default="sqlite:///querido-diario.db"
-)
-
-### Substitua por:
-QUERIDODIARIO_DATABASE_URL = config( "QUERIDODIARIO_DATABASE_URL", default="postgresql://queridodiario:queridodiario@127.0.0.1:5432/queridodiariodb" )
-
-### linhas 52 a 56
-AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
-AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
-AWS_ENDPOINT_URL = config("AWS_ENDPOINT_URL", default="")
-AWS_REGION_NAME = config("AWS_REGION_NAME", default="")
-FILES_STORE_S3_ACL = config("FILES_STORE_S3_ACL", default="public-read")
-
-# Substitua por
-AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="minio-access-key")
-AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="minio-secret-key")
-AWS_ENDPOINT_URL = config("AWS_ENDPOINT_URL", default="http://localhost:9000/")
-AWS_REGION_NAME = config("AWS_REGION_NAME", default="us-east-1")
-FILES_STORE_S3_ACL = config("FILES_STORE_S3_ACL", default="public-read")
+~~~.env
+AWS_ACCESS_KEY_ID=minio-access-key
+AWS_SECRET_ACCESS_KEY=minio-secret-key
+AWS_ENDPOINT_URL=http://127.0.0.1:9000/
+AWS_REGION_NAME=us-east-1
+FILES_STORE=s3://queridodiariobucket/
+FILES_STORE_S3_ACL=public-read
+QUERIDODIARIO_DATABASE_URL=postgresql+psycopg2://queridodiario:queridodiario@127.0.0.1:5432/queridodiariodb
 ~~~
 
-Abra 2 terminais (1 com o repositório do [querido-diario-data-processing]() e outro com o [querido-diario](), ambos forked). Realize o **make setup** no repositório de processamento de dados e faça a busca scrapy crawl no repositório do querido-diario. Após isso, é possível...
+A variável .env já está como ignorada no projeto do querido-diario, portanto não é necessário mudar mais nada. Para executar a requisição abra 2 terminais (1 com o repositório do [querido-diario-data-processing]() e outro com o [querido-diario](), ambos forked). Realize o **make setup** no repositório de processamento de dados e faça a busca scrapy crawl no repositório do querido-diario. Após isso, é possível...
 
-Acesse os diários baixados através desse link: http://localhost:9000/minio/queridodiariobucket
+Acesse os diários baixados através desse link: **http://localhost:9000/minio/queridodiariobucket**
 
 ## Configurando o ambiente do querido-diario
 
