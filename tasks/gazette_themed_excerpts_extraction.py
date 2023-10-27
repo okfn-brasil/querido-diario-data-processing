@@ -2,7 +2,7 @@ import hashlib
 from typing import Dict, Iterable, List
 
 from .interfaces import IndexInterface
-from .utils import clean_extra_whitespaces, get_documents_from_query_with_highlights
+from .utils import batched, clean_extra_whitespaces, get_documents_from_query_with_highlights
 
 
 def extract_themed_excerpts_from_gazettes(
@@ -12,21 +12,22 @@ def extract_themed_excerpts_from_gazettes(
 
     ids = []
     for theme_query in theme["queries"]:
-        for excerpt in get_excerpts_from_gazettes_with_themed_query(
-            theme_query, gazette_ids, index
-        ):
-            # excerpts with less than 10% of the expected size of excerpt account for 
-            # fewer than 1% of excerpts yet their score is usually high
-            if len(excerpt["excerpt"]) < 200:
-                continue
+        for batch in batched(gazette_ids, 500):
+            for excerpt in get_excerpts_from_gazettes_with_themed_query(
+                theme_query, batch, index
+            ):
+                # excerpts with less than 10% of the expected size of excerpt account for 
+                # fewer than 1% of excerpts yet their score is usually high
+                if len(excerpt["excerpt"]) < 200:
+                    continue
 
-            index.index_document(
-                excerpt,
-                document_id=excerpt["excerpt_id"],
-                index=theme["index"],
-                refresh=True,
-            )
-            ids.append(excerpt["excerpt_id"])
+                index.index_document(
+                    excerpt,
+                    document_id=excerpt["excerpt_id"],
+                    index=theme["index"],
+                    refresh=True,
+                )
+                ids.append(excerpt["excerpt_id"])
 
     return ids
 
@@ -152,7 +153,7 @@ def get_es_query_from_themed_query(
 ) -> Dict:
     es_query = {
         "query": {"bool": {"must": [], "filter": {"ids": {"values": gazette_ids}}}},
-        "size": 100,
+        "size": 10,
         "highlight": {
             "fields": {
                 "source_text.with_stopwords": {
