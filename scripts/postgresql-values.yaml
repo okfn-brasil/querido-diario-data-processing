@@ -1,0 +1,8 @@
+global:
+  postgresql:
+    auth:
+      username: queridodiario
+      password: queridodiario
+      database: queridodiariodb
+
+

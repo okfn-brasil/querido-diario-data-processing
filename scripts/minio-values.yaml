@@ -1,0 +1,14 @@
+---
+resources:
+  requests:
+    memory: 1Gi
+provisioning:
+  enabled: true
+  users:
+    - username: querido-diario-user
+      password: querido-diario-secret
+      policies:
+        - readwrite
+  buckets:
+    - name: queridodiariobucket
+      region: us-east-1
