@@ -1,4 +1,4 @@
-name: Test pull request
+name: Teste pull request
 on: 
   pull_request:
     branches:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   everything:
-    name: Build, test and show code coverage
+    name: Build da imagem do container do pipeline
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
@@ -15,9 +15,4 @@ jobs:
 
       - name: Build container image
         run: |
-          make build
-
-      - name: Run tests and show code coverage
-        run: |
-          make coverage
-
+          make build-pipeline-image

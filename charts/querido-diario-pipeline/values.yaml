@@ -1,0 +1,39 @@
+
+textExtractionJob:
+  concurrencyPolicy: "Forbid" #no concurrency for now
+  failedJobsHistoryLimit: "30"
+  image: "ghcr.io/okfn-brasil/querido-diario-data-processing:latest"
+  imagePullPolicy: "IfNotPresent"
+  name: "text-extraction-job"
+  restartPolicy: "OnFailure"
+  schedule: "*/30 * * * *"
+  successfulJobsHistoryLimit: "3"
+
+storage:
+  region: us-east-1
+  endpoint: http://minio.minio.svc.cluster.local:9000
+  access_key:  querido-diario-user
+  access_secret: querido-diario-secret
+  bucket: queridodiariobucket
+  
+postgresql:
+  db: queridodiariodb
+  user: queridodiario
+  password: queridodiario
+  host: postgresql.postgresql.svc.cluster.local
+  port: 5432
+  database_restore_file: contrib/data/queridodiariodb.tar
+  
+elasticsearch:
+  host: http://querido-diario-elasticsearch-es-http.default.svc.cluster.local:9200
+  index: querido-diario
+  user: elastic
+  password: "cluster-pass"
+
+apache_tika:
+  server: http://tika.tika.svc.cluster.local:9998
+  
+debug: true
+querido_diario_files_endpoint: "http://google.com"
+# options: all, daily, unprocessed
+execution_mode: "UNPROCESSED"

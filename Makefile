@@ -1,257 +1,188 @@
-IMAGE_NAMESPACE ?= okfn-brasil
+IMAGE_NAMESPACE ?= ghcr.io/okfn-brasil
 IMAGE_NAME ?= querido-diario-data-processing
 IMAGE_TAG ?= latest
 APACHE_TIKA_IMAGE_NAME ?=  querido-diario-apache-tika-server
 APACHE_TIKA_IMAGE_TAG ?= latest
-POD_NAME ?= querido-diario-data-extraction
+CLUSTER_NAME ?= "querido-diario" 
+CLUSTER_NODES_COUNT ?= 3
+SCRIPT_DIR ?= $(PWD)/scripts
+BUCKET_NAME ?= queridodiariobucket 
+FILES_DIR ?= files
+DIARIOS_DIR ?= $(FILES_DIR)/diarios
+DATABASE_DUMP ?= $(FILES_DIR)/queridodiario_dump.sql
 
-# S3 mock
-STORAGE_BUCKET ?= queridodiariobucket
-STORAGE_IMAGE ?= docker.io/bitnami/minio:2021.4.6
-STORAGE_CONTAINER_NAME ?= queridodiario-storage
-STORAGE_ACCESS_KEY ?= minio-access-key
-STORAGE_ACCESS_SECRET ?= minio-secret-key
-STORAGE_PORT ?= 9000
-# Database info user to run the tests
-DATABASE_CONTAINER_NAME ?= queridodiario-db
-POSTGRES_PASSWORD ?= queridodiario
-POSTGRES_USER ?= $(POSTGRES_PASSWORD)
-POSTGRES_DB ?= queridodiariodb
-POSTGRES_HOST ?= localhost
-POSTGRES_PORT ?= 5432
-POSTGRES_IMAGE ?= docker.io/postgres:10
-DATABASE_RESTORE_FILE ?= contrib/data/queridodiariodb.tar
-# OpenSearch port info
-OPENSEARCH_PORT1 ?= 9200
-OPENSEARCH_PORT2 ?= 9300
-OPENSEARCH_CONTAINER_NAME ?= queridodiario-opensearch
-APACHE_TIKA_CONTAINER_NAME ?= queridodiario-apache-tika-server
+QUERIDO_DIARIO_CDN ?= https://querido-diario.nyc3.cdn.digitaloceanspaces.com/
 
-run-command=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
-	--pod $(POD_NAME) \
-	--env PYTHONPATH=/mnt/code \
-	--env POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
-	--env POSTGRES_USER=$(POSTGRES_USER) \
-	--env POSTGRES_DB=$(POSTGRES_DB) \
-	--env POSTGRES_HOST=$(POSTGRES_HOST) \
-	--env POSTGRES_PORT=$(POSTGRES_PORT) \
-	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) $1)
+helm=helm --kube-context $(CLUSTER_NAME) $(1)
+helm_install=$(helm) upgrade --install --create-namespace --devel --wait
+k8s=kubectl --context $(CLUSTER_NAME) $(1)
 
-wait-for=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
-	--pod $(POD_NAME) \
-	--env PYTHONPATH=/mnt/code \
-	--env POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
-	--env POSTGRES_USER=$(POSTGRES_USER) \
-	--env POSTGRES_DB=$(POSTGRES_DB) \
-	--env POSTGRES_HOST=$(POSTGRES_HOST) \
-	--env POSTGRES_PORT=$(POSTGRES_PORT) \
-	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) wait-for-it --timeout=60 $1)
-
-.PHONY: black
-black:
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
-		--env PYTHONPATH=/mnt/code \
-		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
-		black .
-
-.PHONY: build-devel
-build-devel:
+.PHONY: build-pipeline-image
+build-pipeline-image:
 	podman build --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
-		-f scripts/Dockerfile $(PWD)
+		--ignorefile .gitignore \
+        	-f scripts/Dockerfile $(PWD)
 
-.PHONY: build-tika-server
-build-tika-server:
-	podman build --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
-		-f scripts/Dockerfile_apache_tika $(PWD)
+$(FILES_DIR)/$(IMAGE_NAME)-$(IMAGE_TAG).tar:
+	podman save -o $(FILES_DIR)/$(IMAGE_NAME)-$(IMAGE_TAG).tar $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)
 
-.PHONY: build
-build: build-devel build-tika-server
+.PHONY: carrega-images 
+carrega-images: $(FILES_DIR)/$(IMAGE_NAME)-$(IMAGE_TAG).tar
+	minikube --profile $(CLUSTER_NAME) image load --overwrite=true -v=2 --alsologtostderr $(FILES_DIR)/$(IMAGE_NAME)-$(IMAGE_TAG).tar
 
-.PHONY: login
-login:
-	podman login --username $(REGISTRY_USER) --password "$(REGISTRY_PASSWORD)" https://index.docker.io/v1/
+uninstall-tika:
+	- $(helm) uninstall tika
 
-.PHONY: publish
-publish:
-	podman tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG} $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell date --rfc-3339=date --utc)
-	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell date --rfc-3339=date --utc)
-	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG}
+install-tika: 
+	$(helm_install) --namespace tika tika tika/tika
 
-.PHONY: destroy
-destroy:
-	podman rmi --force $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)
+.PHONY: tika
+tika:   uninstall-tika install-tika
 
-destroy-pod:
-	podman pod rm --force --ignore $(POD_NAME)
+.PHONY: postgresql
+postgresql:
+	$(helm_install) --namespace postgresql --values $(SCRIPT_DIR)/postgresql-values.yaml --version 12.10.0 postgresql bitnami/postgresql 
 
-create-pod: destroy-pod
-	podman pod create -p $(POSTGRES_PORT):$(POSTGRES_PORT) \
-				-p $(OPENSEARCH_PORT1):$(OPENSEARCH_PORT1) \
-				-p $(STORAGE_PORT):$(STORAGE_PORT) \
-	                  	--name $(POD_NAME)
+.PHONY: uninstall-postgresql
+uninstall-postgresql:
+	- $(helm) uninstall --wait --namespace postgresql postgresql
 
-prepare-test-env: create-pod storage apache-tika-server opensearch database
+.PHONY: uninstall-minio
+uninstall-minio:
+	- $(helm) uninstall --wait --namespace minio minio
 
-.PHONY: test
-test: prepare-test-env retest
+.PHONY: minio
+minio:  uninstall-minio
+	$(helm_install) --namespace minio --values $(SCRIPT_DIR)/minio-values.yaml --version 12.8.15 minio bitnami/minio 
 
-.PHONY: retest
-retest:
-	$(call run-command, python -m unittest -f tests)
+uninstall-elasticsearch: 
+	- $(helm) uninstall --namespace elastic-system elastic-operator
 
-.PHONY: retest-digital-ocean-spaces
-retest-digital-ocean-spaces:
-	$(call run-command, python -m unittest -f tests/digital_ocean_spaces.py)
+install-elasticsearch: 
+	$(helm_install) elastic-operator elastic/eck-operator -n elastic-system --create-namespace
+	$(k8s) apply -f $(SCRIPT_DIR)/elasticsearch-cluster.yaml
 
-.PHONY: retest-postgres
-retest-postgres:
-	$(call run-command, python -m unittest -f tests/postgresql.py)
+.PHONY: elasticsearch
+elasticsearch:  uninstall-elasticsearch install-elasticsearch
 
-.PHONY: retest-tasks
-retest-tasks:
-	$(call run-command, python -m unittest -f tests/text_extraction_task_tests.py)
+.PHONY: delete-cluster
+delete-cluster:
+	minikube delete --profile $(CLUSTER_NAME)
 
-.PHONY: retest-main
-retest-main:
-	$(call run-command, python -m unittest -f tests/main_tests.py)
+start-cluster:
+	minikube start --driver=kvm2 --cpus 4 --memory 6gb --disk-size 40g \
+		--nodes $(CLUSTER_NODES_COUNT)  --profile $(CLUSTER_NAME)
+	# O CSI default do minikube nao funciona legal com multiplos nos. 
+	# Então vamos usar um diferente.
+	minikube --profile $(CLUSTER_NAME) addons disable storage-provisioner
+	minikube --profile $(CLUSTER_NAME) addons disable default-storageclass
+	minikube --profile $(CLUSTER_NAME) addons enable volumesnapshots
+	minikube --profile $(CLUSTER_NAME) addons enable csi-hostpath-driver
+	kubectl --context $(CLUSTER_NAME) patch storageclass csi-hostpath-sc -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
 
-.PHONY: retest-index
-retest-index:
-	$(call run-command, python -m unittest -f tests/opensearch.py)
+.PHONY: cluster
+cluster: delete-cluster start-cluster
 
-.PHONY: retest-tika
-retest-tika:
-	$(call run-command, python -m unittest -f tests/text_extraction_tests.py)
-
-start-apache-tika-server:
-	podman run -d --pod $(POD_NAME) --name $(APACHE_TIKA_CONTAINER_NAME) \
-    	$(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
-		java -jar /tika-server.jar
-
-stop-apache-tika-server:
-	podman stop --ignore $(APACHE_TIKA_CONTAINER_NAME)
-	podman rm --force --ignore $(APACHE_TIKA_CONTAINER_NAME)
-
-.PHONY: apache-tika-server
-apache-tika-server: stop-apache-tika-server start-apache-tika-server
-
-
-shell: set-run-variable-values
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
-		--pod $(POD_NAME) \
-		--env PYTHONPATH=/mnt/code \
-		--env-file envvars \
-		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) bash
-
-.PHONY: coverage
-coverage: prepare-test-env
-	$(call run-command, coverage erase)
-	$(call run-command, coverage run -m unittest tests)
-	$(call run-command, coverage report -m)
-
-.PHONY: stop-storage
-stop-storage:
-	podman rm --force --ignore $(STORAGE_CONTAINER_NAME)
-
-.PHONY: storage
-storage: stop-storage start-storage wait-storage
-
-start-storage:
-	podman run -d --rm -ti \
-		--name $(STORAGE_CONTAINER_NAME) \
-		--pod $(POD_NAME) \
-		-e MINIO_ACCESS_KEY=$(STORAGE_ACCESS_KEY) \
-		-e MINIO_SECRET_KEY=$(STORAGE_ACCESS_SECRET) \
-		-e MINIO_DEFAULT_BUCKETS=$(STORAGE_BUCKET):public \
-        $(STORAGE_IMAGE)
-
-wait-storage:
-	$(call wait-for, localhost:9000)
-
-.PHONY: stop-database
-stop-database:
-	podman rm --force --ignore $(DATABASE_CONTAINER_NAME)
-
-.PHONY: database
-database: stop-database start-database wait-database
-
-start-database:
-	podman run -d --rm -ti \
-		--name $(DATABASE_CONTAINER_NAME) \
-		--pod $(POD_NAME) \
-		-e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
-		-e POSTGRES_USER=$(POSTGRES_USER) \
-		-e POSTGRES_DB=$(POSTGRES_DB) \
-		$(POSTGRES_IMAGE)
-
-wait-database:
-	$(call wait-for, localhost:5432)
-
-load-database: set-run-variable-values
-ifneq ("$(wildcard $(DATABASE_RESTORE_FILE))","")
-	podman cp $(DATABASE_RESTORE_FILE) $(DATABASE_CONTAINER_NAME):/mnt/dump_file
-	podman exec $(DATABASE_CONTAINER_NAME) bash -c "pg_restore -v -c -h localhost -U $(POSTGRES_USER) -d $(POSTGRES_DB) /mnt/dump_file || true"
-else
-	@echo "cannot restore because file does not exists '$(DATABASE_RESTORE_FILE)'"
-	@exit 1
-endif
-
-set-run-variable-values:
-	cp --no-clobber contrib/sample.env envvars || true
-	$(eval POD_NAME=run-$(POD_NAME))
-	$(eval DATABASE_CONTAINER_NAME=run-$(DATABASE_CONTAINER_NAME))
-	$(eval OPENSEARCH_CONTAINER_NAME=run-$(OPENSEARCH_CONTAINER_NAME))
-
-.PHONY: sql
-sql: set-run-variable-values
-	podman run --rm -ti \
-		--pod $(POD_NAME) \
-		$(POSTGRES_IMAGE) psql -h localhost -U $(POSTGRES_USER) $(POSTGRES_DB)
+.PHONY: helm-repo
+helm-repo:
+	helm repo add bitnami https://charts.bitnami.com/bitnami
+	helm repo add tika https://apache.jfrog.io/artifactory/tika
+	helm repo add opensearch https://opensearch-project.github.io/helm-charts/
+	helm repo add minio https://helm.min.io/
+	helm repo add elastic https://helm.elastic.co
+	helm repo update
 
 .PHONY: setup
-setup: set-run-variable-values create-pod storage apache-tika-server opensearch database
+setup: cluster reinstall-stack 
 
-.PHONY: re-run
-re-run: set-run-variable-values
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
-		--pod $(POD_NAME) \
-		--env PYTHONPATH=/mnt/code \
-		--env-file envvars \
-		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python main
+.PHONY: reinstall-stack
+reinstall-stack: helm-repo tika minio postgresql elasticsearch #opensearch
+	$(k8s) wait --for=condition="Ready" pods -A --all -l job-name!=minio-provisioning
 
-.PHONY: run
-run: setup re-run
+.PHONY: install-pipeline
+install-pipeline: 
+	$(helm_install) --namespace querido-diario --create-namespace \
+		--set elasticsearch.password=$(shell $(k8s) get secret querido-diario-elasticsearch-es-elastic-user -n default -o jsonpath="{.data.elastic}" | base64 -d) \
+		--set textExtractionJob.image="$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)" \
+		querido-diario-pipeline charts/querido-diario-pipeline/
 
-.PHONY: shell-run
-shell-run: set-run-variable-values
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
-		--pod $(POD_NAME) \
-		--env PYTHONPATH=/mnt/code \
-		--env-file envvars \
-		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) bash
+.PHONY: uninstall-pipeline
+uninstall-pipeline: 
+	- $(helm) uninstall --namespace querido-diario querido-diario-pipeline
+
+.PHONY: credenciais
+credenciais: 
+	@echo "Essas são as credenciais para você acessar os serviços rodando no cluster local:"
+	@echo POSTGRES_PASSWORD = $(shell kubectl get secret --namespace postgresql postgresql -o jsonpath="{.data.password}" | base64 -d)
+	@echo POSTGRES_ADMIN_PASSWORD=$(shell kubectl get secret --namespace postgresql postgresql -o jsonpath="{.data.postgres-password}" | base64 -d)
+	@echo MINIO_ROOT_USER=$(shell $(k8s) get secret --namespace minio minio -o jsonpath="{.data.root-user}" | base64 -d)
+	@echo MINIO_ROOT_PASSWORD=$(shell $(k8s) get secret --namespace minio minio -o jsonpath="{.data.root-password}" | base64 -d)
+	@echo ELASTICSEARCH_PASSWORD=$(shell $(k8s) get secret querido-diario-elasticsearch-es-elastic-user -n default -o jsonpath="{.data.elastic}" | base64 -d)
+
+DIARIOS := 1302603/2023-08-16/eb5522a3e160ba9129bd05617a68badd4e8ee381.pdf 3304557/2023-08-17/00e276910596fa4b4b7eb9cbec8a221e79ebbe0e 4205407/2023-08-10/c6eb1ce23b9bea9c3a72aece0e762eb883a8a00a.pdf 4106902/2023-08-14/b416ef3008654f84e2bee57f89cfd0513f8ec800 2611606/2023-08-12/7b010f0485bbb3bf18500a6ce90346916e776d62.pdf
+$(DIARIOS):
+	@if [ ! -f $(join $(DIARIOS_DIR),/$@) ]; then \
+		echo "Baixando $@"; \
+		curl -XGET --output-dir $(DIARIOS_DIR) --create-dirs --output $@ $(QUERIDO_DIARIO_CDN)$@; \
+	fi 
+	
+.PHONY: prepara-ambiente
+prepara-ambiente: expoe-servicos diarios base-de-dados derruba-servicos
+
+.PHONY: expoe-servicos
+expoe-servicos: derruba-servicos
+	@nohup $(k8s) port-forward --namespace minio svc/minio 9000:9000 > /dev/null 2>&1 &
+	@nohup $(k8s) port-forward --namespace minio svc/minio 9001:9001 > /dev/null 2>&1 &
+	@nohup $(k8s) port-forward --namespace postgresql svc/postgresql 5433:5432 > /dev/null 2>&1 &
+	@echo "Minio esta disponivel na porta 9000 e 9001"
+	@echo "Postgresql está disponivel na porta 5433"
+	@echo "Para remover o mapeamento das portas execute: make derruba-servicoes"
+
+.PHONY: derruba-servicos
+derruba-servicos:
+	- pkill -f "svc/minio 9000"
+	- pkill -f "svc/minio 9001"
+	- pkill -f "svc/postgresql 5433"
+
+# Colocar alguns diarios no s3 rodando no cluster local
+.PHONY: diarios
+diarios: $(DIARIOS)
+	- s3cmd --no-ssl --no-encrypt \
+		--access_key=querido-diario-user \
+		--secret_key=querido-diario-secret \
+		--host 127.0.0.1:9000 \
+		--host-bucket "s3.us-east-1.127.0.0.1:9000" \
+		--bucket-location=us-east-1 \
+		sync files/diarios/* s3://queridodiariobucket
+
+$(DATABASE_DUMP):
+	curl -XGET --output-dir $(FILES_DIR) --create-dirs  --output queridodiario_dump.zip \
+		https://querido-diario-misc.nyc3.cdn.digitaloceanspaces.com/queridodiario_dump.zip 
+	unzip $(FILES_DIR)/queridodiario_dump.zip -d $(FILES_DIR)
+
+# Configura a base de dados com alguns diarios para serem processados. 
+.PHONY: base-de-dados
+base-de-dados: $(DATABASE_DUMP)
+	PGPASSWORD="$(shell $(k8s) get secret --namespace postgresql postgresql -o jsonpath="{.data.password}" | base64 -d)" \
+		   psql --host 127.0.0.1 -U queridodiario -d queridodiariodb -p 5433 -f  $(DATABASE_DUMP)
+	$(k8s) delete pod --namespace postgresql --wait --ignore-not-found postgresql-client
+	$(k8s) run postgresql-client --rm --tty -i --restart='Never' \
+		--namespace postgresql \
+		--image docker.io/bitnami/postgresql:15.4.0-debian-11-r10 \
+		--env="PGPASSWORD=$(shell $(k8s) get secret --namespace postgresql postgresql -o jsonpath="{.data.password}" | base64 -d)"  \
+		--command -- psql --host postgresql -U queridodiario -d queridodiariodb -p 5432 --command "update gazettes set processed=true,scraped_at = CURRENT_TIMESTAMP;"
+	@for diario in $(DIARIOS); do \
+		$(k8s) run postgresql-client --rm --tty -i --restart='Never' \
+			--namespace postgresql \
+			--image docker.io/bitnami/postgresql:15.4.0-debian-11-r10 \
+			--env="PGPASSWORD=$(shell $(k8s) get secret --namespace postgresql postgresql -o jsonpath="{.data.password}" | base64 -d)"  \
+			--command -- psql --host postgresql -U queridodiario -d queridodiariodb -p 5432 --command "update gazettes set processed=false where file_path = '$$diario';"; \
+	done
 
 .PHONY: shell-database
-shell-database: set-run-variable-values
-	podman exec -it $(DATABASE_CONTAINER_NAME) \
-	    psql -h localhost -d $(POSTGRES_DB) -U $(POSTGRES_USER)
-
-opensearch: stop-opensearch start-opensearch wait-opensearch
-
-start-opensearch:
-	podman run -d --rm -ti \
-		--name $(OPENSEARCH_CONTAINER_NAME) \
-		--pod $(POD_NAME) \
-		--env discovery.type=single-node \
-		--env plugins.security.ssl.http.enabled=false \
-		docker.io/opensearchproject/opensearch:2.9.0
-
-stop-opensearch:
-	podman rm --force --ignore $(OPENSEARCH_CONTAINER_NAME)
-
-wait-opensearch:
-	$(call wait-for, localhost:9200)
-
-.PHONY: publish-tag
-publish-tag:
-	podman tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG} $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
-	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
+shell-database:
+	$(k8s) run postgresql-client --rm --tty -i --restart='Never' \
+		--namespace postgresql \
+		--image docker.io/bitnami/postgresql:15.4.0-debian-11-r10 \
+		--env="PGPASSWORD=$(shell $(k8s) get secret --namespace postgresql postgresql -o jsonpath="{.data.password}" | base64 -d)"  \
+		--command -- psql --host postgresql -U queridodiario -d queridodiariodb -p 5432
