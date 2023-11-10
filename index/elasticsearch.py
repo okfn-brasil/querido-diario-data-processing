@@ -7,8 +7,8 @@ from tasks import IndexInterface
 
 
 class ElasticSearchInterface(IndexInterface):
-    def __init__(self, hosts: List, timeout: str = "30s", default_index: str = ""):
-        self._es = elasticsearch.Elasticsearch(hosts=hosts)
+    def __init__(self, hosts: List, user: str, password: str, timeout: str = "30s", default_index: str = ""):
+        self._es = elasticsearch.Elasticsearch(hosts=hosts, http_auth=(user, password))
         self._timeout = timeout
         self._default_index = default_index
 
@@ -87,10 +87,14 @@ class ElasticSearchInterface(IndexInterface):
 def get_elasticsearch_host():
     return os.environ["ELASTICSEARCH_HOST"]
 
-
 def get_elasticsearch_index():
     return os.environ["ELASTICSEARCH_INDEX"]
 
+def get_elasticsearch_user():
+    return os.environ["ELASTICSEARCH_USER"]
+
+def get_elasticsearch_password():
+    return os.environ["ELASTICSEARCH_PASSWORD"]
 
 def create_index_interface() -> IndexInterface:
     hosts = get_elasticsearch_host()
@@ -99,4 +103,4 @@ def create_index_interface() -> IndexInterface:
     default_index_name = get_elasticsearch_index()
     if not isinstance(default_index_name, str) or len(default_index_name) == 0:
         raise Exception("Invalid index name")
-    return ElasticSearchInterface([hosts], default_index=default_index_name)
+    return ElasticSearchInterface([hosts], get_elasticsearch_user(), get_elasticsearch_password(), default_index=default_index_name)
