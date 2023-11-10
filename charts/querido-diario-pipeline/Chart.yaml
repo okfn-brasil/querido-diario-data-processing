@@ -1,0 +1,8 @@
+apiVersion: v2
+name: querido-diario-pipeline
+description: Helm chart para realizar o implantação das aplicações do pipeline
+  de dados do Querido Diário
+
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
