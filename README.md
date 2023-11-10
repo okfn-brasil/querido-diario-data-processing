@@ -1,40 +1,10 @@
-# querido-diario-data-processing
+# Querido Diário - Processamento de Dados
 
-## Setup
+Este repositório contém todo o código do pipeline de processamento usado pelo
+projeto Querido Diário para analisar os diários extraídos pelos raspadores.
 
-- [Install podman](https://podman.io/getting-started/installation)
-- execute build stage (only the first time):
-```console
-make build
-```
-- execute setup stage:
-```console
-make setup
-```
+Aqui, você encontrará os códigos usados no pipeline, juntamente com o Helm
+chart usado para instalá-lo em um cluster Kubernetes.
 
-## Populate data
-Populate data [following this instructions](https://github.com/okfn-brasil/querido-diario#run-inside-a-container).
+Para informações sobre contribuições e de como rodar o pipeline, leai o CONTRIBUTING.md
 
-- you can see created data inside [storage](http://localhost:9000/minio/queridodiariobucket) using [local credentials](contrib/sample.env#L3)
-- you can see gazettes not processed yet connecting on database
-- open database console in a new terminal
-```console
-make shell-database
-```
-- and run a query to see gazettes not processed
-```sql
-select processed, count(1) from gazettes g group by processed;
-```
-
-## Run
-- execute processing stage:
-```console
-make re-run
-```
-- and see gazettes processed running the query above
-- you can search using ElasticSearch
-```console
-curl 'http://localhost:9200/querido-diario/_search' \
-  -H 'Content-Type: application/json' \
-  --data-raw '{"query":{"query_string":{"query":"*"}},"size":2}'
-```
