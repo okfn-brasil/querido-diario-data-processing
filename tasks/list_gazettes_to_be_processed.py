@@ -7,6 +7,7 @@ from .interfaces import DatabaseInterface
 def get_gazettes_to_be_processed(
     execution_mode: str, database: DatabaseInterface
 ) -> Iterable[Dict]:
+
     if execution_mode == "DAILY":
         yield from get_gazettes_extracted_since_yesterday(database)
     elif execution_mode == "ALL":
@@ -123,6 +124,23 @@ def get_unprocessed_gazettes(
         yield format_gazette_data(gazette)
 
 
+def get_territories_gazettes(
+    database: DatabaseInterface,
+) -> Iterable[Dict]:
+
+    command = """
+    SELECT 
+        *
+    FROM
+        territories
+    ;
+    """
+
+    territories = [format_territories_data(territory) for territory in database.select(command)]
+
+    return territories
+
+
 def format_gazette_data(data):
     return {
         "id": data[0],
@@ -140,4 +158,13 @@ def format_gazette_data(data):
         "processed": data[12],
         "territory_name": data[13],
         "state_code": data[14],
+    }
+
+
+def format_territories_data(data):
+    return {
+        "id": data[0],
+        "territory_name": data[1],
+        "state_code": data[2],
+        "state": data[3],
     }
