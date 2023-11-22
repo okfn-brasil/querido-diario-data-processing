@@ -32,7 +32,7 @@ select processed, count(1) from gazettes g group by processed;
 make re-run
 ```
 - and see gazettes processed running the query above
-- you can search using ElasticSearch
+- you can search using OpenSearch on port 9200
 ```console
 curl 'http://localhost:9200/querido-diario/_search' \
   -H 'Content-Type: application/json' \

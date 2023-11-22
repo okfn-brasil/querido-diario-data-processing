@@ -1,19 +1,19 @@
 from typing import Dict, Iterable, List, Union
 import os
 
-import elasticsearch
+import opensearchpy
 
 from tasks import IndexInterface
 
 
-class ElasticSearchInterface(IndexInterface):
-    def __init__(self, hosts: List, timeout: str = "30s", default_index: str = ""):
-        self._es = elasticsearch.Elasticsearch(hosts=hosts)
+class OpenSearchInterface(IndexInterface):
+    def __init__(self, hosts: List, user: str, password: str, timeout: int = 30, default_index: str = ""):
+        self._search_engine = opensearchpy.OpenSearch(hosts=hosts, http_auth=(user, password))
         self._timeout = timeout
         self._default_index = default_index
 
     def index_exists(self, index_name: str) -> bool:
-        return self._es.indices.exists(index=index_name)
+        return self._search_engine.indices.exists(index=index_name)
 
     def is_valid_index_name(self, index_name: str) -> bool:
         return isinstance(index_name, str) and len(index_name) > 0
@@ -29,7 +29,7 @@ class ElasticSearchInterface(IndexInterface):
         index_name = self.get_index_name(index_name)
         if self.index_exists(index_name):
             return
-        self._es.indices.create(
+        self._search_engine.indices.create(
             index=index_name,
             body=body,
             timeout=self._timeout,
@@ -39,7 +39,7 @@ class ElasticSearchInterface(IndexInterface):
         index_name = self.get_index_name(index_name)
         if self.index_exists(index_name):
             return
-        self._es.indices.refresh(
+        self._search_engine.indices.refresh(
             index=index_name,
         )
 
@@ -51,23 +51,23 @@ class ElasticSearchInterface(IndexInterface):
         refresh: bool = False,
     ) -> None:
         index = self.get_index_name(index)
-        self._es.index(index=index, body=document, id=document_id, refresh=refresh)
+        self._search_engine.index(index=index, body=document, id=document_id, refresh=refresh)
 
     def search(self, query: Dict, index: str = "") -> Dict:
         index = self.get_index_name(index)
-        result = self._es.search(index=index, body=query, request_timeout=60)
+        result = self._search_engine.search(index=index, body=query, request_timeout=60)
         return result
 
     def analyze(self, text: str, field: str, index: str = "") -> Dict:
         index = self.get_index_name(index)
-        result = self._es.indices.analyze(body={"text": text, "field":field}, index=index)
+        result = self._search_engine.indices.analyze(body={"text": text, "field":field}, index=index)
         return result
 
     def paginated_search(
         self, query: Dict, index: str = "", keep_alive: str = "5m"
     ) -> Iterable[Dict]:
         index = self.get_index_name(index)
-        result = self._es.search(
+        result = self._search_engine.search(
             index=index, body=query, scroll=keep_alive, request_timeout=120
         )
 
@@ -77,26 +77,31 @@ class ElasticSearchInterface(IndexInterface):
         while len(result["hits"]["hits"]) > 0:
             yield result
             scroll_id = result["_scroll_id"]
-            result = self._es.scroll(
+            result = self._search_engine.scroll(
                 scroll_id=scroll_id, scroll=keep_alive, request_timeout=120
             )
 
-        self._es.clear_scroll(scroll_id=scroll_id)
+        self._search_engine.clear_scroll(scroll_id=scroll_id)
 
 
-def get_elasticsearch_host():
-    return os.environ["ELASTICSEARCH_HOST"]
+def get_opensearch_host():
+    return os.environ["OPENSEARCH_HOST"]
 
 
-def get_elasticsearch_index():
-    return os.environ["ELASTICSEARCH_INDEX"]
+def get_opensearch_index():
+    return os.environ["OPENSEARCH_INDEX"]
 
+def get_opensearch_user():
+    return os.environ["OPENSEARCH_USER"]
+
+def get_opensearch_password():
+    return os.environ["OPENSEARCH_PASSWORD"]
 
 def create_index_interface() -> IndexInterface:
-    hosts = get_elasticsearch_host()
+    hosts = get_opensearch_host()
     if not isinstance(hosts, str) or len(hosts) == 0:
         raise Exception("Missing index hosts")
-    default_index_name = get_elasticsearch_index()
+    default_index_name = get_opensearch_index()
     if not isinstance(default_index_name, str) or len(default_index_name) == 0:
         raise Exception("Invalid index name")
-    return ElasticSearchInterface([hosts], default_index=default_index_name)
+    return OpenSearchInterface([hosts], get_opensearch_user(), get_opensearch_password(), default_index=default_index_name)
