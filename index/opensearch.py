@@ -1,14 +1,14 @@
 from typing import Dict, Iterable, List, Union
 import os
 
-import elasticsearch
+from opensearchpy import OpenSearch
 
 from tasks import IndexInterface
 
 
-class ElasticSearchInterface(IndexInterface):
-    def __init__(self, hosts: List, user: str, password: str, timeout: str = "30s", default_index: str = ""):
-        self._es = elasticsearch.Elasticsearch(hosts=hosts, http_auth=(user, password))
+class OpenSearchInterface(IndexInterface):
+    def __init__(self, hosts: List, user: str, password: str, timeout: int = 30, default_index: str = "", ca_certs_directory: str = ""):
+        self._es = OpenSearch(hosts=hosts, http_auth=(user, password), ca_certs = ca_certs_directory)
         self._timeout = timeout
         self._default_index = default_index
 
@@ -84,23 +84,26 @@ class ElasticSearchInterface(IndexInterface):
         self._es.clear_scroll(scroll_id=scroll_id)
 
 
-def get_elasticsearch_host():
-    return os.environ["ELASTICSEARCH_HOST"]
+def get_opensearch_host():
+    return os.environ["OPENSEARCH_HOST"]
 
-def get_elasticsearch_index():
-    return os.environ["ELASTICSEARCH_INDEX"]
+def get_opensearch_index():
+    return os.environ["OPENSEARCH_INDEX"]
 
-def get_elasticsearch_user():
-    return os.environ["ELASTICSEARCH_USER"]
+def get_opensearch_user():
+    return os.environ["OPENSEARCH_USER"]
 
-def get_elasticsearch_password():
-    return os.environ["ELASTICSEARCH_PASSWORD"]
+def get_opensearch_password():
+    return os.environ["OPENSEARCH_PASSWORD"]
+
+def get_opensearch_ca_certs_directory():
+    return os.environ["OPENSEARCH_CA_CERTS"]
 
 def create_index_interface() -> IndexInterface:
-    hosts = get_elasticsearch_host()
+    hosts = get_opensearch_host()
     if not isinstance(hosts, str) or len(hosts) == 0:
         raise Exception("Missing index hosts")
-    default_index_name = get_elasticsearch_index()
+    default_index_name = get_opensearch_index()
     if not isinstance(default_index_name, str) or len(default_index_name) == 0:
         raise Exception("Invalid index name")
-    return ElasticSearchInterface([hosts], get_elasticsearch_user(), get_elasticsearch_password(), default_index=default_index_name)
+    return OpenSearchInterface([hosts], get_opensearch_user(), get_opensearch_password(), default_index=default_index_name, ca_certs_directory=get_opensearch_ca_certs_directory())

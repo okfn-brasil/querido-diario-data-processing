@@ -1,0 +1,50 @@
+---
+apiVersion: opensearch.opster.io/v1
+kind: OpenSearchCluster
+metadata:
+  name: querido-diario-index
+  namespace: default
+spec:
+  security:
+    config:
+    tls:
+       http:
+         generate: true 
+       transport:
+         generate: true
+         perNode: true
+  general:
+    httpPort: 9200
+    serviceName: querido-diario-index
+    version: 2.8.0
+    drainDataNodes: true
+    setVMMaxMapCount: true
+  dashboards:
+    tls:
+      enable: true
+      generate: true
+    version: 2.3.0
+    enable: true
+    replicas: 1
+    resources:
+      requests:
+         memory: "512Mi"
+         cpu: "200m"
+      limits:
+         memory: "512Mi"
+         cpu: "200m"
+  nodePools:
+    - component: masters
+      replicas: 3
+      resources:
+         requests:
+            memory: "4Gi"
+            cpu: "1000m"
+         limits:
+            memory: "4Gi"
+            cpu: "1000m"
+      roles:
+        - "data"
+        - "cluster_manager"
+      persistence:
+         emptyDir: {}

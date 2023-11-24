@@ -1,0 +1,38 @@
+categories:
+  - title: '🚀 Melhorias'
+    labels:
+      - 'melhoria'
+  - title: '🐛 Bugs'
+    labels:
+      - 'bug'
+  - title: '🧰 Manutenção'
+    labels:
+      - 'manutencao'
+
+exclude-labels:
+  - duplicate
+  - invalid
+  - wontfix
+  - skip-changelog
+
+change-template: '- $TITLE (#$NUMBER)'
+change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
+name-template: 'v$RESOLVED_VERSION'
+template: |
+  $CHANGES
+
+autolabeler:
+    # Tag any PR with "!" in the subject as major update. In other words, breaking change
+  - label: 'melhoria'
+    title: 'feat'
+  - label: 'bug'
+    title: 'fix'
+
+version-resolver:
+  minor:
+    labels:
+      - 'melhoria'
+  patch:
+    labels:
+      - 'bug'
+  default: patch

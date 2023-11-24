@@ -13,8 +13,8 @@ data:
   POSTGRES_PORT: {{ .Values.postgresql.port  | quote }}
   DATABASE_RESTORE_FILE: {{ .Values.postgresql.database_restore_file }}
 
-  ELASTICSEARCH_HOST: {{ .Values.elasticsearch.host }}
-  ELASTICSEARCH_INDEX: {{ .Values.elasticsearch.index }}
+  OPENSEARCH_HOST: {{ .Values.opensearch.host }}
+  OPENSEARCH_INDEX: {{ .Values.opensearch.index }}
 
   APACHE_TIKA_SERVER: {{ .Values.apache_tika.server }}
 

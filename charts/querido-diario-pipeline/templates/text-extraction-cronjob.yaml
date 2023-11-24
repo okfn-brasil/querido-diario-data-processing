@@ -13,6 +13,16 @@ spec:
       template:
         spec:
           restartPolicy: {{ .Values.textExtractionJob.restartPolicy }}
+          {{- if .Values.opensearch.ca_cert_mount_path }}
+          volumes: 
+            - name: opensearch-cert
+              secret:
+                secretName: {{ .Values.opensearch.certificateSecret}}
+                optional: false
+                items:
+                  - key: "ca.crt"
+                    path: "opensearchca.crt"
+          {{- end }}
           containers:
           - name: text-extractor-job
             image: {{ .Values.textExtractionJob.image }}
@@ -21,6 +31,14 @@ spec:
               - python
             args:
               - main
+            {{- if .Values.opensearch.ca_cert_mount_path }}
+            volumeMounts:
+              - name: opensearch-cert
+                mountPath: {{ .Values.opensearch.ca_cert_mount_path}}
+            {{- end }}
+            env:
+              - name: OPENSEARCH_CA_CERTS
+                value: "{{ .Values.opensearch.ca_cert_mount_path}}/opensearchca.crt"
             envFrom:
               - configMapRef: 
                   name: text-extraction-env-vars

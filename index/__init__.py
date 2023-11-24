@@ -1,1 +1,1 @@
-from .elasticsearch import create_index_interface
+from .opensearch import create_index_interface

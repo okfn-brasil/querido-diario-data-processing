@@ -4,7 +4,7 @@ IMAGE_TAG ?= latest
 APACHE_TIKA_IMAGE_NAME ?=  querido-diario-apache-tika-server
 APACHE_TIKA_IMAGE_TAG ?= latest
 CLUSTER_NAME ?= "querido-diario" 
-CLUSTER_NODES_COUNT ?= 3
+CLUSTER_NODES_COUNT ?= 5
 SCRIPT_DIR ?= $(PWD)/scripts
 BUCKET_NAME ?= queridodiariobucket 
 FILES_DIR ?= files
@@ -22,6 +22,7 @@ build-pipeline-image:
 	podman build --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
 		--ignorefile .gitignore \
         	-f scripts/Dockerfile $(PWD)
+	- rm $(FILES_DIR)/$(IMAGE_NAME)-$(IMAGE_TAG).tar
 
 $(FILES_DIR)/$(IMAGE_NAME)-$(IMAGE_TAG).tar:
 	podman save -o $(FILES_DIR)/$(IMAGE_NAME)-$(IMAGE_TAG).tar $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)
@@ -55,15 +56,17 @@ uninstall-minio:
 minio:  uninstall-minio
 	$(helm_install) --namespace minio --values $(SCRIPT_DIR)/minio-values.yaml --version 12.8.15 minio bitnami/minio 
 
-uninstall-elasticsearch: 
-	- $(helm) uninstall elastic-operator
+uninstall-opensearch: 
+	- $(k8s) delete --wait --ignore-not-found -f $(SCRIPT_DIR)/opensearch-cluster.yaml
+	- $(helm) uninstall -n opensearch-operator opensearch-operator 
 
-install-elasticsearch: 
-	$(helm_install) elastic-operator elastic/eck-operator -n elastic-system --create-namespace
-	$(k8s) apply -f $(SCRIPT_DIR)/elasticsearch-cluster.yaml
+install-opensearch: 
+	$(helm_install) -n opensearch-operator opensearch-operator opensearch-operator/opensearch-operator
+	$(k8s) wait --for=condition="Ready" pods -n opensearch-operator --all
+	$(k8s) apply -f $(SCRIPT_DIR)/opensearch-cluster.yaml
 
-.PHONY: elasticsearch
-elasticsearch:  uninstall-elasticsearch install-elasticsearch
+.PHONY: opensearch
+opensearch: uninstall-opensearch install-opensearch
 
 .PHONY: delete-cluster
 delete-cluster:
@@ -88,27 +91,28 @@ helm-repo:
 	helm repo add bitnami https://charts.bitnami.com/bitnami
 	helm repo add tika https://apache.jfrog.io/artifactory/tika
 	helm repo add opensearch https://opensearch-project.github.io/helm-charts/
+	helm repo add opensearch-operator https://opster.github.io/opensearch-k8s-operator/
 	helm repo add minio https://helm.min.io/
-	helm repo add elastic https://helm.elastic.co
 	helm repo update
 
 .PHONY: setup
 setup: cluster reinstall-stack 
 
 .PHONY: reinstall-stack
-reinstall-stack: helm-repo tika minio postgresql elasticsearch #opensearch
+reinstall-stack: helm-repo tika minio postgresql opensearch
 	$(k8s) wait --for=condition="Ready" pods -A --all -l job-name!=minio-provisioning
 
 .PHONY: install-pipeline
 install-pipeline: 
-	$(helm_install) --namespace querido-diario --create-namespace \
-		--set elasticsearch.password=$(shell $(k8s) get secret querido-diario-elasticsearch-es-elastic-user -n default -o jsonpath="{.data.elastic}" | base64 -d) \
+	$(helm_install) \
+		--set opensearch.user=$(shell $(k8s) get secret querido-diario-index-admin-password -n default -o jsonpath="{.data.username}" | base64 -d) \
+		--set opensearch.password=$(shell $(k8s) get secret querido-diario-index-admin-password -n default -o jsonpath="{.data.password}" | base64 -d) \
 		--set textExtractionJob.image="$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)" \
 		querido-diario-pipeline charts/querido-diario-pipeline/
 
 .PHONY: uninstall-pipeline
 uninstall-pipeline: 
-	- $(helm) uninstall --namespace querido-diario querido-diario-pipeline
+	- $(helm) uninstall querido-diario-pipeline
 
 .PHONY: credenciais
 credenciais: 
@@ -117,7 +121,8 @@ credenciais:
 	@echo POSTGRES_ADMIN_PASSWORD=$(shell kubectl get secret --namespace postgresql postgresql -o jsonpath="{.data.postgres-password}" | base64 -d)
 	@echo MINIO_ROOT_USER=$(shell $(k8s) get secret --namespace minio minio -o jsonpath="{.data.root-user}" | base64 -d)
 	@echo MINIO_ROOT_PASSWORD=$(shell $(k8s) get secret --namespace minio minio -o jsonpath="{.data.root-password}" | base64 -d)
-	@echo ELASTICSEARCH_PASSWORD=$(shell $(k8s) get secret querido-diario-elasticsearch-es-elastic-user -n default -o jsonpath="{.data.elastic}" | base64 -d)
+	@echo OPENSEARCH_USER=$(shell $(k8s) get secret querido-diario-index-admin-password -n default -o jsonpath="{.data.username}" | base64 -d)
+	@echo OPENSEARCH_PASSWORD=$(shell $(k8s) get secret querido-diario-index-admin-password -n default -o jsonpath="{.data.password}" | base64 -d)
 
 DIARIOS := 1302603/2023-08-16/eb5522a3e160ba9129bd05617a68badd4e8ee381.pdf 3304557/2023-08-17/00e276910596fa4b4b7eb9cbec8a221e79ebbe0e 4205407/2023-08-10/c6eb1ce23b9bea9c3a72aece0e762eb883a8a00a.pdf 4106902/2023-08-14/b416ef3008654f84e2bee57f89cfd0513f8ec800 2611606/2023-08-12/7b010f0485bbb3bf18500a6ce90346916e776d62.pdf
 $(DIARIOS):
