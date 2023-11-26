@@ -12,15 +12,16 @@ def get_territorie_info(state: str, name: str, territories: list):
         if territorie["state"].lower() == state.lower() and territorie_name == name:
 
             return territorie["id"], territorie["territory_name"], territorie["state_code"]
-
+    
 
 def limpar_name(name: str):
 
-    processamento_2 = name.replace("'", "")
-    processamento_2 = unicodedata.normalize("NFD", processamento_2)
-    processamento_2 = processamento_2.encode("ascii", "ignore").decode("utf-8")
-    processamento_2 = processamento_2.lower()
+    clean_name = name.replace("'", "")
+    clean_name = unicodedata.normalize("NFD", clean_name)
+    clean_name = clean_name.encode("ascii", "ignore").decode("utf-8")
+    clean_name = clean_name.lower()
+    clean_name = clean_name.strip()
 
-    processamento_2 = "major isidoro" if processamento_2 == "major izidoro" else processamento_2
+    clean_name = "major isidoro" if clean_name == "major izidoro" else clean_name
 
-    return processamento_2
+    return clean_name
