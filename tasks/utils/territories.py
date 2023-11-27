@@ -2,7 +2,7 @@
 import unicodedata
 from typing import Dict, Iterable
 
-from .interfaces import DatabaseInterface
+from ..interfaces import DatabaseInterface
 
 
 def get_territories_gazettes(
