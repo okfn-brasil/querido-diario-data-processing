@@ -3,7 +3,7 @@ import tempfile
 import os
 from pathlib import Path
 from typing import Dict, Iterable, List
-from .gazette_segmentation import extrarir_diarios
+from segmentation import get_segmenter
 
 from .interfaces import (
     DatabaseInterface,
@@ -98,14 +98,17 @@ def try_process_gazette_association_file(
     get_gazette_text_and_define_url(gazette, pdf, text_extractor)
     upload_gazette_raw_text(gazette, storage)
     pdf_txt = try_to_extract_content(pdf, text_extractor)
-    diarios = extrarir_diarios(
-        pdf_text=pdf_txt,
-        gazette=gazette,
-        territories=territories
-    )
+
+    gazette["source_text"] = pdf_txt
+    segmenter = get_segmenter(gazette["territory_id"], gazette)
+    diarios = segmenter.get_gazette_segments()
+    # diarios = extrarir_diarios(
+    #     pdf_text=pdf_txt,
+    #     gazette=gazette,
+    #     territories=territories
+    # )
     
     for diario in diarios:
-
         upload_gazette_raw_text_association(diario, storage)
         index.index_document(diario, document_id=diario["file_checksum"])
 
