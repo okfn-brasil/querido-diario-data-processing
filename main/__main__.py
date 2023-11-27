@@ -11,10 +11,9 @@ from tasks import (
     extract_themed_excerpts_from_gazettes,
     get_gazettes_to_be_processed,
     get_themes,
-    get_territories_gazettes,
     tag_entities_in_excerpts,
-
 )
+from tasks.utils import get_territories_gazettes
 
 
 def is_debug_enabled():

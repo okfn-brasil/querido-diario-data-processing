@@ -10,5 +10,3 @@ from .interfaces import (
     TextExtractorInterface,
 )
 from .list_gazettes_to_be_processed import get_gazettes_to_be_processed
-from .list_territories import get_territories_gazettes
-from .get_territorie_info import get_territorie_info
