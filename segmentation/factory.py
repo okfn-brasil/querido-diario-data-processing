@@ -4,7 +4,7 @@ from segmentation.base import AssociationSegmenter
 from segmentation import segmenters
 
 
-def get_segmenter(territory_id: str, association_gazzete: dict[str, Any], territory_to_data: Dict) -> AssociationSegmenter:
+def get_segmenter(territory_id: str, association_gazzete: Dict[str, Any], territory_to_data: Dict) -> AssociationSegmenter:
     """
     Factory method to return a AssociationSegmenter
 
