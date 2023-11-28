@@ -13,7 +13,6 @@ from tasks import (
     get_themes,
     tag_entities_in_excerpts,
 )
-from tasks.utils import get_territories_gazettes
 
 
 def is_debug_enabled():
@@ -44,10 +43,8 @@ def execute_pipeline():
     themes = get_themes()
 
     gazettes_to_be_processed = get_gazettes_to_be_processed(execution_mode, database)
-    territories = get_territories_gazettes(database)
-
     indexed_gazette_ids = extract_text_from_gazettes(
-        gazettes_to_be_processed, database, storage, index, text_extractor, territories
+        gazettes_to_be_processed, database, storage, index, text_extractor
     )
    
     for theme in themes:

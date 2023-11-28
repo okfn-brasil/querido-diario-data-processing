@@ -19,7 +19,6 @@ def extract_text_from_gazettes(
     storage: StorageInterface,
     index: IndexInterface,
     text_extractor: TextExtractorInterface,
-    territories: Iterable[Dict]
 ) -> List[str]:
     """
     Extracts the text from a list of gazettes
@@ -32,11 +31,9 @@ def extract_text_from_gazettes(
     
     for gazette in gazettes:
         try:
-
             if str(gazette["territory_id"][-4:]).strip() == "0000":
-                
                 association_ids = try_process_gazette_association_file(
-                    gazette, database, storage, index, text_extractor, territories
+                    gazette, database, storage, index, text_extractor
                 )
             else:
                 processed_gazette = try_process_gazette_file(
@@ -48,15 +45,12 @@ def extract_text_from_gazettes(
                 f"Could not process gazette: {gazette['file_path']}. Cause: {e}"
             )
         else:
-            
             if association_ids:
                ids += [association["file_checksum"] for association in association_ids.copy()]
                association_ids.clear()
-
             else:
                 ids.append(processed_gazette["file_checksum"])
-        
-        
+
     return ids
 
 
@@ -87,7 +81,6 @@ def try_process_gazette_association_file(
     storage: StorageInterface,
     index: IndexInterface,
     text_extractor: TextExtractorInterface,
-    territories: Iterable[Dict]
 ) -> List:
     """
     Do all the work to extract the content from the gazette files
@@ -102,12 +95,7 @@ def try_process_gazette_association_file(
     gazette["source_text"] = pdf_txt
     segmenter = get_segmenter(gazette["territory_id"], gazette)
     diarios = segmenter.get_gazette_segments()
-    # diarios = extrarir_diarios(
-    #     pdf_text=pdf_txt,
-    #     gazette=gazette,
-    #     territories=territories
-    # )
-    
+
     for diario in diarios:
         upload_gazette_raw_text_association(diario, storage)
         index.index_document(diario, document_id=diario["file_checksum"])
