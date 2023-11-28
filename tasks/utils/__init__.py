@@ -8,5 +8,5 @@ from .text import (
 )
 
 from .territories import (
-    get_territory,
+    get_territory_to_data,
 )

@@ -1,10 +1,10 @@
-from typing import Any
+from typing import Any, Dict
 
 from segmentation.base import AssociationSegmenter
 from segmentation import segmenters
 
 
-def get_segmenter(territory_id: str, association_gazzete: dict[str, Any]) -> AssociationSegmenter:
+def get_segmenter(territory_id: str, association_gazzete: dict[str, Any], territory_to_data: Dict) -> AssociationSegmenter:
     """
     Factory method to return a AssociationSegmenter
 
@@ -39,4 +39,4 @@ def get_segmenter(territory_id: str, association_gazzete: dict[str, Any]) -> Ass
 
     segmenter_class_name = territory_to_segmenter_class[territory_id]
     segmenter_class = getattr(segmenters, segmenter_class_name)
-    return segmenter_class(association_gazzete)
+    return segmenter_class(association_gazzete, territory_to_data)
