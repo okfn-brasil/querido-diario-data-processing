@@ -1,11 +1,11 @@
 import re
 
-from typing import Any
+from typing import Any, Dict, List
 from segmentation.base import AssociationSegmenter, GazetteSegment
 from tasks.utils import get_checksum
 
 class ALAssociacaoMunicipiosSegmenter(AssociationSegmenter):
-    def __init__(self, association_gazzete: dict[str, Any]):
+    def __init__(self, association_gazzete: Dict[str, Any]):
         super().__init__(association_gazzete)
         # No final do regex, existe uma estrutura condicional que verifica se o próximo match é um \s ou SECRETARIA. Isso foi feito para resolver um problema no diário de 2018-10-02, em que o município de Coité do Nóia não foi percebido pelo código. Para resolver isso, utilizamos a próxima palavra (SECRETARIA) para tratar esse caso.
         # Exceções Notáveis
@@ -15,7 +15,7 @@ class ALAssociacaoMunicipiosSegmenter(AssociationSegmenter):
         )
         self.association_source_text = self.association_gazette["source_text"]
 
-    def get_gazette_segments(self) -> list[dict[str, Any]]:
+    def get_gazette_segments(self) -> List[Dict[str, Any]]:
         """
         Returns a list of dicts with the gazettes metadata
         """
@@ -26,7 +26,7 @@ class ALAssociacaoMunicipiosSegmenter(AssociationSegmenter):
             gazette_segments.append(segmento.__dict__)
         return gazette_segments
 
-    def split_text_by_territory(self) -> dict[str, str]:
+    def split_text_by_territory(self) -> Dict[str, str]:
         """
         Segment a association text by territory
         and returns a dict with the territory name and the text segment
@@ -88,6 +88,8 @@ class ALAssociacaoMunicipiosSegmenter(AssociationSegmenter):
         return territory_to_text_split
 
     def build_segment(self, territory, segment_text) -> GazetteSegment:
+        #clean_name = "major isidoro" if clean_name == "major izidoro" else clean_name
+
         file_checksum = get_checksum(segment_text)
         processed = True
         territory_name = territory
@@ -128,7 +130,7 @@ class ALAssociacaoMunicipiosSegmenter(AssociationSegmenter):
         municipio = re.sub("(\/AL.*|GABINETE DO PREFEITO.*|PODER.*|http.*|PORTARIA.*|Extrato.*|ATA DE.*|SECRETARIA.*|Fundo.*|SETOR.*|ERRATA.*|- AL.*|GABINETE.*)", "", municipio)
         return municipio
 
-    def _extract_territory_name(self, texto_diario_slice: list[str], num_linha: int):
+    def _extract_territory_name(self, texto_diario_slice: List[str], num_linha: int):
         texto = '\n'.join(texto_diario_slice[num_linha:num_linha+10])
         match = re.findall(self.RE_NOMES_MUNICIPIOS, texto, re.MULTILINE)
         if len(match) > 0:
