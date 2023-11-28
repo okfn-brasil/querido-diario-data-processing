@@ -4,13 +4,26 @@ from typing import Dict, Iterable
 from ..interfaces import DatabaseInterface
 
 
-def get_territories_gazettes(
+def get_territory(target_state: str, target_city: str):
+    target_state = target_state.strip().lower()
+    target_city = _clear_city_name(target_city)
+
+    database = DatabaseInterface()
+    territories = _get_territories_gazettes(database)
+    territory_to_data = {
+        (_clear_city_name(t["territory_name"]), t["state_code"].lower()): t
+        for t in territories
+    }
+    territory_data = territory_to_data.get((target_city, target_state))
+    return territory_data
+
+
+def _get_territories_gazettes(
     database: DatabaseInterface,
 ) -> Iterable[Dict]:
     """
     Example
     -------
-    >>> from tasks.utils import get_territories_gazettes
     >>> territories = get_territories_gazettes(database)
     """
     command = """SELECT * FROM territories;"""
@@ -25,24 +38,11 @@ def _format_territories_data(data):
         "id": data[0],
         "territory_name": data[1],
         "state_code": data[2],
-        "state": data[3],
+        # "state": data[3],
     }
 
 
-def get_territorie_info(state: str, name: str, territories: list):
-    state = state.strip()
-    name = limpar_name(name)
-    for territorie in territories:
-        territorie_name = limpar_name(territorie["territory_name"])
-        if territorie["state"].lower() == state.lower() and territorie_name == name:
-            return (
-                territorie["id"],
-                territorie["territory_name"],
-                territorie["state_code"],
-            )
-
-
-def limpar_name(name: str):
+def _clear_city_name(name: str):
     clean_name = name.replace("'", "")
     clean_name = unicodedata.normalize("NFD", clean_name)
     clean_name = clean_name.encode("ascii", "ignore").decode("utf-8")

@@ -8,6 +8,5 @@ from .text import (
 )
 
 from .territories import (
-    get_territories_gazettes,
-    get_territorie_info,
+    get_territory,
 )
