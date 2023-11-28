@@ -48,7 +48,4 @@ def limpar_name(name: str):
     clean_name = clean_name.encode("ascii", "ignore").decode("utf-8")
     clean_name = clean_name.lower()
     clean_name = clean_name.strip()
-
-    clean_name = "major isidoro" if clean_name == "major izidoro" else clean_name
-
     return clean_name
