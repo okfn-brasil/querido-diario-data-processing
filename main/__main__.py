@@ -48,14 +48,14 @@ def execute_pipeline():
         gazettes_to_be_processed, database, storage, index, text_extractor
     )
     for theme in themes:
-        if theme['index'] != 'educacao':
+        if theme["index"] != "educacao":
             continue
         themed_excerpt_ids = extract_themed_excerpts_from_gazettes(
             theme, indexed_gazette_ids, index
         )
-        #embedding_rerank_excerpts(theme, themed_excerpt_ids, index)
-        #tag_entities_in_excerpts(theme, themed_excerpt_ids, index)
-        #tfidf_rerank_excerpts(theme, index)
+        # embedding_rerank_excerpts(theme, themed_excerpt_ids, index)
+        # tag_entities_in_excerpts(theme, themed_excerpt_ids, index)
+        # tfidf_rerank_excerpts(theme, index)
 
 
 if __name__ == "__main__":

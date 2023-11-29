@@ -45,18 +45,18 @@ class PostgreSQL(DatabaseInterface):
 
     def _commit_changes(self, command: str, data: Dict = {}) -> None:
         with self._connection.cursor() as cursor:
-            logging.debug(f"Making change: {cursor.query}")
+            # logging.debug(f"Making change: {cursor.query}")
             cursor.execute(command, data)
             self._connection.commit()
 
     def select(self, command: str) -> Iterable[Tuple]:
         with self._connection.cursor() as cursor:
             cursor.execute(command)
-            logging.debug(f"Starting query: {cursor.query}")
+            # logging.debug(f"Starting query: {cursor.query}")
             for entry in cursor:
                 logging.debug(entry)
                 yield entry
-            logging.debug(f"Finished query: {cursor.query}")
+            # logging.debug(f"Finished query: {cursor.query}")
 
     def insert(self, command: str, data: Dict = {}):
         logging.debug(f"Inserting:")

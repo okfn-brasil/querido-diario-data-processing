@@ -1,8 +1,22 @@
 import hashlib
 from typing import Dict, Iterable, List
+import logging
 
 from .interfaces import IndexInterface
 from .utils import clean_extra_whitespaces, get_documents_from_query_with_highlights
+
+
+def is_debug_enabled():
+    return environ.get("DEBUG", "0") == "1"
+
+
+def enable_debug_if_necessary():
+    """
+    Enable debug logs with the DEBUG variable is ser to 1
+    """
+    if is_debug_enabled():
+        logging.basicConfig(level=logging.DEBUG)
+        logging.debug("Debug enabled")
 
 
 def extract_themed_excerpts_from_gazettes(
@@ -12,12 +26,11 @@ def extract_themed_excerpts_from_gazettes(
 
     ids = []
     import csv
-    with open("dataset.csv", "w") as f:
+
+    with open("dataset8.csv", "w") as f:
         flag = True
         for theme_query in theme["queries"]:
-            for excerpt in get_excerpts_from_gazettes_with_themed_query(
-                theme_query, gazette_ids, index
-            ):
+            for excerpt in get_excerpts_from_gazettes(theme_query, gazette_ids, index):
                 if flag:
                     flag = False
                     csvfile = csv.DictWriter(f, fieldnames=excerpt.keys())
@@ -107,7 +120,7 @@ def create_index(theme: Dict, index: IndexInterface) -> None:
     index.create_index(index_name=theme["index"], body=body)
 
 
-def get_excerpts_from_gazettes_with_themed_query(
+def get_excerpts_from_gazettes(
     query: Dict, gazette_ids: List[str], index: IndexInterface
 ) -> Iterable[Dict]:
     es_query = get_es_query_from_themed_query(query, gazette_ids)
@@ -146,7 +159,122 @@ def generate_excerpt_id(excerpt: str, gazette: Dict) -> str:
     return f"{gazette['file_checksum']}_{hash.hexdigest()}"
 
 
+# Monta a consulta mais permissiva com span para retornar os excertos da busca por tema e 20 de slop entre os termos
 def get_es_query_from_themed_query(
+    query: Dict,
+    gazette_ids: List[str],
+) -> Dict:
+    es_query = {
+        "query": {
+            "bool": {
+                "must": [],
+                "filter": [
+                    {"range": {"date": {"gte": "2020-01-01", "lte": "2022-04-30"}}},
+                    {
+                        "terms": {
+                            "territory_id": [
+                                "1302603",
+                                "1400100",
+                                "1501402",
+                                "1702109",
+                                "1721000",
+                                "2103000",
+                                "2211001",
+                                "2408003",
+                                "2408102",
+                                "2507507",
+                                "2607901",
+                                "2611101",
+                                "2611606",
+                                "2704302",
+                                "2910800",
+                                "2927408",
+                                "3106200",
+                                "3304557",
+                                "3525904",
+                                "3552403",
+                                "4106902",
+                                "4205407",
+                                "4314902",
+                                "5002704",
+                                "5103403",
+                                "5208707",
+                                "5300108",
+                            ]
+                        }
+                    },
+                    {"ids": {"values": gazette_ids}},
+                ],
+            }
+        },
+        "size": 100,
+        "highlight": {
+            #"order": "score",
+            "fields": {
+                "source_text": {
+                    "type": "unified",
+                    "boundary_scanner_locale": "pt-BR",
+                    "fragment_size": 2000,
+                    "number_of_fragments": 10000,
+                    "pre_tags": ["<__"],
+                    "post_tags": ["__>"],
+                    #"highlight_query": {}
+                }
+            },
+        },
+    }
+
+    macro_synonym_block = {"span_or": {"clauses": []}}
+    # logging.debug("********* Term sets:")
+    # logging.debug(query["term_sets"])
+    for macro_set in query["term_sets"]:
+        # logging.debug("********* macro set:")
+        # logging.debug(macro_set)
+        proximity_block = {"span_near": {"clauses": [], "slop": 20, "in_order": False}}
+        for term_set in macro_set:
+            # logging.debug("********* term set:")
+            # logging.debug(term_set)
+            synonym_block = {"span_or": {"clauses": []}}
+            for term in term_set:
+                phrase_block = {
+                    "span_near": {"clauses": [], "slop": 0, "in_order": True}
+                }
+                for word in term.split():
+                    word_block = {"span_term": {"source_text": word}}
+                    phrase_block["span_near"]["clauses"].append(word_block)
+                synonym_block["span_or"]["clauses"].append(phrase_block)
+            proximity_block["span_near"]["clauses"].append(synonym_block)
+        macro_synonym_block["span_or"]["clauses"].append(proximity_block)
+
+    es_query["query"]["bool"]["must"].append(macro_synonym_block)
+    """
+        logging.debug(" ")
+        logging.debug(" ")
+        logging.debug(" ")
+        logging.debug("→→→→→→→→→→ ES Query:")
+        logging.debug(es_query)
+        logging.debug("←←←←←←←←←← ES Query:")
+        logging.debug(" ")
+        logging.debug(" ")
+        logging.debug(" ")
+
+    # TODO: add query conditions to the highlight_query
+    re_query_highlight = {}
+    import copy
+    re_query_highlight["bool"] = copy.deepcopy(es_query["query"]["bool"])
+    # Remove filtros
+    re_query_highlight["bool"]["filter"] = None
+    logging.debug("→→→→→→→→→→ Re Query Highlight:")
+    logging.debug(re_query_highlight)
+    logging.debug("→→→→→→→→→→ ES Highlight:")
+    logging.debug(es_query["highlight"])
+    es_query["highlight"]["fields"]["source_text"]["highlight_query"] = re_query_highlight
+    """
+    return es_query
+
+
+# Monta a query mais restrita, com um span or
+def get_es_query_from_themed_query_restrictive(
     query: Dict,
     gazette_ids: List[str],
 ) -> Dict:
@@ -208,23 +336,116 @@ def get_es_query_from_themed_query(
         },
     }
 
-    macro_synonym_block = {"span_or": {"clauses": []}}
+    macro_block = {"span_near": {"clauses": [], "slop":20, "in_order": False}}
+    # Para cada query (consiste em n grupos de termos /categorias / sinônimos)
     for macro_set in query["term_sets"]:
-        proximity_block = {"span_near": {"clauses": [], "slop": 20, "in_order": False}}
+        # Para cada conjunto de sinônimos
         for term_set in macro_set:
+            logging.debug("→→→→→→→→→→→→→→→→→→→ term_set:")
+            logging.debug(term_set)
             synonym_block = {"span_or": {"clauses": []}}
             for term in term_set:
-                phrase_block = {
-                    "span_near": {"clauses": [], "slop": 0, "in_order": True}
-                }
-                for word in term.split():
-                    word_block = {"span_term": {"source_text": word}}
-                    phrase_block["span_near"]["clauses"].append(word_block)
-                synonym_block["span_or"]["clauses"].append(phrase_block)
-            proximity_block["span_near"]["clauses"].append(synonym_block)
-        macro_synonym_block["span_or"]["clauses"].append(proximity_block)
+                word_block = {"span_term": {"source_text": term}}
+                synonym_block["span_or"]["clauses"].append(word_block)
+            macro_block["span_near"]["clauses"].append(synonym_block)
 
-    es_query["query"]["bool"]["must"].append(macro_synonym_block)
+    es_query["query"]["bool"]["must"].append(macro_block)
+    logging.debug(" ")
+    logging.debug(" ")
+    logging.debug(" ")
+    logging.debug("→→→→→→→→→→ ES Query:")
+    logging.debug(es_query)
+    logging.debug("←←←←←←←←←← ES Query:")
+    logging.debug(" ")
+    logging.debug(" ")
+    logging.debug(" ")
+    return es_query
+
+
+# Monta a consulta mais restritiva com interval search para retornar os excertos da busca por tema
+def get_es_query_from_interval_query(
+    query: Dict,
+    gazette_ids: List[str],
+) -> Dict:
+    es_query = {
+        "query": {
+            "bool": {
+                "must": [],
+                "filter": [
+                    {"range": {"date": {"gte": "2020-01-01", "lte": "2022-04-30"}}},
+                    {
+                        "terms": {
+                            "territory_id": [
+                                "1302603",
+                                "1400100",
+                                "1501402",
+                                "1702109",
+                                "1721000",
+                                "2103000",
+                                "2211001",
+                                "2408003",
+                                "2408102",
+                                "2507507",
+                                "2607901",
+                                "2611101",
+                                "2611606",
+                                "2704302",
+                                "2910800",
+                                "2927408",
+                                "3106200",
+                                "3304557",
+                                "3525904",
+                                "3552403",
+                                "4106902",
+                                "4205407",
+                                "4314902",
+                                "5002704",
+                                "5103403",
+                                "5208707",
+                                "5300108",
+                            ]
+                        }
+                    },
+                    {"ids": {"values": gazette_ids}},
+                ],
+            }
+        },
+        "size": 100,
+        "highlight": {
+            "fields": {
+                "source_text": {
+                    "type": "unified",
+                    "boundary_scanner_locale": "pt-BR",
+                    "fragment_size": 2000,
+                    "number_of_fragments": 10000,
+                    "pre_tags": ["<__"],
+                    "post_tags": ["__>"],
+                }
+            },
+        },
+    }
+    macro_block = {
+        "intervals": {
+            "source_text": {
+                "all_of": {"intervals": [], "ordered": True, "max_gaps": 20}
+            }
+        }
+    }
+    for macro_set in query["term_sets"]:
+        for term_set in macro_set:
+            # Para cada bloco de sinônimos cria um bloco any_of
+            synonym_block = {"any_of": {"intervals": []}}
+            for term in term_set:
+                word_block = {"match": {"query": term}}
+                synonym_block["any_of"]["intervals"].append(word_block)
+            macro_block["intervals"]["source_text"]["all_of"]["intervals"].append(
+                synonym_block
+            )
+    es_query["query"]["bool"]["must"].append(macro_block)
+    logging.debug("→→→→→→→→→→ ES Query:")
+    logging.debug(es_query)
+    logging.debug("←←←←←←←←←← ES Query:")
+
     return es_query
 
 

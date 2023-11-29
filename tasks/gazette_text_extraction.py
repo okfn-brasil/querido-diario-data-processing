@@ -69,22 +69,14 @@ def create_index(index: IndexInterface) -> None:
                 "date": {"type": "date"},
                 "edition_number": {
                     "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}}
+                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
                 },
-                "file_checksum": {
-                    "type": "keyword"
-                },
-                "file_path": {
-                    "type": "keyword"
-                },
-                "file_url": {
-                    "type": "keyword"
-                },
+                "file_checksum": {"type": "keyword"},
+                "file_path": {"type": "keyword"},
+                "file_url": {"type": "keyword"},
                 "id": {"type": "keyword"},
                 "is_extra_edition": {"type": "boolean"},
-                "power": {
-                    "type": "keyword"
-                },
+                "power": {"type": "keyword"},
                 "processed": {"type": "boolean"},
                 "scraped_at": {"type": "date"},
                 "source_text": {
@@ -97,23 +89,17 @@ def create_index(index: IndexInterface) -> None:
                             "type": "text",
                             "analyzer": "portuguese_exact",
                             "index_options": "offsets",
-                            "term_vector": "with_positions_offsets"
+                            "term_vector": "with_positions_offsets",
                         }
-                    }
+                    },
                 },
-                "state_code": {
-                    "type": "keyword"
-                },
-                "territory_id": {
-                    "type": "keyword"
-                },
+                "state_code": {"type": "keyword"},
+                "territory_id": {"type": "keyword"},
                 "territory_name": {
                     "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}}
+                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
                 },
-                "url": {
-                    "type": "keyword"
-                }
+                "url": {"type": "keyword"},
             }
         },
         "settings": {
@@ -121,21 +107,21 @@ def create_index(index: IndexInterface) -> None:
                 "filter": {
                     "portuguese_stemmer": {
                         "type": "stemmer",
-                        "language": "light_portuguese"
+                        "language": "light_portuguese",
                     }
                 },
                 "analyzer": {
                     "portuguese_without_stopwords_removal": {
                         "tokenizer": "standard",
-                        "filter": ["lowercase", "portuguese_stemmer"]
+                        "filter": ["lowercase", "portuguese_stemmer"],
                     },
                     "portuguese_exact": {
                         "tokenizer": "standard",
-                        "filter": ["lowercase"]
-                    }
-                }
+                        "filter": ["lowercase"],
+                    },
+                },
             }
-        }
+        },
     }
     index.create_index(body=body)
 

@@ -162,6 +162,27 @@
       ]
     },
     {
+      "name": "Teste",
+      "index": "teste",
+      "stopwords": [],
+      "entities": {
+        "categories": [ ],
+        "cases": [ ]
+      },
+      "queries": [
+        {
+          "title": "teste1",
+          "term_sets": [
+            [
+              ["contrato", "licitação", "pregão"],
+              ["ensino", "educação", "educacional", "escola"],
+              ["switch", "access point", "ponto de acesso", "firewall", "roteador"]
+            ]
+          ]
+        }
+      ]
+    },
+    {
       "name": "Implantação de Tecnologias na Educação",
       "index": "educacao",
       "stopwords": [],
@@ -191,12 +212,12 @@
             [
               ["contrato", "licitação", "pregão", "aquisição", "prestação de serviços", "decreto", "lei", "regimento", "plano", "portaria", "resolução", "acordo de cooperação", "termo de convênio", "despacho", "termo de colaboração", "termo de fomento", "chamamento público", "parceria", "deliberação", "edital", "extrato", "comodato", "instrução normativa", "aditivo"],
               ["ensino", "educação", "educacional", "escola"],
-              ["ava", "aplicativo", "plataforma", "ambiente virtual", "sistema", "virtual", "ensino remoto", "ensino à distância", "ead"]
+              ["ava", "aplicativo", "plataforma", "ambiente virtual", "virtual", "ensino remoto", "ensino à distância", "ead", "sistema educacional"]
             ],
             [
               ["contrato", "licitação", "pregão", "aquisição", "prestação de serviços", "decreto", "lei", "regimento", "plano", "portaria", "resolução", "acordo de cooperação", "termo de convênio", "despacho", "termo de colaboração", "termo de fomento", "chamamento público", "parceria", "deliberação", "edital", "extrato", "comodato", "instrução normativa", "aditivo"],
               ["ensino", "educação", "educacional", "escola"],
-              ["zoom", "youtube", "kahoot", "moodle", "khan academy", "superensino", "super ensino", "superprof", "super prof", "Eduedu", "eduplay", "liber", "brainy", "stoodi", "lemann", "cogna", "ânima", "passei direto", "árvore de livros", "udemy", "veduca", "coursera", "alura", "aprimora", "google", "meet", "microsoft", "teams", "g suite", "gsuite", "edtech", "ed tech", "ed-tech", "dragon learn", "foreducation", "mangahigh", "classroom", "amazon", "jovens genios"]
+              ["zoom", "youtube", "kahoot", "moodle", "khan academy", "superensino", "super ensino", "superprof", "super prof", "Eduedu", "eduplay", "liber", "brainy", "stoodi", "lemann", "cogna", "ânima", "passei direto", "árvore de livros", "udemy", "veduca", "coursera", "alura", "aprimora", "google", "meet", "microsoft", "teams", "g suite", "gsuite", "edtech", "ed tech", "ed-tech", "dragon learn", "foreducation", "mangahigh", "classroom", "amazon", "jovens genios", "sistema educacional"]
             ]
           ]
         },
@@ -206,7 +227,7 @@
             [
               ["contrato", "licitação", "pregão", "aquisição", "prestação de serviços", "decreto", "lei", "regimento", "plano", "portaria", "resolução", "acordo de cooperação", "termo de convênio", "despacho", "termo de colaboração", "termo de fomento", "chamamento público", "parceria", "deliberação", "edital", "extrato", "comodato", "instrução normativa", "aditivo"],
               ["ensino", "educação", "educacional", "escola"],
-              ["office", "google", "microsoft", "portabilis", "i-educar", "eduqo", "amazon", "aws", "i-diario", "idiario", "i diario", "diário de classe online", "diário de classe on-line", "diário de classe virtual", "apple"]
+              ["office", "google", "microsoft", "portabilis", "i-educar", "eduqo", "amazon", "aws", "i-diario", "idiario", "i diario", "diário de classe online", "diário de classe on-line", "diário de classe virtual", "apple", "sistema de gestão", "sistema integrado de gestão", "sistema educacional", "sistema de informática"]
             ]
           ]
         },
