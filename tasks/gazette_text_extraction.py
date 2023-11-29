@@ -2,9 +2,8 @@ import logging
 import tempfile
 import os
 from pathlib import Path
-from typing import Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Union
 from segmentation import get_segmenter
-from tasks.utils import get_territory_to_data
 
 from .interfaces import (
     DatabaseInterface,
@@ -15,7 +14,8 @@ from .interfaces import (
 
 
 def extract_text_from_gazettes(
-    gazettes: Iterable[Dict],
+    gazettes: Iterable[Dict[str, Any]],
+    territories: Iterable[Dict[str, Any]],
     database: DatabaseInterface,
     storage: StorageInterface,
     index: IndexInterface,
@@ -25,39 +25,27 @@ def extract_text_from_gazettes(
     Extracts the text from a list of gazettes
     """
     logging.info("Starting text extraction from gazettes")
-    create_index(index)
 
-    territory_to_data = get_territory_to_data(database)
     ids = []
-    association_ids = []
     for gazette in gazettes:
         try:
-            if str(gazette["territory_id"][-4:]).strip() == "0000":
-                association_ids = try_process_gazette_association_file(
-                    gazette, database, storage, index, text_extractor, territory_to_data
-                )
-            else:
-                processed_gazette = try_process_gazette_file(
-                    gazette, database, storage, index, text_extractor
-                )
-
+            document_ids = try_process_gazette_file(
+                gazette, territories, database, storage, index, text_extractor
+            )
         except Exception as e:
             logging.warning(
                 f"Could not process gazette: {gazette['file_path']}. Cause: {e}"
             )
             logging.exception(e)
         else:
-            if association_ids:
-               ids += [association["file_checksum"] for association in association_ids.copy()]
-               association_ids.clear()
-            else:
-                ids.append(processed_gazette["file_checksum"])
+            ids.extend(document_ids)
 
     return ids
 
 
 def try_process_gazette_file(
     gazette: Dict,
+    territories: Iterable[Dict[str, Any]],
     database: DatabaseInterface,
     storage: StorageInterface,
     index: IndexInterface,
@@ -68,149 +56,74 @@ def try_process_gazette_file(
     """
     logging.debug(f"Processing gazette {gazette['file_path']}")
     gazette_file = download_gazette_file(gazette, storage)
-    get_gazette_text_and_define_url(gazette, gazette_file, text_extractor)
-    upload_gazette_raw_text(gazette, storage)
-    index.index_document(gazette, document_id=gazette["file_checksum"])
-    delete_gazette_files(gazette_file)
-    set_gazette_as_processed(gazette, database)
-
-    return gazette
-
-
-def try_process_gazette_association_file(
-    gazette: Dict,
-    database: DatabaseInterface,
-    storage: StorageInterface,
-    index: IndexInterface,
-    text_extractor: TextExtractorInterface,
-    territory_to_data: Dict,
-) -> List:
-    """
-    Do all the work to extract the content from the gazette files
-    """
-
-    logging.debug(f"Processing gazette {gazette['file_path']}")
-    pdf = download_gazette_file(gazette, storage)
-    get_gazette_text_and_define_url(gazette, pdf, text_extractor)
-    upload_gazette_raw_text(gazette, storage)
-    pdf_txt = try_to_extract_content(pdf, text_extractor)
-
-    gazette["source_text"] = pdf_txt
-    segmenter = get_segmenter(gazette["territory_id"], gazette, territory_to_data)
-    diarios = segmenter.get_gazette_segments()
-
-    for diario in diarios:
-        upload_gazette_raw_text_association(diario, storage)
-        index.index_document(diario, document_id=diario["file_checksum"])
-
-    delete_gazette_files(pdf)
-    set_gazette_as_processed(gazette, database)
-    return diarios
-
-
-def create_index(index: IndexInterface) -> None:
-    body = {
-        "mappings": {
-            "properties": {
-                "created_at": {"type": "date"},
-                "date": {"type": "date"},
-                "edition_number": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
-                },
-                "file_checksum": {"type": "keyword"},
-                "file_path": {"type": "keyword"},
-                "file_url": {"type": "keyword"},
-                "id": {"type": "keyword"},
-                "is_extra_edition": {"type": "boolean"},
-                "power": {"type": "keyword"},
-                "processed": {"type": "boolean"},
-                "scraped_at": {"type": "date"},
-                "source_text": {
-                    "type": "text",
-                    "analyzer": "brazilian",
-                    "index_options": "offsets",
-                    "term_vector": "with_positions_offsets",
-                    "fields": {
-                        "with_stopwords": {
-                            "type": "text",
-                            "analyzer": "brazilian_with_stopwords",
-                            "index_options": "offsets",
-                            "term_vector": "with_positions_offsets",
-                        },
-                        "exact": {
-                            "type": "text",
-                            "analyzer": "exact",
-                            "index_options": "offsets",
-                            "term_vector": "with_positions_offsets",
-                        }
-                    },
-                },
-                "state_code": {"type": "keyword"},
-                "territory_id": {"type": "keyword"},
-                "territory_name": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
-                },
-                "url": {"type": "keyword"},
-            }
-        },
-        "settings": {
-            "index": {
-              "sort.field": ["territory_id", "date"],
-              "sort.order": ["asc", "desc"]
-            },
-            "analysis": {
-                "filter": {
-                    "brazilian_stemmer": {
-                        "type": "stemmer",
-                        "language": "brazilian",
-                    }
-                },
-                "analyzer": {
-                    "brazilian_with_stopwords": {
-                        "tokenizer": "standard",
-                        "filter": ["lowercase", "brazilian_stemmer"],
-                    },
-                    "exact": {
-                        "tokenizer": "standard",
-                        "filter": ["lowercase"],
-                    },
-                },
-            }
-        },
-    }
-    index.create_index(body=body)
-
-
-def upload_gazette_raw_text(gazette: Dict, storage):
-    """
-    Define gazette raw text
-    """
-    file_raw_txt = Path(gazette["file_path"]).with_suffix(".txt").as_posix()
-    storage.upload_content(file_raw_txt, gazette["source_text"])
-    logging.debug(f"file_raw_txt uploaded {file_raw_txt}")
-    file_endpoint = get_file_endpoint()
-    gazette["file_raw_txt"] = f"{file_endpoint}/{file_raw_txt}"
-
-def upload_gazette_raw_text_association(gazette: Dict, storage):
-    """
-    Define gazette raw text and define the url to access the file in the storage
-    """
-    storage.upload_content(gazette["file_raw_txt"], gazette["source_text"])
-    file_endpoint = get_file_endpoint()
-    gazette["file_raw_txt"] = f"{file_endpoint}{gazette['file_raw_txt']}"
-
-
-def get_gazette_text_and_define_url(
-    gazette: Dict, gazette_file: str, text_extractor: TextExtractorInterface
-):
-    """
-    Extract file content and define the url to access the file in the storage
-    """
     gazette["source_text"] = try_to_extract_content(gazette_file, text_extractor)
+    gazette["url"] = define_file_url(gazette["file_path"])
+    gazette_txt_path = define_gazette_txt_path(gazette)
+    gazette["file_raw_txt"] = define_file_url(gazette_txt_path)
+    upload_raw_text(gazette_txt_path, gazette["source_text"], storage)
+    delete_gazette_files(gazette_file)
+
+    document_ids = []
+    if gazette_type_is_aggregated(gazette):
+        segmenter = get_segmenter(gazette["territory_id"], territories)
+        territory_segments = segmenter.get_gazette_segments(gazette)
+
+        for segment in territory_segments:
+            segment_txt_path = define_segment_txt_path(segment)
+            segment["file_raw_txt"] = define_file_url(segment_txt_path)
+            upload_raw_text(segment_txt_path, segment["source_text"], storage)
+            index.index_document(segment, document_id=segment["file_checksum"])
+            document_ids.append(segment["file_checksum"])
+    else:
+        index.index_document(gazette, document_id=gazette["file_checksum"])
+        document_ids.append(gazette["file_checksum"])
+
+    set_gazette_as_processed(gazette, database)
+    return document_ids
+
+
+def gazette_type_is_aggregated(gazette: Dict):
+    """
+    Checks if gazette contains publications by more than one city.
+
+    Currently, this is being done by verifying if the territory_id finishes in "00000".
+    This is a special code we are using for gazettes from associations of cities from a
+    state.
+
+    E.g. If cities from Alagoas have their territory_id's starting with "27", an
+    association file will be given territory_id "270000" and will be detected.
+    """
+    return str(gazette["territory_id"][-5:]).strip() == "00000"
+
+
+def upload_raw_text(path: Union[str, Path], content: str, storage: StorageInterface):
+    """
+    Upload gazette raw text file
+    """
+    storage.upload_content(path, content)
+    logging.debug(f"Raw text uploaded {path}")
+
+
+def define_gazette_txt_path(gazette: Dict):
+    """
+    Defines the gazette txt path in the storage
+    """
+    return str(Path(gazette["file_path"]).with_suffix(".txt").as_posix())
+
+
+def define_segment_txt_path(segment: Dict):
+    """
+    Defines the segment txt path in the storage
+    """
+    return f"{segment['territory_id']}/{segment['date']}/{segment['file_checksum']}.txt"
+
+
+def define_file_url(path: str):
+    """
+    Joins the storage endpoint with the path to form the URL
+    """
     file_endpoint = get_file_endpoint()
-    gazette["url"] = f"{file_endpoint}/{gazette['file_path']}"
+    return f"{file_endpoint}/{path}"
 
 
 def get_file_endpoint() -> str:

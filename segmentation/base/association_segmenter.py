@@ -1,11 +1,10 @@
-from typing import Union, Dict, List
+from typing import Any, Dict, Iterable, List, Union
 from segmentation.base import GazetteSegment
 
 
 class AssociationSegmenter:
-    def __init__(self, association_gazette: str, territory_to_data: Dict):
-        self.association_gazette = association_gazette
-        self.territory_to_data = territory_to_data
+    def __init__(self, territories: Iterable[Dict[str, Any]]):
+        self.territories = territories
 
     def get_gazette_segments(self, *args, **kwargs) -> List[Union[GazetteSegment, Dict]]:
         """
