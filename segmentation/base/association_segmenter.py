@@ -3,8 +3,9 @@ from segmentation.base import GazetteSegment
 
 
 class AssociationSegmenter:
-    def __init__(self, association_gazette: str):
+    def __init__(self, association_gazette: str, territory_to_data: Dict):
         self.association_gazette = association_gazette
+        self.territory_to_data = territory_to_data
 
     def get_gazette_segments(self, *args, **kwargs) -> List[Union[GazetteSegment, Dict]]:
         """

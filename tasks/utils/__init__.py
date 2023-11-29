@@ -6,3 +6,7 @@ from .text import (
     clean_extra_whitespaces,
     get_checksum,
 )
+
+from .territories import (
+    get_territory_to_data,
+)

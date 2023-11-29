@@ -3,7 +3,8 @@ import tempfile
 import os
 from pathlib import Path
 from typing import Dict, Iterable, List
-from .gazette_segmentation import extrarir_diarios
+from segmentation import get_segmenter
+from tasks.utils import get_territory_to_data
 
 from .interfaces import (
     DatabaseInterface,
@@ -19,7 +20,6 @@ def extract_text_from_gazettes(
     storage: StorageInterface,
     index: IndexInterface,
     text_extractor: TextExtractorInterface,
-    territories: Iterable[Dict]
 ) -> List[str]:
     """
     Extracts the text from a list of gazettes
@@ -27,16 +27,14 @@ def extract_text_from_gazettes(
     logging.info("Starting text extraction from gazettes")
     create_index(index)
 
+    territory_to_data = get_territory_to_data(database)
     ids = []
     association_ids = []
-    
     for gazette in gazettes:
         try:
-
             if str(gazette["territory_id"][-4:]).strip() == "0000":
-                
                 association_ids = try_process_gazette_association_file(
-                    gazette, database, storage, index, text_extractor, territories
+                    gazette, database, storage, index, text_extractor, territory_to_data
                 )
             else:
                 processed_gazette = try_process_gazette_file(
@@ -47,16 +45,14 @@ def extract_text_from_gazettes(
             logging.warning(
                 f"Could not process gazette: {gazette['file_path']}. Cause: {e}"
             )
+            logging.exception(e)
         else:
-            
             if association_ids:
                ids += [association["file_checksum"] for association in association_ids.copy()]
                association_ids.clear()
-
             else:
                 ids.append(processed_gazette["file_checksum"])
-        
-        
+
     return ids
 
 
@@ -87,7 +83,7 @@ def try_process_gazette_association_file(
     storage: StorageInterface,
     index: IndexInterface,
     text_extractor: TextExtractorInterface,
-    territories: Iterable[Dict]
+    territory_to_data: Dict,
 ) -> List:
     """
     Do all the work to extract the content from the gazette files
@@ -98,14 +94,12 @@ def try_process_gazette_association_file(
     get_gazette_text_and_define_url(gazette, pdf, text_extractor)
     upload_gazette_raw_text(gazette, storage)
     pdf_txt = try_to_extract_content(pdf, text_extractor)
-    diarios = extrarir_diarios(
-        pdf_text=pdf_txt,
-        gazette=gazette,
-        territories=territories
-    )
-    
-    for diario in diarios:
 
+    gazette["source_text"] = pdf_txt
+    segmenter = get_segmenter(gazette["territory_id"], gazette, territory_to_data)
+    diarios = segmenter.get_gazette_segments()
+
+    for diario in diarios:
         upload_gazette_raw_text_association(diario, storage)
         index.index_document(diario, document_id=diario["file_checksum"])
 
@@ -206,7 +200,7 @@ def upload_gazette_raw_text_association(gazette: Dict, storage):
     storage.upload_content(gazette["file_raw_txt"], gazette["source_text"])
     file_endpoint = get_file_endpoint()
     gazette["file_raw_txt"] = f"{file_endpoint}{gazette['file_raw_txt']}"
-    gazette["url"] = f"{file_endpoint}/{gazette['file_path']}"
+
 
 def get_gazette_text_and_define_url(
     gazette: Dict, gazette_file: str, text_extractor: TextExtractorInterface
