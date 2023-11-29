@@ -1,163 +1,88 @@
 import re
-import unicodedata
+import logging
 
 from typing import Any, Dict, List
 from segmentation.base import AssociationSegmenter, GazetteSegment
-from tasks.utils import get_checksum
+from tasks.utils import batched, get_checksum, get_territory_data, get_territory_slug
+
 
 class ALAssociacaoMunicipiosSegmenter(AssociationSegmenter):
-    def __init__(self, association_gazzete: Dict[str, Any], territory_to_data: Dict[str, Any]):
-        super().__init__(association_gazzete, territory_to_data)
-        # No final do regex, existe uma estrutura condicional que verifica se o próximo match é um \s ou SECRETARIA. Isso foi feito para resolver um problema no diário de 2018-10-02, em que o município de Coité do Nóia não foi percebido pelo código. Para resolver isso, utilizamos a próxima palavra (SECRETARIA) para tratar esse caso.
-        # Exceções Notáveis
-        # String: VAMOS, município Poço das Trincheiras, 06/01/2022, ato CCB3A6AB
-        self.RE_NOMES_MUNICIPIOS = (
-            r"ESTADO DE ALAGOAS(?:| )\n{1,2}PREFEITURA MUNICIPAL DE (.*\n{0,2}(?!VAMOS).*$)\n\s(?:\s|SECRETARIA)"
-        )
-        self.association_source_text = self.association_gazette["source_text"]
-        self.territory_to_data = self._format_territory_to_data(territory_to_data)
+    RE_NOMES_MUNICIPIOS = re.compile(
+        r"""
+        (ESTADO\sDE\sALAGOAS(?:|\s)\n{1,2}PREFEITURA\sMUNICIPAL\sDE\s)  # Marcador de início do cabeçalho de publicação do município
+        ((?!EDUCAÇÃO).*?\n{0,2}(?!VAMOS).*?$)                           # Nome do município (pode estar presente em até duas linhas). Exceções Notáveis: VAMOS, Poço das Trincheiras, 06/01/2022, ato CCB3A6AB; EDUCAÇÃO, Dois Riachos, 07/12/2023, ato ABCCE576
+        (\n\s(?:\s|SECRETARIA|Secretaria))                              # Marcador de fim do cabeçalho (pula mais de duas linhas). Exceções Notáveis: SECRETARIA, Coité do Nóia, 02/10/2018, ato 12F7DE15; Secretaria, Qubrângulo, 18/07/2023, atos 27FB2D83 a 1FAF9421
+        """,
+        re.MULTILINE | re.VERBOSE,
+    )
 
-    def get_gazette_segments(self) -> List[Dict[str, Any]]:
+    def get_gazette_segments(self, gazette: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         Returns a list of dicts with the gazettes metadata
         """
-        territory_to_text_split = self.split_text_by_territory()
-        gazette_segments = []
-        for municipio, texto_diario in territory_to_text_split.items():
-            segmento = self.build_segment(municipio, texto_diario)
-            gazette_segments.append(segmento.__dict__)
+        territory_to_text_map = self.split_text_by_territory(gazette["source_text"])
+        gazette_segments = [
+            self.build_segment(territory_slug, segment_text, gazette).__dict__
+            for territory_slug, segment_text in territory_to_text_map.items()
+        ]
         return gazette_segments
 
-    def split_text_by_territory(self) -> Dict[str, str]:
+    def split_text_by_territory(self, text: str) -> Dict[str, str]:
         """
         Segment a association text by territory
         and returns a dict with the territory name and the text segment
         """
-        texto_diario_slice = self.association_source_text.lstrip().splitlines()
-
-        # Processamento
-        linhas_apagar = []  # slice de linhas a ser apagadas ao final.
-        ama_header = texto_diario_slice[0]
-        ama_header_count = 0
-        codigo_count = 0
-        codigo_total = self.association_source_text.count("Código Identificador")
-
-        for num_linha, linha in enumerate(texto_diario_slice):
-            # Remoção do cabeçalho AMA, porém temos que manter a primeira aparição.
-            if linha.startswith(ama_header):
-                ama_header_count += 1
-                if ama_header_count > 1:
-                    linhas_apagar.append(num_linha)
-
-            # Remoção das linhas finais
-            if codigo_count == codigo_total:
-                linhas_apagar.append(num_linha)
-            elif linha.startswith("Código Identificador"):
-                codigo_count += 1
-
-        # Apagando linhas do slice
-        texto_diario_slice = [l for n, l in enumerate(
-            texto_diario_slice) if n not in linhas_apagar]
-
-        # Inserindo o cabeçalho no diário de cada município.
-        territory_to_text_split = {}
-        nomes_municipios = re.findall(
-            self.RE_NOMES_MUNICIPIOS, self.association_source_text, re.MULTILINE)
-        for municipio in nomes_municipios:
-            nome_municipio_normalizado = self._normalize_territory_name(municipio)
-            territory_to_text_split[nome_municipio_normalizado] = ama_header + '\n\n'
-
-        num_linha = 0
-        municipio_atual = None
-        while num_linha < len(texto_diario_slice):
-            linha = texto_diario_slice[num_linha].rstrip()
-
-            if linha.startswith("ESTADO DE ALAGOAS"):
-                nome = self._extract_territory_name(texto_diario_slice, num_linha)
-                if nome is not None:
-                    nome_normalizado = self._normalize_territory_name(nome)
-                    municipio_atual = nome_normalizado
-
-            # Só começa, quando algum muncípio for encontrado.
-            if municipio_atual is None:
-                num_linha += 1
-                continue
-
-            # Conteúdo faz parte de um muncípio
-            territory_to_text_split[municipio_atual] += linha + '\n'
-            num_linha += 1
-
-        return territory_to_text_split
-
-    def build_segment(self, raw_territory_name, segment_text) -> GazetteSegment:
-        file_checksum = get_checksum(segment_text)
-        processed = True
-        source_text = segment_text.rstrip()
-        state = self.association_gazette.get("state_code")
-        raw_territory_name = self._fix_territory_name(raw_territory_name)
-
-        territory_data = self.territory_to_data.get((self._clear_state_code(state), self._clear_city_name(raw_territory_name)))
-
-        territory_id = territory_data["id"]
-        territory_name = territory_data["territory_name"]
-        date = self.association_gazette["date"]
-        file_raw_txt = f"/{territory_id}/{date}/{file_checksum}.txt"
-        
-        return GazetteSegment(
-            # same association values
-            id=self.association_gazette.get("id"),
-            created_at=self.association_gazette.get("created_at"),
-            date=self.association_gazette.get("date"),
-            edition_number=self.association_gazette.get("edition_number"),
-            file_path=self.association_gazette.get("file_path"),
-            file_url=self.association_gazette.get("file_url"),
-            is_extra_edition=self.association_gazette.get("is_extra_edition"),
-            power=self.association_gazette.get("power"),
-            scraped_at=self.association_gazette.get("scraped_at"),
-            state_code=state,
-            url=self.association_gazette.get("url"),
-
-            # segment specific values
-            file_checksum=file_checksum,
-            processed=processed,
-            territory_name=territory_name,
-            source_text=source_text,
-            territory_id=territory_id,
-            file_raw_txt=file_raw_txt,
+        ama_header = text.lstrip().split("\n", maxsplit=1)[0].rstrip()
+        # clean headers
+        clean_text = "\n".join(re.split(re.escape(ama_header), text))
+        # clean final lines
+        clean_text = "\n".join(
+            re.split(r"(Código Ide ?ntificador:\s*\w+)", clean_text)[:-1]
         )
 
-    def _normalize_territory_name(self, municipio: str) -> str:
-        municipio = municipio.rstrip().replace('\n', '')  # limpeza inicial
-        # Alguns nomes de municípios possuem um /AL no final, exemplo: Viçosa no diário 2022-01-17, ato 8496EC0A. Para evitar erros como "vicosa-/al-secretaria-municipal...", a linha seguir remove isso. 
-        municipio = re.sub("(\/AL.*|GABINETE DO PREFEITO.*|PODER.*|http.*|PORTARIA.*|Extrato.*|ATA DE.*|SECRETARIA.*|Fundo.*|SETOR.*|ERRATA.*|- AL.*|GABINETE.*)", "", municipio)
-        return municipio
+        raw_segments = re.split(self.RE_NOMES_MUNICIPIOS, clean_text)[1:]
 
-    def _extract_territory_name(self, texto_diario_slice: List[str], num_linha: int):
-        texto = '\n'.join(texto_diario_slice[num_linha:num_linha+10])
-        match = re.findall(self.RE_NOMES_MUNICIPIOS, texto, re.MULTILINE)
-        if len(match) > 0:
-            return match[0].strip().replace('\n', '')
-        return None
+        territory_to_text_map = {}
+        for pattern_batch in batched(raw_segments, 4):
+            territory_name = pattern_batch[1]
+            clean_territory_name = self._normalize_territory_name(territory_name)
+            territory_slug = get_territory_slug(clean_territory_name, "AL")
+            previous_text_or_header = territory_to_text_map.setdefault(
+                territory_slug, f"{ama_header}\n"
+            )
+            raw_batch_text = "".join(pattern_batch)
+            new_territory_text = f"{previous_text_or_header}\n{raw_batch_text}"
+            territory_to_text_map[territory_slug] = new_territory_text
 
-    def _format_territory_to_data(self, territory_to_data: Dict[str, Any]):
-        territory_to_data = {
-            (self._clear_state_code(k[0]), self._clear_city_name(k[1])): v for k, v in territory_to_data.items()
+        return territory_to_text_map
+
+    def build_segment(
+        self, territory_slug: str, segment_text: str, gazette: Dict
+    ) -> GazetteSegment:
+        logging.debug(
+            f"Creating segment for territory \"{territory_slug}\" from {gazette['file_path']} file."
+        )
+        territory_data = get_territory_data(territory_slug, self.territories)
+
+        return GazetteSegment(**{
+            **gazette,
+            # segment specific values
+            "processed": True,
+            "file_checksum": get_checksum(segment_text),
+            "source_text": segment_text.strip(),
+            "territory_name": territory_data["territory_name"],
+            "territory_id": territory_data["id"],
+        })
+
+    def _normalize_territory_name(self, territory_name: str) -> str:
+        clean_name = territory_name.strip().replace("\n", "")
+        # Alguns nomes de municípios possuem um /AL no final, exemplo: Viçosa no diário 2022-01-17, ato 8496EC0A. Para evitar erros como "vicosa-/al-secretaria-municipal...", a linha seguir remove isso.
+        clean_name = re.sub(
+            "\s*(\/AL.*|GABINETE DO PREFEITO.*|PODER.*|http.*|PORTARIA.*|Extrato.*|ATA DE.*|SECRETARIA.*|Fundo.*|SETOR.*|ERRATA.*|- AL.*|GABINETE.*|EXTRATO.*|SÚMULA.*|RATIFICAÇÃO.*)",
+            "",
+            clean_name,
+        )
+        name_to_fixed = {
+            "MAJOR IZIDORO": "MAJOR ISIDORO",
         }
-        return territory_to_data
-
-    def _clear_city_name(self, name: str):
-        clean_name = name.replace("'", "")
-        clean_name = unicodedata.normalize("NFD", clean_name)
-        clean_name = clean_name.encode("ascii", "ignore").decode("utf-8")
-        clean_name = clean_name.lower()
-        clean_name = clean_name.strip()
-        return clean_name
-
-    def _clear_state_code(self, code: str):
-        return code.lower().strip()
-    
-    def _fix_territory_name(self, name: str):
-        #clean_name = "major isidoro" if clean_name == "major izidoro" else clean_name
-        if name == "major izidoro":
-            return "major isidoro"
-        return name
+        return name_to_fixed.get(clean_name, clean_name)

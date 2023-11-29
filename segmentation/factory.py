@@ -1,30 +1,34 @@
-from typing import Any, Dict
+from typing import Any, Dict, Iterable
 
 from segmentation.base import AssociationSegmenter
 from segmentation import segmenters
 
 
-def get_segmenter(territory_id: str, association_gazzete: Dict[str, Any], territory_to_data: Dict) -> AssociationSegmenter:
+_segmenter_instances = {}
+
+
+def get_segmenter(territory_id: str, territories: Iterable[Dict[str, Any]]) -> AssociationSegmenter:
     """
     Factory method to return a AssociationSegmenter
 
     Example
     -------
-    >>> association_gazette = {
-        "territory_name": "Associação",
-        "created_at": datetime.datetime.now(),
-        "date": datetime.datetime.now(),
-        "edition_number": 1,
-        "file_path": 'raw/pdf.pdf',
-        "file_url": 'localhost:8000/raw/pdf.pdf',
-        "is_extra_edition": True,
-        "power": 'executive',
-        "scraped_at": datetime.datetime.now(),
-        "state_code": 'AL',
-        "source_text": texto,
-    }
+    >>> territory_id = "9999999"
+    >>> territories = [
+        {
+            "id": "9999999",
+            "territory_name": "Bairro do Limoeiro",
+            "state_code": "ZZ",
+            "state": "Limoeirolândia",
+        }, {
+            "id": "0000000",
+            "territory_name": "Castelo Rá-Tim-Bum",
+            "state_code": "SP",
+            "state": "São Paulo",
+        },
+    ]
     >>> from segmentation import get_segmenter
-    >>> segmenter = get_segmenter(territory_id, association_gazette)
+    >>> segmenter = get_segmenter(territory_id, territories)
     >>> segments = segmenter.get_gazette_segments()
 
     Notes
@@ -37,6 +41,9 @@ def get_segmenter(territory_id: str, association_gazzete: Dict[str, Any], territ
         "2700000": "ALAssociacaoMunicipiosSegmenter",
     }
 
-    segmenter_class_name = territory_to_segmenter_class[territory_id]
-    segmenter_class = getattr(segmenters, segmenter_class_name)
-    return segmenter_class(association_gazzete, territory_to_data)
+    if territory_id not in _segmenter_instances:
+        segmenter_class_name = territory_to_segmenter_class[territory_id]
+        segmenter_class = getattr(segmenters, segmenter_class_name)
+        _segmenter_instances[territory_id] = segmenter_class(territories)
+
+    return _segmenter_instances[territory_id]
