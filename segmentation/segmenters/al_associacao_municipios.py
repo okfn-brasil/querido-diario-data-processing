@@ -95,14 +95,17 @@ class ALAssociacaoMunicipiosSegmenter(AssociationSegmenter):
         source_text = segment_text.rstrip()
         state = self.association_gazette.get("state_code")
         raw_territory_name = self._fix_territory_name(raw_territory_name)
-        territory_data = self.territory_to_data.get(self._clear_state_code(state), self._clear_city_name(raw_territory_name))
-        territory_id = territory_data.get("id")
-        territory_name = territory_data.get("territory_name")
-        # file_raw_txt = f"/{territory_id}/{date}/{file_checksum}.txt"
-        # file_raw_txt = None
+
+        territory_data = self.territory_to_data.get((self._clear_state_code(state), self._clear_city_name(raw_territory_name)))
+
+        territory_id = territory_data["id"]
+        territory_name = territory_data["territory_name"]
+        date = self.association_gazette["date"]
+        file_raw_txt = f"/{territory_id}/{date}/{file_checksum}.txt"
         
         return GazetteSegment(
             # same association values
+            id=self.association_gazette.get("id"),
             created_at=self.association_gazette.get("created_at"),
             date=self.association_gazette.get("date"),
             edition_number=self.association_gazette.get("edition_number"),
@@ -120,7 +123,7 @@ class ALAssociacaoMunicipiosSegmenter(AssociationSegmenter):
             territory_name=territory_name,
             source_text=source_text,
             territory_id=territory_id,
-            # file_raw_txt=file_raw_txt,
+            file_raw_txt=file_raw_txt,
         )
 
     def _normalize_territory_name(self, municipio: str) -> str:
@@ -142,7 +145,7 @@ class ALAssociacaoMunicipiosSegmenter(AssociationSegmenter):
         }
         return territory_to_data
 
-    def _clear_city_name(name: str):
+    def _clear_city_name(self, name: str):
         clean_name = name.replace("'", "")
         clean_name = unicodedata.normalize("NFD", clean_name)
         clean_name = clean_name.encode("ascii", "ignore").decode("utf-8")
@@ -150,10 +153,10 @@ class ALAssociacaoMunicipiosSegmenter(AssociationSegmenter):
         clean_name = clean_name.strip()
         return clean_name
 
-    def _clear_state_code(code: str):
+    def _clear_state_code(self, code: str):
         return code.lower().strip()
     
-    def _fix_territory_name(name: str):
+    def _fix_territory_name(self, name: str):
         #clean_name = "major isidoro" if clean_name == "major izidoro" else clean_name
         if name == "major izidoro":
             return "major isidoro"

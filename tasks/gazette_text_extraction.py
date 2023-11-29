@@ -45,6 +45,7 @@ def extract_text_from_gazettes(
             logging.warning(
                 f"Could not process gazette: {gazette['file_path']}. Cause: {e}"
             )
+            logging.exception(e)
         else:
             if association_ids:
                ids += [association["file_checksum"] for association in association_ids.copy()]
@@ -199,6 +200,7 @@ def upload_gazette_raw_text_association(gazette: Dict, storage):
     storage.upload_content(gazette["file_raw_txt"], gazette["source_text"])
     file_endpoint = get_file_endpoint()
     gazette["file_raw_txt"] = f"{file_endpoint}{gazette['file_raw_txt']}"
+    gazette["url"] = f"{file_endpoint}/{gazette['file_path']}"
 
 
 def get_gazette_text_and_define_url(
