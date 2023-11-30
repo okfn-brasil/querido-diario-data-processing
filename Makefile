@@ -21,10 +21,10 @@ POSTGRES_HOST ?= localhost
 POSTGRES_PORT ?= 5432
 POSTGRES_IMAGE ?= docker.io/postgres:10
 DATABASE_RESTORE_FILE ?= contrib/data/queridodiariodb.tar
-# Elasticsearch info to run the tests
-ELASTICSEARCH_PORT1 ?= 9200
-ELASTICSEARCH_PORT2 ?= 9300
-ELASTICSEARCH_CONTAINER_NAME ?= queridodiario-elasticsearch
+# OpenSearch port info
+OPENSEARCH_PORT1 ?= 9200
+OPENSEARCH_PORT2 ?= 9300
+OPENSEARCH_CONTAINER_NAME ?= queridodiario-opensearch
 APACHE_TIKA_CONTAINER_NAME ?= queridodiario-apache-tika-server
 
 run-command=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
@@ -86,11 +86,11 @@ destroy-pod:
 
 create-pod: destroy-pod
 	podman pod create -p $(POSTGRES_PORT):$(POSTGRES_PORT) \
-					  -p $(ELASTICSEARCH_PORT1):$(ELASTICSEARCH_PORT1) \
-					  -p $(STORAGE_PORT):$(STORAGE_PORT) \
-	                  --name $(POD_NAME)
+				-p $(OPENSEARCH_PORT1):$(OPENSEARCH_PORT1) \
+				-p $(STORAGE_PORT):$(STORAGE_PORT) \
+	                  	--name $(POD_NAME)
 
-prepare-test-env: create-pod storage apache-tika-server elasticsearch database
+prepare-test-env: create-pod storage apache-tika-server opensearch database
 
 .PHONY: test
 test: prepare-test-env retest
@@ -117,7 +117,7 @@ retest-main:
 
 .PHONY: retest-index
 retest-index:
-	$(call run-command, python -m unittest -f tests/elasticsearch.py)
+	$(call run-command, python -m unittest -f tests/opensearch.py)
 
 .PHONY: retest-tika
 retest-tika:
@@ -200,7 +200,7 @@ set-run-variable-values:
 	cp --no-clobber contrib/sample.env envvars || true
 	$(eval POD_NAME=run-$(POD_NAME))
 	$(eval DATABASE_CONTAINER_NAME=run-$(DATABASE_CONTAINER_NAME))
-	$(eval ELASTICSEARCH_CONTAINER_NAME=run-$(ELASTICSEARCH_CONTAINER_NAME))
+	$(eval OPENSEARCH_CONTAINER_NAME=run-$(OPENSEARCH_CONTAINER_NAME))
 
 .PHONY: sql
 sql: set-run-variable-values
@@ -209,7 +209,7 @@ sql: set-run-variable-values
 		$(POSTGRES_IMAGE) psql -h localhost -U $(POSTGRES_USER) $(POSTGRES_DB)
 
 .PHONY: setup
-setup: set-run-variable-values create-pod storage apache-tika-server elasticsearch database
+setup: set-run-variable-values create-pod storage apache-tika-server opensearch database
 
 .PHONY: re-run
 re-run: set-run-variable-values
@@ -235,19 +235,20 @@ shell-database: set-run-variable-values
 	podman exec -it $(DATABASE_CONTAINER_NAME) \
 	    psql -h localhost -d $(POSTGRES_DB) -U $(POSTGRES_USER)
 
-elasticsearch: stop-elasticsearch start-elasticsearch wait-elasticsearch
+opensearch: stop-opensearch start-opensearch wait-opensearch
 
-start-elasticsearch:
+start-opensearch:
 	podman run -d --rm -ti \
-		--name $(ELASTICSEARCH_CONTAINER_NAME) \
+		--name $(OPENSEARCH_CONTAINER_NAME) \
 		--pod $(POD_NAME) \
 		--env discovery.type=single-node \
-		docker.io/elasticsearch:7.9.1
+		--env plugins.security.ssl.http.enabled=false \
+		docker.io/opensearchproject/opensearch:2.9.0
 
-stop-elasticsearch:
-	podman rm --force --ignore $(ELASTICSEARCH_CONTAINER_NAME)
+stop-opensearch:
+	podman rm --force --ignore $(OPENSEARCH_CONTAINER_NAME)
 
-wait-elasticsearch:
+wait-opensearch:
 	$(call wait-for, localhost:9200)
 
 .PHONY: publish-tag

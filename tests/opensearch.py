@@ -3,9 +3,9 @@ from unittest import TestCase, expectedFailure
 from unittest.mock import patch, MagicMock
 import uuid
 
-import elasticsearch
+import opensearch
 
-from index.elasticsearch import ElasticSearchInterface, create_index_interface
+from index.opensearch import OpenSearchInterface, create_index_interface
 from tasks import IndexInterface
 
 
@@ -13,8 +13,8 @@ class IndexInterfaceFactoryFunctionTests(TestCase):
     @patch.dict(
         "os.environ",
         {
-            "ELASTICSEARCH_HOST": "127.0.0.1",
-            "ELASTICSEARCH_INDEX": "index_name",
+            "OPENSEARCH_HOST": "127.0.0.1",
+            "OPENSEARCH_INDEX": "index_name",
         },
     )
     def test_create_index_interface_factory_method_with_valid_arguments(self):
@@ -29,7 +29,7 @@ class IndexInterfaceFactoryFunctionTests(TestCase):
     @patch.dict(
         "os.environ",
         {
-            "ELASTICSEARCH_INDEX": "index_name",
+            "OPENSEARCH_INDEX": "index_name",
         },
     )
     @expectedFailure
@@ -39,7 +39,7 @@ class IndexInterfaceFactoryFunctionTests(TestCase):
     @patch.dict(
         "os.environ",
         {
-            "ELASTICSEARCH_HOST": "127.0.0.1",
+            "OPENSEARCH_HOST": "127.0.0.1",
         },
     )
     @expectedFailure
@@ -49,8 +49,8 @@ class IndexInterfaceFactoryFunctionTests(TestCase):
     @patch.dict(
         "os.environ",
         {
-            "ELASTICSEARCH_HOST": "127.0.0.1",
-            "ELASTICSEARCH_INDEX": "",
+            "OPENSEARCH_HOST": "127.0.0.1",
+            "OPENSEARCH_INDEX": "",
         },
     )
     @expectedFailure
@@ -60,8 +60,8 @@ class IndexInterfaceFactoryFunctionTests(TestCase):
     @patch.dict(
         "os.environ",
         {
-            "ELASTICSEARCH_HOST": "",
-            "ELASTICSEARCH_INDEX": "index_name",
+            "OPENSEARCH_HOST": "",
+            "OPENSEARCH_INDEX": "index_name",
         },
     )
     @expectedFailure
@@ -69,7 +69,7 @@ class IndexInterfaceFactoryFunctionTests(TestCase):
         interface = create_index_interface()
 
 
-class ElasticsearchBasicTests(TestCase):
+class OpensearchBasicTests(TestCase):
     def setUp(self):
         document_checksum = str(uuid.uuid1())
         self.fake_document = {
@@ -89,148 +89,148 @@ class ElasticsearchBasicTests(TestCase):
             "territory_name": "Gaspar",
         }
 
-    def test_elasticsearch_should_implement_index_interface(self):
-        self.assertIsInstance(ElasticSearchInterface([]), IndexInterface)
+    def test_opensearch_should_implement_index_interface(self):
+        self.assertIsInstance(OpenSearchInterface([]), IndexInterface)
 
-    @patch("elasticsearch.Elasticsearch", autospec=True)
-    def test_elasticsearch_connection(self, elasticsearch_mock):
-        interface = ElasticSearchInterface(["127.0.0.1"])
-        elasticsearch_mock.assert_called_once_with(hosts=["127.0.0.1"])
+    @patch("opensearch.Opensearch", autospec=True)
+    def test_opensearch_connection(self, opensearch_mock):
+        interface = OpenSearchInterface(["127.0.0.1"])
+        opensearch_mock.assert_called_once_with(hosts=["127.0.0.1"])
 
-    @patch("elasticsearch.Elasticsearch", autospec=True)
-    def test_elasticsearch_index_creation_should_check_if_index_exists(
-        self, elasticsearch_mock
+    @patch("opensearch.Opensearch", autospec=True)
+    def test_opensearch_index_creation_should_check_if_index_exists(
+        self, opensearch_mock
     ):
-        interface = ElasticSearchInterface(["127.0.0.1"])
-        interface._es.indices = MagicMock()
-        interface._es.indices.exists = MagicMock()
+        interface = OpenSearchInterface(["127.0.0.1"])
+        interface.search_engine.indices = MagicMock()
+        interface.search_engine.indices.exists = MagicMock()
         interface.create_index("querido-diario")
-        interface._es.indices.exists.assert_called_once_with(index="querido-diario")
+        interface.search_engine.indices.exists.assert_called_once_with(index="querido-diario")
 
-    @patch("elasticsearch.Elasticsearch", autospec=True)
-    def test_elasticsearch_index_creation_should_failed_when_no_index_is_provided(
-        self, elasticsearch_mock
+    @patch("opensearch.Opensearch", autospec=True)
+    def test_opensearch_index_creation_should_failed_when_no_index_is_provided(
+        self, opensearch_mock
     ):
-        interface = ElasticSearchInterface(["127.0.0.1"])
-        interface._es.indices = MagicMock()
-        interface._es.indices.exists = MagicMock()
+        interface = OpenSearchInterface(["127.0.0.1"])
+        interface.search_engine.indices = MagicMock()
+        interface.search_engine.indices.exists = MagicMock()
         with self.assertRaisesRegex(Exception, "Index name not defined"):
             interface.create_index()
 
-    @patch("elasticsearch.Elasticsearch", autospec=True)
-    def test_elasticsearch_index_creation_with_default_index_value(
-        self, elasticsearch_mock
+    @patch("opensearch.Opensearch", autospec=True)
+    def test_opensearch_index_creation_with_default_index_value(
+        self, opensearch_mock
     ):
-        interface = ElasticSearchInterface(
+        interface = OpenSearchInterface(
             ["127.0.0.1"], default_index="querido-diario2"
         )
-        interface._es.indices = MagicMock()
-        interface._es.indices.exists = MagicMock()
+        interface.search_engine.indices = MagicMock()
+        interface.search_engine.indices.exists = MagicMock()
         interface.create_index()
-        interface._es.indices.exists.assert_called_once_with(index="querido-diario2")
+        interface.search_engine.indices.exists.assert_called_once_with(index="querido-diario2")
 
-    @patch("elasticsearch.Elasticsearch", autospec=True)
-    def test_elasticsearch_index_default_timeout_should_be_30s(
-        self, elasticsearch_mock
+    @patch("opensearch.Opensearch", autospec=True)
+    def test_opensearch_index_default_timeout_should_be_30s(
+        self, opensearch_mock
     ):
-        interface = ElasticSearchInterface(["127.0.0.1"])
-        interface._es.indices = MagicMock()
-        interface._es.indices.exists = MagicMock(return_value=False)
-        interface._es.indices.create = MagicMock()
+        interface = OpenSearchInterface(["127.0.0.1"])
+        interface.search_engine.indices = MagicMock()
+        interface.search_engine.indices.exists = MagicMock(return_value=False)
+        interface.search_engine.indices.create = MagicMock()
         interface.create_index("querido-diario")
-        interface._es.indices.create.assert_called_once_with(
+        interface.search_engine.indices.create.assert_called_once_with(
             index="querido-diario",
             body={"mappings": {"properties": {"date": {"type": "date"}}}},
             timeout="30s",
         )
 
-    @patch("elasticsearch.Elasticsearch", autospec=True)
-    def test_elasticsearch_index_should_allow_change_default_timeout(
-        self, elasticsearch_mock
+    @patch("opensearch.Opensearch", autospec=True)
+    def test_opensearch_index_should_allow_change_default_timeout(
+        self, opensearch_mock
     ):
-        interface = ElasticSearchInterface(["127.0.0.1"], timeout="2m")
-        interface._es.indices = MagicMock()
-        interface._es.indices.exists = MagicMock(return_value=False)
-        interface._es.indices.create = MagicMock()
+        interface = OpenSearchInterface(["127.0.0.1"], timeout="2m")
+        interface.search_engine.indices = MagicMock()
+        interface.search_engine.indices.exists = MagicMock(return_value=False)
+        interface.search_engine.indices.create = MagicMock()
         interface.create_index("querido-diario")
-        interface._es.indices.create.assert_called_once_with(
+        interface.search_engine.indices.create.assert_called_once_with(
             index="querido-diario",
             body={"mappings": {"properties": {"date": {"type": "date"}}}},
             timeout="2m",
         )
 
-    @patch("elasticsearch.Elasticsearch", autospec=True)
-    def test_elasticsearch_index_creation_should_not_recreate_index_if_it_exists(
-        self, elasticsearch_mock
+    @patch("opensearch.Opensearch", autospec=True)
+    def test_opensearch_index_creation_should_not_recreate_index_if_it_exists(
+        self, opensearch_mock
     ):
-        interface = ElasticSearchInterface(["127.0.0.1"])
-        interface._es.indices = MagicMock()
-        interface._es.indices.exists = MagicMock(return_value=True)
-        interface._es.indices.create = MagicMock()
+        interface = OpenSearchInterface(["127.0.0.1"])
+        interface.search_engine.indices = MagicMock()
+        interface.search_engine.indices.exists = MagicMock(return_value=True)
+        interface.search_engine.indices.create = MagicMock()
         interface.create_index("querido-diario")
-        interface._es.indices.exists.assert_called_once_with(index="querido-diario")
-        interface._es.indices.create.assert_not_called()
+        interface.search_engine.indices.exists.assert_called_once_with(index="querido-diario")
+        interface.search_engine.indices.create.assert_not_called()
 
-    @patch("elasticsearch.Elasticsearch", autospec=True)
-    def test_elasticsearch_should_create_index_if_it_does_not_exists(
-        self, elasticsearch_mock
+    @patch("opensearch.Opensearch", autospec=True)
+    def test_opensearch_should_create_index_if_it_does_not_exists(
+        self, opensearch_mock
     ):
-        interface = ElasticSearchInterface(["127.0.0.1"])
-        interface._es.indices = MagicMock()
-        interface._es.indices.exists = MagicMock(return_value=False)
-        interface._es.indices.create = MagicMock()
+        interface = OpenSearchInterface(["127.0.0.1"])
+        interface.search_engine.indices = MagicMock()
+        interface.search_engine.indices.exists = MagicMock(return_value=False)
+        interface.search_engine.indices.create = MagicMock()
         interface.create_index("querido-diario")
-        interface._es.indices.exists.assert_called_once_with(index="querido-diario")
-        interface._es.indices.create.assert_called_once_with(
+        interface.search_engine.indices.exists.assert_called_once_with(index="querido-diario")
+        interface.search_engine.indices.create.assert_called_once_with(
             index="querido-diario",
             body={"mappings": {"properties": {"date": {"type": "date"}}}},
             timeout="30s",
         )
 
-    @patch("elasticsearch.Elasticsearch", autospec=True)
-    def test_elasticsearch_should_create_index_with_default_value_with_function_has_no_arguments(
-        self, elasticsearch_mock
+    @patch("opensearch.Opensearch", autospec=True)
+    def test_opensearch_should_create_index_with_default_value_with_function_has_no_arguments(
+        self, opensearch_mock
     ):
-        interface = ElasticSearchInterface(
+        interface = OpenSearchInterface(
             ["127.0.0.1"], default_index="querido-diario2"
         )
-        interface._es.indices = MagicMock()
-        interface._es.indices.exists = MagicMock(return_value=False)
-        interface._es.indices.create = MagicMock()
+        interface.search_engine.indices = MagicMock()
+        interface.search_engine.indices.exists = MagicMock(return_value=False)
+        interface.search_engine.indices.create = MagicMock()
         interface.create_index()
-        interface._es.indices.exists.assert_called_once_with(index="querido-diario2")
-        interface._es.indices.create.assert_called_once_with(
+        interface.search_engine.indices.exists.assert_called_once_with(index="querido-diario2")
+        interface.search_engine.indices.create.assert_called_once_with(
             index="querido-diario2",
             body={"mappings": {"properties": {"date": {"type": "date"}}}},
             timeout="30s",
         )
 
-    @patch("elasticsearch.Elasticsearch", autospec=True)
-    def test_upload_document_to_index(self, elasticsearch_mock):
-        interface = ElasticSearchInterface(["127.0.0.1"])
+    @patch("opensearch.Opensearch", autospec=True)
+    def test_upload_document_to_index(self, opensearch_mock):
+        interface = OpenSearchInterface(["127.0.0.1"])
         document_checksum = str(uuid.uuid1())
         interface.index_document(self.fake_document, "querido-diario")
-        interface._es.index.assert_called_once_with(
+        interface.search_engine.index.assert_called_once_with(
             index="querido-diario",
             body=self.fake_document,
             id=self.fake_document["file_checksum"],
         )
 
-    @patch("elasticsearch.Elasticsearch", autospec=True)
-    def test_upload_document_to_index_using_default_index(self, elasticsearch_mock):
-        interface = ElasticSearchInterface(
+    @patch("opensearch.Opensearch", autospec=True)
+    def test_upload_document_to_index_using_default_index(self, opensearch_mock):
+        interface = OpenSearchInterface(
             ["127.0.0.1"], default_index="querido-diario2"
         )
         document_checksum = str(uuid.uuid1())
         interface.index_document(self.fake_document)
-        interface._es.index.assert_called_once_with(
+        interface.search_engine.index.assert_called_once_with(
             index="querido-diario2",
             body=self.fake_document,
             id=self.fake_document["file_checksum"],
         )
 
 
-class ElasticsearchIntegrationTests(TestCase):
+class OpensearchIntegrationTests(TestCase):
     def setUp(self):
         document_checksum = str(uuid.uuid1())
         self.fake_document = {
@@ -249,40 +249,40 @@ class ElasticsearchIntegrationTests(TestCase):
             "state_code": "SC",
             "territory_name": "Gaspar",
         }
-        self._es = elasticsearch.Elasticsearch(hosts=["127.0.0.1"])
+        self.search_engine = opensearch.Opensearch(hosts=["127.0.0.1"])
 
     def clean_index(self, index):
-        self._es.delete_by_query(
+        self.search_engine.delete_by_query(
             index=index, body={"query": {"match_all": {}}}, timeout="5m"
         )
-        self._es.indices.refresh(index="querido-diario")
+        self.search_engine.indices.refresh(index="querido-diario")
 
     def delete_index(self, index):
-        self._es.indices.delete(
+        self.search_engine.indices.delete(
             index="querido-diario", timeout="2m", ignore_unavailable=True
         )
-        self.assertFalse(self._es.indices.exists("querido-diario"))
+        self.assertFalse(self.search_engine.indices.exists("querido-diario"))
 
     def test_index_creation(self):
         self.delete_index("querido-diario")
 
-        interface = ElasticSearchInterface(["127.0.0.1"], timeout="5m")
+        interface = OpenSearchInterface(["127.0.0.1"], timeout="5m")
         interface.create_index("querido-diario")
-        self.assertTrue(self._es.indices.exists("querido-diario"))
+        self.assertTrue(self.search_engine.indices.exists("querido-diario"))
 
     def test_index_document(self):
         self.clean_index("querido-diario")
-        interface = ElasticSearchInterface(["127.0.0.1"])
+        interface = OpenSearchInterface(["127.0.0.1"])
         interface.index_document(self.fake_document, "querido-diario")
-        self._es.indices.refresh(index="querido-diario")
+        self.search_engine.indices.refresh(index="querido-diario")
 
-        self.assertEqual(self._es.count(index="querido-diario")["count"], 1)
+        self.assertEqual(self.search_engine.count(index="querido-diario")["count"], 1)
         self.assertTrue(
-            self._es.exists(
+            self.search_engine.exists(
                 id=self.fake_document["file_checksum"], index="querido-diario"
             )
         )
-        indexed_document = self._es.get(
+        indexed_document = self.search_engine.get(
             index="querido-diario", id=self.fake_document["file_checksum"]
         )
         self.fake_document["date"] = self.fake_document["date"].strftime("%Y-%m-%d")
@@ -292,18 +292,18 @@ class ElasticsearchIntegrationTests(TestCase):
 
     def test_index_document_twice(self):
         self.clean_index("querido-diario")
-        interface = ElasticSearchInterface(["127.0.0.1"])
+        interface = OpenSearchInterface(["127.0.0.1"])
         interface.index_document(self.fake_document, "querido-diario")
         interface.index_document(self.fake_document, "querido-diario")
-        self._es.indices.refresh(index="querido-diario")
+        self.search_engine.indices.refresh(index="querido-diario")
 
-        self.assertEqual(self._es.count(index="querido-diario")["count"], 1)
+        self.assertEqual(self.search_engine.count(index="querido-diario")["count"], 1)
         self.assertTrue(
-            self._es.exists(
+            self.search_engine.exists(
                 id=self.fake_document["file_checksum"], index="querido-diario"
             )
         )
-        indexed_document = self._es.get(
+        indexed_document = self.search_engine.get(
             index="querido-diario", id=self.fake_document["file_checksum"]
         )
         self.fake_document["date"] = self.fake_document["date"].strftime("%Y-%m-%d")

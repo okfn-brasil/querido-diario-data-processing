@@ -17,8 +17,8 @@ from .text_extraction_task_tests import TextExtractionTaskTests
 
 from .main_tests import MainModuleTests
 
-from .elasticsearch import (
-    ElasticsearchBasicTests,
+from .opensearch import (
+    OpensearchBasicTests,
     IndexInterfaceFactoryFunctionTests,
-    ElasticsearchIntegrationTests,
+    OpensearchIntegrationTests,
 )
