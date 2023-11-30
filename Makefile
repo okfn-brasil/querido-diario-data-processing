@@ -56,7 +56,7 @@ minio:  uninstall-minio
 	$(helm_install) --namespace minio --values $(SCRIPT_DIR)/minio-values.yaml --version 12.8.15 minio bitnami/minio 
 
 uninstall-elasticsearch: 
-	- $(helm) uninstall elastic-operator
+	- $(helm) uninstall --namespace elastic-system elastic-operator
 
 install-elasticsearch: 
 	$(helm_install) elastic-operator elastic/eck-operator -n elastic-system --create-namespace
@@ -70,7 +70,7 @@ delete-cluster:
 	minikube delete --profile $(CLUSTER_NAME)
 
 start-cluster:
-	minikube start --driver=kvm2 --cpus 6 --memory 6gb --disk-size 40g \
+	minikube start --driver=kvm2 --cpus 4 --memory 6gb --disk-size 40g \
 		--nodes $(CLUSTER_NODES_COUNT)  --profile $(CLUSTER_NAME)
 	# O CSI default do minikube nao funciona legal com multiplos nos. 
 	# Então vamos usar um diferente.
@@ -133,16 +133,16 @@ prepara-ambiente: expoe-servicos diarios base-de-dados derruba-servicos
 expoe-servicos: derruba-servicos
 	@nohup $(k8s) port-forward --namespace minio svc/minio 9000:9000 > /dev/null 2>&1 &
 	@nohup $(k8s) port-forward --namespace minio svc/minio 9001:9001 > /dev/null 2>&1 &
-	@nohup $(k8s) port-forward --namespace postgresql svc/postgresql 5432:5432 > /dev/null 2>&1 &
+	@nohup $(k8s) port-forward --namespace postgresql svc/postgresql 5433:5432 > /dev/null 2>&1 &
 	@echo "Minio esta disponivel na porta 9000 e 9001"
-	@echo "Postgresql está disponivel na porta 5432"
+	@echo "Postgresql está disponivel na porta 5433"
 	@echo "Para remover o mapeamento das portas execute: make derruba-servicoes"
 
 .PHONY: derruba-servicos
 derruba-servicos:
 	- pkill -f "svc/minio 9000"
 	- pkill -f "svc/minio 9001"
-	- pkill -f "svc/postgresql 5432"
+	- pkill -f "svc/postgresql 5433"
 
 # Colocar alguns diarios no s3 rodando no cluster local
 .PHONY: diarios
@@ -164,7 +164,7 @@ $(DATABASE_DUMP):
 .PHONY: base-de-dados
 base-de-dados: $(DATABASE_DUMP)
 	PGPASSWORD="$(shell $(k8s) get secret --namespace postgresql postgresql -o jsonpath="{.data.password}" | base64 -d)" \
-		   psql --host 127.0.0.1 -U queridodiario -d queridodiariodb -p 5432 -f  $(DATABASE_DUMP)
+		   psql --host 127.0.0.1 -U queridodiario -d queridodiariodb -p 5433 -f  $(DATABASE_DUMP)
 	$(k8s) delete pod --namespace postgresql --wait --ignore-not-found postgresql-client
 	$(k8s) run postgresql-client --rm --tty -i --restart='Never' \
 		--namespace postgresql \
