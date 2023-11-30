@@ -28,11 +28,12 @@ necessários alguns pré-requisitos:
 
 - Um cluster Kubernetes (recomendado o
   [Minikube](https://minikube.sigs.k8s.io/docs/)).
+- [Kubectl](https://kubernetes.io/pt-br/docs/tasks/tools/#kubectl) para gerenciar o cluster.
 - [Podman](https://podman.io/getting-started/installation): utilizado para
   criar os containers.
-- [s3cmd](https://github.com/s3tools/s3cmd): comando utilizado apenas para preparar o ambiente de teste. Esse é o
-  comando utilizado para copiar alguns arquivos de diário para o ambiente de
-  teste
+- [s3cmd](https://github.com/s3tools/s3cmd): comando utilizado apenas para preparar o ambiente de teste. Este programa é utilizado para copiar alguns arquivos de diário para o ambiente de
+  teste.
+- [PostgreSQL 12](https://www.postgresql.org/download/) também para preparar o ambiente de teste. Este programa é utilizado para popular o banco de dados relacional.
 
 Para criar um cluster no Minikube com todos os componentes necessários
 instalados, execute o seguinte comando:
@@ -123,7 +124,7 @@ para o serviço, é necessário executar o comando `curl` de um container dentro
 do cluster:
 
 ```console
-kubectl run curl --rm -ti --restart="Never" --image curlimages/curl:8.4.0 -- -u elastic:<senha> http://querido-diario-elasticsearch-es-http.default.svc.cluster.local:9200/querido-diario
+kubectl run curl --rm -ti --restart="Never" --image curlimages/curl:8.4.0 -- -u elastic:<senha> "http://querido-diario-elasticsearch-es-http.default.svc.cluster.local:9200/querido-diario"
 ```
 
 Observe que a `<senha>` pode ser obtida com o comando `make credenciais`.

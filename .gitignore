@@ -3,3 +3,4 @@ __pycache__
 envvars
 contrib/data
 files/
+nohup.out
