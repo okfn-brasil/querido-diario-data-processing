@@ -61,7 +61,7 @@ build-devel:
 
 .PHONY: build-tika-server
 build-tika-server:
-	docket build --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
+	docker build --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
 		-f scripts/Dockerfile_apache_tika $(PWD)
 
 .PHONY: build
