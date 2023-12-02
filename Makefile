@@ -82,10 +82,10 @@ destroy:
 	podman rmi --force $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)
 
 destroy-pod:
-	podman pod rm --force --ignore $(POD_NAME)
+	docker pod rm --force --ignore $(POD_NAME)
 
 create-pod: destroy-pod
-	podman pod create -p $(POSTGRES_PORT):$(POSTGRES_PORT) \
+	docker pod create -p $(POSTGRES_PORT):$(POSTGRES_PORT) \
 				-p $(OPENSEARCH_PORT1):$(OPENSEARCH_PORT1) \
 				-p $(STORAGE_PORT):$(STORAGE_PORT) \
 	                  	--name $(POD_NAME)
@@ -124,13 +124,13 @@ retest-tika:
 	$(call run-command, python -m unittest -f tests/text_extraction_tests.py)
 
 start-apache-tika-server:
-	podman run -d --pod $(POD_NAME) --name $(APACHE_TIKA_CONTAINER_NAME) \
+	docker run -d --pod $(POD_NAME) --name $(APACHE_TIKA_CONTAINER_NAME) \
     	$(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
 		java -jar /tika-server.jar
 
 stop-apache-tika-server:
-	podman stop --ignore $(APACHE_TIKA_CONTAINER_NAME)
-	podman rm --force --ignore $(APACHE_TIKA_CONTAINER_NAME)
+	docker stop --ignore $(APACHE_TIKA_CONTAINER_NAME)
+	docker rm --force --ignore $(APACHE_TIKA_CONTAINER_NAME)
 
 .PHONY: apache-tika-server
 apache-tika-server: stop-apache-tika-server start-apache-tika-server
@@ -151,13 +151,13 @@ coverage: prepare-test-env
 
 .PHONY: stop-storage
 stop-storage:
-	podman rm --force --ignore $(STORAGE_CONTAINER_NAME)
+	docker rm --force --ignore $(STORAGE_CONTAINER_NAME)
 
 .PHONY: storage
 storage: stop-storage start-storage wait-storage
 
 start-storage:
-	podman run -d --rm -ti \
+	docker run -d --rm -ti \
 		--name $(STORAGE_CONTAINER_NAME) \
 		--pod $(POD_NAME) \
 		-e MINIO_ACCESS_KEY=$(STORAGE_ACCESS_KEY) \
@@ -170,13 +170,13 @@ wait-storage:
 
 .PHONY: stop-database
 stop-database:
-	podman rm --force --ignore $(DATABASE_CONTAINER_NAME)
+	docker rm --force --ignore $(DATABASE_CONTAINER_NAME)
 
 .PHONY: database
 database: stop-database start-database wait-database
 
 start-database:
-	podman run -d --rm -ti \
+	docker run -d --rm -ti \
 		--name $(DATABASE_CONTAINER_NAME) \
 		--pod $(POD_NAME) \
 		-e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
@@ -238,7 +238,7 @@ shell-database: set-run-variable-values
 opensearch: stop-opensearch start-opensearch wait-opensearch
 
 start-opensearch:
-	podman run -d --rm -ti \
+	docker run -d --rm -ti \
 		--name $(OPENSEARCH_CONTAINER_NAME) \
 		--pod $(POD_NAME) \
 		--env discovery.type=single-node \
@@ -246,7 +246,7 @@ start-opensearch:
 		docker.io/opensearchproject/opensearch:2.9.0
 
 stop-opensearch:
-	podman rm --force --ignore $(OPENSEARCH_CONTAINER_NAME)
+	docker rm --force --ignore $(OPENSEARCH_CONTAINER_NAME)
 
 wait-opensearch:
 	$(call wait-for, localhost:9200)
