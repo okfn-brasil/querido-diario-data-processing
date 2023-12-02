@@ -56,12 +56,12 @@ black:
 
 .PHONY: build-devel
 build-devel:
-	podman build --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
+	docker build --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
 		-f scripts/Dockerfile $(PWD)
 
 .PHONY: build-tika-server
 build-tika-server:
-	podman build --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
+	docket build --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
 		-f scripts/Dockerfile_apache_tika $(PWD)
 
 .PHONY: build
