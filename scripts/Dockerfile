@@ -1,6 +1,5 @@
 FROM docker.io/python:3.8
 
-ENV TMPDIR /tmp
 ENV USER gazette
 ENV USER_HOME /home/$USER
 ENV WORKDIR /mnt/code
