@@ -13,14 +13,22 @@ spec:
       template:
         spec:
           restartPolicy: {{ .Values.textExtractionJob.restartPolicy }}
+          volumes:
+            - name: opensearch-cert-volume
+              secret:
+                secretName: "{{ .Values.elasticsearch.certificatesSecretName}}"
           containers:
           - name: text-extractor-job
-            image: {{ .Values.textExtractionJob.image }}
+            image: "{{ .Values.textExtractionJob.image.repository }}:{{ .Values.textExtractionJob.image.tag }}"
             imagePullPolicy: {{ .Values.textExtractionJob.imagePullPolicy }}
             command: 
               - python
             args:
               - main
+            volumeMounts:
+              - name: opensearch-cert-volume
+                mountPath: {{ .Values.elasticsearch.ca_cert_directory }}
+                readOnly: true
             envFrom:
               - configMapRef: 
                   name: text-extraction-env-vars

@@ -2,5 +2,3 @@ __pycache__
 .coverage
 envvars
 contrib/data
-nohup.out
-files

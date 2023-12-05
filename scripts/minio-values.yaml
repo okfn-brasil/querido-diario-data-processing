@@ -1,4 +1,6 @@
 ---
+persistence:
+  mountPath: "/mnt/data/minio"
 resources:
   requests:
     memory: 1Gi

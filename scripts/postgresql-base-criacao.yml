@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cria-base-de-dados
+spec:
+  template:
+    spec:
+      containers:
+      - name: postgresql-client
+        image: ""
+        env:
+          - name: PGHOST
+            value: ""
+          - name: PGPORT
+            value: ""
+          - name: PGPASSWORD
+            value: ""
+          - name: PGUSER
+            value: ""
+          - name: PGDATABASE
+            value: ""
+          - name: DIARIOS
+            value: ""
+      restartPolicy: Never
+  backoffLimit: 4
+

@@ -1,8 +1,11 @@
 global:
   postgresql:
     auth:
-      username: queridodiario
-      password: queridodiario
-      database: queridodiariodb
+      username: "queridodiario"
+      password: "queridodiario"
+      database: "queridodiariodb"
 
-
+persistence:
+  mountPath: "/mnt/data/postgresql"
+volumePermissions:
+  enabled: true

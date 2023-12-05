@@ -7,8 +7,12 @@ from tasks import IndexInterface
 
 
 class OpenSearchInterface(IndexInterface):
-    def __init__(self, hosts: List, user: str, password: str, timeout: int = 30, default_index: str = ""):
-        self._search_engine = opensearchpy.OpenSearch(hosts=hosts, http_auth=(user, password))
+    def __init__(self, hosts: List, user: str, password: str, timeout: int = 30, default_index: str = "", ca_cert: str = ""):
+        self._search_engine = opensearchpy.OpenSearch(
+                hosts=hosts, 
+                http_auth=(user, password),
+                ca_certs=ca_cert
+        )
         self._timeout = timeout
         self._default_index = default_index
 
@@ -92,7 +96,6 @@ class OpenSearchInterface(IndexInterface):
 def get_opensearch_host():
     return os.environ["OPENSEARCH_HOST"]
 
-
 def get_opensearch_index():
     return os.environ["OPENSEARCH_INDEX"]
 
@@ -102,6 +105,9 @@ def get_opensearch_user():
 def get_opensearch_password():
     return os.environ["OPENSEARCH_PASSWORD"]
 
+def get_opensearch_ca_cert():
+    return os.environ["OPENSEARCH_CA_CERT"]
+
 def create_index_interface() -> IndexInterface:
     hosts = get_opensearch_host()
     if not isinstance(hosts, str) or len(hosts) == 0:
@@ -109,4 +115,4 @@ def create_index_interface() -> IndexInterface:
     default_index_name = get_opensearch_index()
     if not isinstance(default_index_name, str) or len(default_index_name) == 0:
         raise Exception("Invalid index name")
-    return OpenSearchInterface([hosts], get_opensearch_user(), get_opensearch_password(), default_index=default_index_name)
+    return OpenSearchInterface([hosts], get_opensearch_user(), get_opensearch_password(), default_index=default_index_name, ca_cert = get_opensearch_ca_cert())
