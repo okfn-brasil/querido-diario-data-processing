@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: diarios-upload-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: minio-client-container
+        image: 'querido-diario-data-processing-minio-client'
+        env:
+          - name: MINIO_ACCESS_KEY
+            value: "seu_access_key"
+          - name: MINIO_SECRET_KEY
+            value: "seu_secret_key"
+          - name: MINIO_ACCESS_URL
+            value: "seu_endpoint_de_acesso"
+          - name: MINIO_ACCESS_BUCKET
+            value: "seu_bucket"
+      restartPolicy: Never
+  backoffLimit: 4
+

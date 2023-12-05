@@ -2,11 +2,13 @@
 textExtractionJob:
   concurrencyPolicy: "Forbid" #no concurrency for now
   failedJobsHistoryLimit: "30"
-  image: "ghcr.io/okfn-brasil/querido-diario-data-processing:latest"
+  image:
+    repository: "ghcr.io/okfn-brasil/querido-diario-data-processing"
+    tag: "v0.11.1"
   imagePullPolicy: "IfNotPresent"
   name: "text-extraction-job"
   restartPolicy: "OnFailure"
-  schedule: "*/30 * * * *"
+  schedule: "*/2 * * * *"
   successfulJobsHistoryLimit: "3"
 
 storage:
@@ -25,10 +27,13 @@ postgresql:
   database_restore_file: contrib/data/queridodiariodb.tar
   
 elasticsearch:
-  host: http://querido-diario-elasticsearch-es-http.default.svc.cluster.local:9200
+  host: https://querido-diario-opensearsch-cluster.querido-diario.svc.cluster.local:9200
   index: querido-diario
-  user: elastic
-  password: "cluster-pass"
+  user: admin
+  password: "admin"
+  certificatesSecretName: "querido-diario-opensearsch-cluster-ca"
+  ca_cert_directory: "/etc/querido-diario/opensearch/ssl/certs"
+
 
 apache_tika:
   server: http://tika.tika.svc.cluster.local:9998
