@@ -6,11 +6,14 @@ from database import create_database_interface
 from storage import create_storage_interface
 from index import create_index_interface
 from tasks import (
+    create_gazettes_index,
+    create_themed_excerpts_index,
     embedding_rerank_excerpts,
     extract_text_from_gazettes,
     extract_themed_excerpts_from_gazettes,
     get_gazettes_to_be_processed,
     get_themes,
+    get_territories,
     tag_entities_in_excerpts,
 )
 
@@ -42,11 +45,15 @@ def execute_pipeline():
     text_extractor = create_apache_tika_text_extraction()
     themes = get_themes()
 
+    create_gazettes_index(index)
+    territories = get_territories(database)
     gazettes_to_be_processed = get_gazettes_to_be_processed(execution_mode, database)
     indexed_gazette_ids = extract_text_from_gazettes(
-        gazettes_to_be_processed, database, storage, index, text_extractor
+        gazettes_to_be_processed, territories, database, storage, index, text_extractor
     )
+   
     for theme in themes:
+        create_themed_excerpts_index(theme, index)
         themed_excerpt_ids = extract_themed_excerpts_from_gazettes(
             theme, indexed_gazette_ids, index
         )
