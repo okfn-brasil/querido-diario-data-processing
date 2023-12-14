@@ -74,8 +74,13 @@ class OpenSearchInterface(IndexInterface):
         if len(result["hits"]["hits"]) == 0:
             return
 
+        scroll_id = None
         while len(result["hits"]["hits"]) > 0:
             yield result
+
+            if scroll_id is not None and scroll_id != result["_scroll_id"]:
+                self._search_engine.clear_scroll(scroll_id=scroll_id)
+
             scroll_id = result["_scroll_id"]
             result = self._search_engine.scroll(
                 scroll_id=scroll_id, scroll=keep_alive, request_timeout=120
