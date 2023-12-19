@@ -130,7 +130,7 @@ start-apache-tika-server:
 		java -jar /tika-server.jar
 
 stop-apache-tika-server:
-	docker stop --ignore $(APACHE_TIKA_CONTAINER_NAME)
+	docker stop $(APACHE_TIKA_CONTAINER_NAME)
 	docker rm --force $(APACHE_TIKA_CONTAINER_NAME)
 
 .PHONY: apache-tika-server
