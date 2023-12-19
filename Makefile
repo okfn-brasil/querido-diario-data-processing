@@ -89,7 +89,7 @@ create-pod: destroy-pod
 				-p $(OPENSEARCH_PORT1) \
 				-p $(STORAGE_PORT) \
 	                  	--name $(POD_NAME) \
-				$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)
+				$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) sleep 3600
 
 prepare-test-env: create-pod storage apache-tika-server opensearch database
 
