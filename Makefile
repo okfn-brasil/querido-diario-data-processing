@@ -82,7 +82,7 @@ destroy:
 	podman rmi --force $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)
 
 destroy-pod:
-	docker rm --force --ignore $(POD_NAME)
+	docker rm --force $(POD_NAME)
 
 create-pod: destroy-pod
 	docker container run -d -p $(POSTGRES_PORT) \
