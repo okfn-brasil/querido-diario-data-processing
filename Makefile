@@ -38,7 +38,7 @@ run-command=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) $1)
 
 wait-for=(docker run --rm -ti --volume $(PWD):/mnt/code:rw \
-	--pod $(POD_NAME) \
+	--network container:$(POD_NAME) \
 	--env PYTHONPATH=/mnt/code \
 	--env POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
 	--env POSTGRES_USER=$(POSTGRES_USER) \
