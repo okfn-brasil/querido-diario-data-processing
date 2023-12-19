@@ -82,13 +82,14 @@ destroy:
 	podman rmi --force $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)
 
 destroy-pod:
-	docker pod rm --force --ignore $(POD_NAME)
+	docker rm --force --ignore $(POD_NAME)
 
 create-pod: destroy-pod
-	docker pod create -p $(POSTGRES_PORT):$(POSTGRES_PORT) \
-				-p $(OPENSEARCH_PORT1):$(OPENSEARCH_PORT1) \
-				-p $(STORAGE_PORT):$(STORAGE_PORT) \
-	                  	--name $(POD_NAME)
+	docker container run -d -p $(POSTGRES_PORT) \
+				-p $(OPENSEARCH_PORT1) \
+				-p $(STORAGE_PORT) \
+	                  	--name $(POD_NAME) \
+				$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)
 
 prepare-test-env: create-pod storage apache-tika-server opensearch database
 
