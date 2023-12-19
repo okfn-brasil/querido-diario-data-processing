@@ -125,7 +125,7 @@ retest-tika:
 	$(call run-command, python -m unittest -f tests/text_extraction_tests.py)
 
 start-apache-tika-server:
-	docker run -d --pod $(POD_NAME) --name $(APACHE_TIKA_CONTAINER_NAME) \
+	docker run -d --network container:$(POD_NAME) --name $(APACHE_TIKA_CONTAINER_NAME) \
     	$(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
 		java -jar /tika-server.jar
 
@@ -160,7 +160,7 @@ storage: stop-storage start-storage wait-storage
 start-storage:
 	docker run -d --rm -ti \
 		--name $(STORAGE_CONTAINER_NAME) \
-		--pod $(POD_NAME) \
+		--network container:$(POD_NAME) \
 		-e MINIO_ACCESS_KEY=$(STORAGE_ACCESS_KEY) \
 		-e MINIO_SECRET_KEY=$(STORAGE_ACCESS_SECRET) \
 		-e MINIO_DEFAULT_BUCKETS=$(STORAGE_BUCKET):public \
@@ -179,7 +179,7 @@ database: stop-database start-database wait-database
 start-database:
 	docker run -d --rm -ti \
 		--name $(DATABASE_CONTAINER_NAME) \
-		--pod $(POD_NAME) \
+		--network container:$(POD_NAME) \
 		-e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
 		-e POSTGRES_USER=$(POSTGRES_USER) \
 		-e POSTGRES_DB=$(POSTGRES_DB) \
@@ -241,7 +241,7 @@ opensearch: stop-opensearch start-opensearch wait-opensearch
 start-opensearch:
 	docker run -d --rm -ti \
 		--name $(OPENSEARCH_CONTAINER_NAME) \
-		--pod $(POD_NAME) \
+		--network container:$(POD_NAME) \
 		--env discovery.type=single-node \
 		--env plugins.security.ssl.http.enabled=false \
 		docker.io/opensearchproject/opensearch:2.9.0
