@@ -131,7 +131,7 @@ start-apache-tika-server:
 
 stop-apache-tika-server:
 	docker stop --ignore $(APACHE_TIKA_CONTAINER_NAME)
-	docker rm --force --ignore $(APACHE_TIKA_CONTAINER_NAME)
+	docker rm --force $(APACHE_TIKA_CONTAINER_NAME)
 
 .PHONY: apache-tika-server
 apache-tika-server: stop-apache-tika-server start-apache-tika-server
@@ -152,7 +152,7 @@ coverage: prepare-test-env
 
 .PHONY: stop-storage
 stop-storage:
-	docker rm --force --ignore $(STORAGE_CONTAINER_NAME)
+	docker rm --force $(STORAGE_CONTAINER_NAME)
 
 .PHONY: storage
 storage: stop-storage start-storage wait-storage
@@ -171,7 +171,7 @@ wait-storage:
 
 .PHONY: stop-database
 stop-database:
-	docker rm --force --ignore $(DATABASE_CONTAINER_NAME)
+	docker rm --force $(DATABASE_CONTAINER_NAME)
 
 .PHONY: database
 database: stop-database start-database wait-database
@@ -247,7 +247,7 @@ start-opensearch:
 		docker.io/opensearchproject/opensearch:2.9.0
 
 stop-opensearch:
-	docker rm --force --ignore $(OPENSEARCH_CONTAINER_NAME)
+	docker rm --force $(OPENSEARCH_CONTAINER_NAME)
 
 wait-opensearch:
 	$(call wait-for, localhost:9200)
