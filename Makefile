@@ -232,7 +232,7 @@ shell-run: set-run-variable-values
 
 .PHONY: shell-database
 shell-database: set-run-variable-values
-	podman exec -it $(DATABASE_CONTAINER_NAME) \
+	docker exec -it $(DATABASE_CONTAINER_NAME) \
 	    psql -h localhost -d $(POSTGRES_DB) -U $(POSTGRES_USER)
 
 opensearch: stop-opensearch start-opensearch wait-opensearch
