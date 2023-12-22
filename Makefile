@@ -85,9 +85,9 @@ destroy-pod:
 	docker rm --force $(POD_NAME)
 
 create-pod: destroy-pod
-	docker container run -d -p $(POSTGRES_PORT) \
-				-p $(OPENSEARCH_PORT1) \
-				-p $(STORAGE_PORT) \
+	docker container run -d -p $(POSTGRES_PORT):$(POSTGRES_PORT) \
+				-p $(OPENSEARCH_PORT1):$(OPENSEARCH_PORT1) \
+				-p $(STORAGE_PORT):$(STORAGE_PORT) \
 	                  	--name $(POD_NAME) \
 				$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) sleep 3600
 
