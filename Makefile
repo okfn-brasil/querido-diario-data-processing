@@ -213,8 +213,8 @@ setup: set-run-variable-values create-pod storage apache-tika-server opensearch 
 
 .PHONY: re-run
 re-run: set-run-variable-values
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
-		--pod $(POD_NAME) \
+	docker run --rm -ti --volume $(PWD):/mnt/code:rw \
+		--network container:$(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
 		--env-file envvars \
 		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python main
