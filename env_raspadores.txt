@@ -1,0 +1,7 @@
+AWS_ACCESS_KEY_ID=minio-access-key
+AWS_SECRET_ACCESS_KEY=minio-secret-key
+AWS_ENDPOINT_URL=http://127.0.0.1:9000/
+AWS_REGION_NAME=us-east-1
+FILES_STORE=s3://queridodiariobucket/
+FILES_STORE_S3_ACL=public-read
+QUERIDODIARIO_DATABASE_URL=postgresql+psycopg2://queridodiario:queridodiario@127.0.0.1:5432/queridodiariodb
