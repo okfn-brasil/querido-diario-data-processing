@@ -58,7 +58,7 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         If the file type is pdf returns True. Otherwise,
         returns False
         """
-        return self.is_file_type(found_type, file_types=["application/pdf"])
+        return found_type in ["application/pdf"]
 
     def is_doc(self, found_type):
         """
@@ -70,14 +70,14 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
             "application/vnd.oasis.opendocument.text",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         ]
-        return self.is_file_type(found_type, file_types)
+        return found_type in file_types
 
     def is_txt(self, found_type):
         """
         If the file type is txt returns True. Otherwise,
         returns False
         """
-        return self.is_file_type(found_type, file_types=["text/plain"])
+        return found_type in ["text/plain"]
 
     def get_file_type(self, filepath):
         """
