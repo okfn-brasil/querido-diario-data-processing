@@ -22,11 +22,11 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         with open(filepath, "r") as file:
             return file.read()
 
-    def _try_extract_text(self, filepath: str, file_type) -> str:
-        if self.is_txt(file_type):
+    def _try_extract_text(self, filepath: str) -> str:
+        if self.is_txt(filepath):
             return self._return_file_content(filepath)
         with open(filepath, "rb") as file:
-            headers = {"Content-Type": file_type}
+            headers = {"Content-Type": self._get_file_type(filepath)}
             response = requests.put(f"{self._url}/tika", data=file, headers=headers)
             response.encoding = "UTF-8"
             return response.text
@@ -34,10 +34,9 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
     def extract_text(self, filepath: str) -> str:
         logging.debug(f"Extracting text from {filepath}")
         self.check_file_exists(filepath)
-        file_type = self.get_file_type(filepath)
-        self.check_file_type_supported(file_type)
+        self.check_file_type_supported(filepath)
         try:
-            return self._try_extract_text(filepath, file_type)
+            return self._try_extract_text(filepath)
         except Exception as e:
             raise Exception("Could not extract file content") from e
 
@@ -45,22 +44,22 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         if not os.path.exists(filepath):
             raise Exception(f"File does not exists: {filepath}")
 
-    def check_file_type_supported(self, found_type) -> None:
+    def check_file_type_supported(self, filepath: str) -> None:
         if (
-            not self.is_doc(found_type)
-            and not self.is_pdf(found_type)
-            and not self.is_txt(found_type)
+            not self.is_doc(filepath)
+            and not self.is_pdf(filepath)
+            and not self.is_txt(filepath)
         ):
-            raise Exception("Unsupported file type: " + found_type)
+            raise Exception("Unsupported file type: " + self.get_file_type(filepath))
 
-    def is_pdf(self, found_type):
+    def is_pdf(self, filepath):
         """
         If the file type is pdf returns True. Otherwise,
         returns False
         """
-        return found_type in ["application/pdf"]
+        return self.is_file_type(filepath, file_types=["application/pdf"])
 
-    def is_doc(self, found_type):
+    def is_doc(self, filepath):
         """
         If the file type is doc or similar returns True. Otherwise,
         returns False
@@ -70,14 +69,14 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
             "application/vnd.oasis.opendocument.text",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         ]
-        return found_type in file_types
+        return self.is_file_type(filepath, file_types)
 
-    def is_txt(self, found_type):
+    def is_txt(self, filepath):
         """
         If the file type is txt returns True. Otherwise,
         returns False
         """
-        return found_type in ["text/plain"]
+        return self.is_file_type(filepath, file_types=["text/plain"])
 
     def get_file_type(self, filepath):
         """
@@ -85,11 +84,11 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         """
         return magic.from_file(filepath, mime=True)
 
-    def is_file_type(self, found_type, file_types):
+    def is_file_type(self, filepath, file_types):
         """
         Generic method to check if a identified file type matches a given list of types
         """
-        return found_type in file_types
+        return self.get_file_type(filepath) in file_types
 
 
 def get_apache_tika_server_url():
