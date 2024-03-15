@@ -1,257 +1,44 @@
+
 IMAGE_NAMESPACE ?= okfn-brasil
 IMAGE_NAME ?= querido-diario-data-processing
 IMAGE_TAG ?= latest
-APACHE_TIKA_IMAGE_NAME ?=  querido-diario-apache-tika-server
-APACHE_TIKA_IMAGE_TAG ?= latest
-POD_NAME ?= querido-diario-data-extraction
+CLUSTER_NAME ?= querido-diario
+CLUSTER_NODES_COUNT ?= 3
+FILES_DIR ?= files
+DIARIOS_DIR ?= $(FILES_DIR)/diarios
+QUERIDO_DIARIO_CDN ?= https://querido-diario.nyc3.cdn.digitaloceanspaces.com/
+QUERIDO_DIARIO_BASEDADOS ?= https://querido-diario-misc.nyc3.cdn.digitaloceanspaces.com/queridodiario_dump.zip
 
-# S3 mock
-STORAGE_BUCKET ?= queridodiariobucket
-STORAGE_IMAGE ?= docker.io/bitnami/minio:2021.4.6
-STORAGE_CONTAINER_NAME ?= queridodiario-storage
-STORAGE_ACCESS_KEY ?= minio-access-key
-STORAGE_ACCESS_SECRET ?= minio-secret-key
-STORAGE_PORT ?= 9000
-# Database info user to run the tests
-DATABASE_CONTAINER_NAME ?= queridodiario-db
-POSTGRES_PASSWORD ?= queridodiario
-POSTGRES_USER ?= $(POSTGRES_PASSWORD)
-POSTGRES_DB ?= queridodiariodb
-POSTGRES_HOST ?= localhost
-POSTGRES_PORT ?= 5432
-POSTGRES_IMAGE ?= docker.io/postgres:10
-DATABASE_RESTORE_FILE ?= contrib/data/queridodiariodb.tar
-# OpenSearch port info
-OPENSEARCH_PORT1 ?= 9200
-OPENSEARCH_PORT2 ?= 9300
-OPENSEARCH_CONTAINER_NAME ?= queridodiario-opensearch
-APACHE_TIKA_CONTAINER_NAME ?= queridodiario-apache-tika-server
+k8s=kubectl --context $(CLUSTER_NAME) $(1)
 
-run-command=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
-	--pod $(POD_NAME) \
-	--env PYTHONPATH=/mnt/code \
-	--env POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
-	--env POSTGRES_USER=$(POSTGRES_USER) \
-	--env POSTGRES_DB=$(POSTGRES_DB) \
-	--env POSTGRES_HOST=$(POSTGRES_HOST) \
-	--env POSTGRES_PORT=$(POSTGRES_PORT) \
-	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) $1)
+start-cluster:
+	minikube start --nodes $(CLUSTER_NODES_COUNT) --container-runtime=docker --profile $(CLUSTER_NAME)
+	# Ja baixa uma imagem que pode ser utilizada para iteragir com o opensearch
+	minikube image load curlimages/curl:latest  --profile $(CLUSTER_NAME)
 
-wait-for=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
-	--pod $(POD_NAME) \
-	--env PYTHONPATH=/mnt/code \
-	--env POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
-	--env POSTGRES_USER=$(POSTGRES_USER) \
-	--env POSTGRES_DB=$(POSTGRES_DB) \
-	--env POSTGRES_HOST=$(POSTGRES_HOST) \
-	--env POSTGRES_PORT=$(POSTGRES_PORT) \
-	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) wait-for-it --timeout=60 $1)
+delete-cluster:
+	minikube delete --profile $(CLUSTER_NAME)
 
-.PHONY: black
-black:
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
-		--env PYTHONPATH=/mnt/code \
-		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
-		black .
+.PHONY: cluster
+cluster: delete-cluster start-cluster
 
-.PHONY: build-devel
-build-devel:
-	podman build --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
-		-f scripts/Dockerfile $(PWD)
+DIARIOS := 1302603/2023-08-16/eb5522a3e160ba9129bd05617a68badd4e8ee381.pdf 3304557/2023-08-17/00e276910596fa4b4b7eb9cbec8a221e79ebbe0e 4205407/2023-08-10/c6eb1ce23b9bea9c3a72aece0e762eb883a8a00a.pdf 4106902/2023-08-14/b416ef3008654f84e2bee57f89cfd0513f8ec800 2611606/2023-08-12/7b010f0485bbb3bf18500a6ce90346916e776d62.pdf
+$(DIARIOS):
+	@if [ ! -f $(join $(DIARIOS_DIR),/$@) ]; then \
+		echo "Baixando $@"; \
+		curl -XGET --output-dir $(DIARIOS_DIR) --create-dirs --output $@ $(QUERIDO_DIARIO_CDN)$@; \
+	fi
 
-.PHONY: build-tika-server
-build-tika-server:
-	podman build --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
-		-f scripts/Dockerfile_apache_tika $(PWD)
-
-.PHONY: build
-build: build-devel build-tika-server
-
-.PHONY: login
-login:
-	podman login --username $(REGISTRY_USER) --password "$(REGISTRY_PASSWORD)" https://index.docker.io/v1/
-
-.PHONY: publish
-publish:
-	podman tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG} $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell date --rfc-3339=date --utc)
-	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell date --rfc-3339=date --utc)
-	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG}
-
-.PHONY: destroy
-destroy:
-	podman rmi --force $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)
-
-destroy-pod:
-	podman pod rm --force --ignore $(POD_NAME)
-
-create-pod: destroy-pod
-	podman pod create -p $(POSTGRES_PORT):$(POSTGRES_PORT) \
-				-p $(OPENSEARCH_PORT1):$(OPENSEARCH_PORT1) \
-				-p $(STORAGE_PORT):$(STORAGE_PORT) \
-	                  	--name $(POD_NAME)
-
-prepare-test-env: create-pod storage apache-tika-server opensearch database
-
-.PHONY: test
-test: prepare-test-env retest
-
-.PHONY: retest
-retest:
-	$(call run-command, python -m unittest -f tests)
-
-.PHONY: retest-digital-ocean-spaces
-retest-digital-ocean-spaces:
-	$(call run-command, python -m unittest -f tests/digital_ocean_spaces.py)
-
-.PHONY: retest-postgres
-retest-postgres:
-	$(call run-command, python -m unittest -f tests/postgresql.py)
-
-.PHONY: retest-tasks
-retest-tasks:
-	$(call run-command, python -m unittest -f tests/text_extraction_task_tests.py)
-
-.PHONY: retest-main
-retest-main:
-	$(call run-command, python -m unittest -f tests/main_tests.py)
-
-.PHONY: retest-index
-retest-index:
-	$(call run-command, python -m unittest -f tests/opensearch.py)
-
-.PHONY: retest-tika
-retest-tika:
-	$(call run-command, python -m unittest -f tests/text_extraction_tests.py)
-
-start-apache-tika-server:
-	podman run -d --pod $(POD_NAME) --name $(APACHE_TIKA_CONTAINER_NAME) \
-    	$(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
-		java -jar /tika-server.jar
-
-stop-apache-tika-server:
-	podman stop --ignore $(APACHE_TIKA_CONTAINER_NAME)
-	podman rm --force --ignore $(APACHE_TIKA_CONTAINER_NAME)
-
-.PHONY: apache-tika-server
-apache-tika-server: stop-apache-tika-server start-apache-tika-server
+# Colocar alguns diarios no s3 rodando no cluster local
+.PHONY: diarios
+diarios: $(DIARIOS)
 
 
-shell: set-run-variable-values
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
-		--pod $(POD_NAME) \
-		--env PYTHONPATH=/mnt/code \
-		--env-file envvars \
-		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) bash
+$(FILES_DIR)/queridodiario_dump.zip:
+	curl -XGET --output-dir $(FILES_DIR) --create-dirs --output queridodiario_dump.zip https://querido-diario-misc.nyc3.cdn.digitaloceanspaces.com/queridodiario_dump.zip
 
-.PHONY: coverage
-coverage: prepare-test-env
-	$(call run-command, coverage erase)
-	$(call run-command, coverage run -m unittest tests)
-	$(call run-command, coverage report -m)
+$(FILES_DIR)/queridodiario_dump.sql:
+	unzip -u $(FILES_DIR)/queridodiario_dump.zip -d $(FILES_DIR)
 
-.PHONY: stop-storage
-stop-storage:
-	podman rm --force --ignore $(STORAGE_CONTAINER_NAME)
-
-.PHONY: storage
-storage: stop-storage start-storage wait-storage
-
-start-storage:
-	podman run -d --rm -ti \
-		--name $(STORAGE_CONTAINER_NAME) \
-		--pod $(POD_NAME) \
-		-e MINIO_ACCESS_KEY=$(STORAGE_ACCESS_KEY) \
-		-e MINIO_SECRET_KEY=$(STORAGE_ACCESS_SECRET) \
-		-e MINIO_DEFAULT_BUCKETS=$(STORAGE_BUCKET):public \
-        $(STORAGE_IMAGE)
-
-wait-storage:
-	$(call wait-for, localhost:9000)
-
-.PHONY: stop-database
-stop-database:
-	podman rm --force --ignore $(DATABASE_CONTAINER_NAME)
-
-.PHONY: database
-database: stop-database start-database wait-database
-
-start-database:
-	podman run -d --rm -ti \
-		--name $(DATABASE_CONTAINER_NAME) \
-		--pod $(POD_NAME) \
-		-e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
-		-e POSTGRES_USER=$(POSTGRES_USER) \
-		-e POSTGRES_DB=$(POSTGRES_DB) \
-		$(POSTGRES_IMAGE)
-
-wait-database:
-	$(call wait-for, localhost:5432)
-
-load-database: set-run-variable-values
-ifneq ("$(wildcard $(DATABASE_RESTORE_FILE))","")
-	podman cp $(DATABASE_RESTORE_FILE) $(DATABASE_CONTAINER_NAME):/mnt/dump_file
-	podman exec $(DATABASE_CONTAINER_NAME) bash -c "pg_restore -v -c -h localhost -U $(POSTGRES_USER) -d $(POSTGRES_DB) /mnt/dump_file || true"
-else
-	@echo "cannot restore because file does not exists '$(DATABASE_RESTORE_FILE)'"
-	@exit 1
-endif
-
-set-run-variable-values:
-	cp --no-clobber contrib/sample.env envvars || true
-	$(eval POD_NAME=run-$(POD_NAME))
-	$(eval DATABASE_CONTAINER_NAME=run-$(DATABASE_CONTAINER_NAME))
-	$(eval OPENSEARCH_CONTAINER_NAME=run-$(OPENSEARCH_CONTAINER_NAME))
-
-.PHONY: sql
-sql: set-run-variable-values
-	podman run --rm -ti \
-		--pod $(POD_NAME) \
-		$(POSTGRES_IMAGE) psql -h localhost -U $(POSTGRES_USER) $(POSTGRES_DB)
-
-.PHONY: setup
-setup: set-run-variable-values create-pod storage apache-tika-server opensearch database
-
-.PHONY: re-run
-re-run: set-run-variable-values
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
-		--pod $(POD_NAME) \
-		--env PYTHONPATH=/mnt/code \
-		--env-file envvars \
-		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python main
-
-.PHONY: run
-run: setup re-run
-
-.PHONY: shell-run
-shell-run: set-run-variable-values
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
-		--pod $(POD_NAME) \
-		--env PYTHONPATH=/mnt/code \
-		--env-file envvars \
-		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) bash
-
-.PHONY: shell-database
-shell-database: set-run-variable-values
-	podman exec -it $(DATABASE_CONTAINER_NAME) \
-	    psql -h localhost -d $(POSTGRES_DB) -U $(POSTGRES_USER)
-
-opensearch: stop-opensearch start-opensearch wait-opensearch
-
-start-opensearch:
-	podman run -d --rm -ti \
-		--name $(OPENSEARCH_CONTAINER_NAME) \
-		--pod $(POD_NAME) \
-		--env discovery.type=single-node \
-		--env plugins.security.ssl.http.enabled=false \
-		docker.io/opensearchproject/opensearch:2.9.0
-
-stop-opensearch:
-	podman rm --force --ignore $(OPENSEARCH_CONTAINER_NAME)
-
-wait-opensearch:
-	$(call wait-for, localhost:9200)
-
-.PHONY: publish-tag
-publish-tag:
-	podman tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG} $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
-	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
+.PHONY: base-de-dados
+base-de-dados: $(FILES_DIR)/queridodiario_dump.zip $(FILES_DIR)/queridodiario_dump.sql

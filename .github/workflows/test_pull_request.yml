@@ -1,4 +1,4 @@
-name: Test pull request
+name: Teste pull request
 on: 
   pull_request:
     branches:
@@ -7,17 +7,18 @@ on:
 
 jobs:
   everything:
-    name: Build, test and show code coverage
+    name: Build da imagem do container do pipeline
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@master
-
-      - name: Build container image
-        run: |
-          make build
-
-      - name: Run tests and show code coverage
-        run: |
-          make coverage
-
+      - uses: actions/checkout@v2
+      - uses: docker/setup-qemu-action@v1
+      - uses: docker/setup-buildx-action@v1
+      - name: Build da imagem do container do pipeline
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./scripts/Dockerfile
+          platforms: linux/amd64
+          push: false
+          tags: |
+            ghcr.io/querido-diario-pr:latest

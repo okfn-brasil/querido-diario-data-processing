@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: text-extraction-env-vars
+  namespace: {{ .Release.Namespace }}
+data: 
+  STORAGE_REGION: {{ .Values.storage.region }}
+  STORAGE_ENDPOINT: {{ .Values.storage.endpoint }}
+  STORAGE_BUCKET: {{ .Values.storage.bucket }}
+
+  POSTGRES_DB: {{ .Values.postgresql.db }}
+  POSTGRES_HOST: {{ .Values.postgresql.host }}
+  POSTGRES_PORT: {{ .Values.postgresql.port  | quote }}
+  DATABASE_RESTORE_FILE: {{ .Values.postgresql.database_restore_file }}
+
+  OPENSEARCH_HOST: {{ .Values.elasticsearch.host }}
+  OPENSEARCH_INDEX: {{ .Values.elasticsearch.index }}
+  OPENSEARCH_CA_CERT: "{{ .Values.elasticsearch.ca_cert_directory }}/ca.crt"
+  
+
+  APACHE_TIKA_SERVER: {{ .Values.apache_tika.server }}
+
+  QUERIDO_DIARIO_FILES_ENDPOINT: {{ .Values.querido_diario_files_endpoint }}
+  EXECUTION_MODE: {{ .Values.execution_mode }}
+  {{- if .Values.debug }}
+  DEBUG: "1"
+  {{ else }}
+  DEBUG: "0"
+  {{ end }}

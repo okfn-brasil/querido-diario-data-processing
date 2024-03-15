@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Exclui a base de dados existente e a cria novamente
+psql -d postgres --command "DROP DATABASE IF EXISTS $PGDATABASE;"
+psql -d postgres --command "CREATE DATABASE $PGDATABASE;"
+
+# Restaura um backup da base de dados
+psql -f queridodiario_dump.sql
+
+psql --command "update gazettes set processed=true,scraped_at = CURRENT_TIMESTAMP;"
+
+list=$DIARIOS
+
+# Check if the list is empty
+if [ -z "$list" ]; then
+    echo "The environment variable is empty."
+    exit 1
+fi
+
+# IFS (Internal Field Separator) is set to comma to split the list
+IFS=',' read -ra ADDR <<< "$list"
+
+# Iterate over the list and execute the psql command
+for diario in "${ADDR[@]}"; do
+	psql  --command "update gazettes set processed=false where file_path = '$diario';"; 
+done
+

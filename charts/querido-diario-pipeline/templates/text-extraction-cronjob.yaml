@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Values.textExtractionJob.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: {{ .Values.textExtractionJob.schedule | quote }}
+  concurrencyPolicy: {{ .Values.textExtractionJob.concurrencyPolicy }}
+  failedJobsHistoryLimit: {{ .Values.textExtractionJob.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.textExtractionJob.successfulJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: {{ .Values.textExtractionJob.restartPolicy }}
+          volumes:
+            - name: opensearch-cert-volume
+              secret:
+                secretName: "{{ .Values.elasticsearch.certificatesSecretName}}"
+          containers:
+          - name: text-extractor-job
+            image: "{{ .Values.textExtractionJob.image.repository }}:{{ .Values.textExtractionJob.image.tag }}"
+            imagePullPolicy: {{ .Values.textExtractionJob.imagePullPolicy }}
+            command: 
+              - python
+            args:
+              - main
+            volumeMounts:
+              - name: opensearch-cert-volume
+                mountPath: {{ .Values.elasticsearch.ca_cert_directory }}
+                readOnly: true
+            envFrom:
+              - configMapRef: 
+                  name: text-extraction-env-vars
+                  optional: false
+              - secretRef: 
+                  name: text-extraction-secrets
+                  optional: false
+              
