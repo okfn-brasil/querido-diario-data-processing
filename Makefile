@@ -42,4 +42,3 @@ $(FILES_DIR)/queridodiario_dump.sql:
 
 .PHONY: base-de-dados
 base-de-dados: $(FILES_DIR)/queridodiario_dump.zip $(FILES_DIR)/queridodiario_dump.sql
-
