@@ -3,7 +3,7 @@ IMAGE_NAME ?= querido-diario-data-processing
 IMAGE_TAG ?= latest
 APACHE_TIKA_IMAGE_NAME ?=  querido-diario-apache-tika-server
 APACHE_TIKA_IMAGE_TAG ?= latest
-POD_NAME ?= querido-diario-data-extraction
+POD_NAME ?= querido-diario
 
 # S3 mock
 STORAGE_BUCKET ?= queridodiariobucket
@@ -19,13 +19,17 @@ POSTGRES_USER ?= $(POSTGRES_PASSWORD)
 POSTGRES_DB ?= queridodiariodb
 POSTGRES_HOST ?= localhost
 POSTGRES_PORT ?= 5432
-POSTGRES_IMAGE ?= docker.io/postgres:10
+POSTGRES_IMAGE ?= docker.io/postgres:11
 DATABASE_RESTORE_FILE ?= contrib/data/queridodiariodb.tar
 # OpenSearch port info
 OPENSEARCH_PORT1 ?= 9200
 OPENSEARCH_PORT2 ?= 9300
 OPENSEARCH_CONTAINER_NAME ?= queridodiario-opensearch
 APACHE_TIKA_CONTAINER_NAME ?= queridodiario-apache-tika-server
+# Backend and API
+FULL_PROJECT ?= false
+API_PORT ?= 8080
+BACKEND_PORT ?= 8000
 
 run-command=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 	--pod $(POD_NAME) \
@@ -85,10 +89,19 @@ destroy-pod:
 	podman pod rm --force --ignore $(POD_NAME)
 
 create-pod: destroy-pod
+ifeq ($(FULL_PROJECT), true)
 	podman pod create -p $(POSTGRES_PORT):$(POSTGRES_PORT) \
 				-p $(OPENSEARCH_PORT1):$(OPENSEARCH_PORT1) \
 				-p $(STORAGE_PORT):$(STORAGE_PORT) \
-	                  	--name $(POD_NAME)
+				-p $(API_PORT):$(API_PORT) \
+				-p $(BACKEND_PORT):$(BACKEND_PORT) \
+				--name $(POD_NAME)
+else
+	podman pod create -p $(POSTGRES_PORT):$(POSTGRES_PORT) \
+				-p $(OPENSEARCH_PORT1):$(OPENSEARCH_PORT1) \
+				-p $(STORAGE_PORT):$(STORAGE_PORT) \
+				--name $(POD_NAME)
+endif
 
 prepare-test-env: create-pod storage apache-tika-server opensearch database
 
@@ -198,9 +211,6 @@ endif
 
 set-run-variable-values:
 	cp --no-clobber contrib/sample.env envvars || true
-	$(eval POD_NAME=run-$(POD_NAME))
-	$(eval DATABASE_CONTAINER_NAME=run-$(DATABASE_CONTAINER_NAME))
-	$(eval OPENSEARCH_CONTAINER_NAME=run-$(OPENSEARCH_CONTAINER_NAME))
 
 .PHONY: sql
 sql: set-run-variable-values
