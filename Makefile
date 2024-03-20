@@ -31,7 +31,7 @@ FULL_PROJECT ?= false
 API_PORT ?= 8080
 BACKEND_PORT ?= 8000
 
-run-command=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
+run-command=(podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
 	--pod $(POD_NAME) \
 	--env PYTHONPATH=/mnt/code \
 	--env POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
@@ -41,7 +41,7 @@ run-command=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 	--env POSTGRES_PORT=$(POSTGRES_PORT) \
 	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) $1)
 
-wait-for=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
+wait-for=(podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
 	--pod $(POD_NAME) \
 	--env PYTHONPATH=/mnt/code \
 	--env POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
@@ -53,7 +53,7 @@ wait-for=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 
 .PHONY: black
 black:
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
+	podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
 		--env PYTHONPATH=/mnt/code \
 		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
 		black .
@@ -61,12 +61,12 @@ black:
 .PHONY: build-devel
 build-devel:
 	podman build --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
-		-f scripts/Dockerfile $(PWD)
+		-f scripts/Dockerfile $(CURDIR)
 
 .PHONY: build-tika-server
 build-tika-server:
 	podman build --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
-		-f scripts/Dockerfile_apache_tika $(PWD)
+		-f scripts/Dockerfile_apache_tika $(CURDIR)
 
 .PHONY: build
 build: build-devel build-tika-server
@@ -150,7 +150,7 @@ apache-tika-server: stop-apache-tika-server start-apache-tika-server
 
 
 shell: set-run-variable-values
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
+	podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
 		--env-file envvars \
@@ -223,7 +223,7 @@ setup: set-run-variable-values create-pod storage apache-tika-server opensearch 
 
 .PHONY: re-run
 re-run: set-run-variable-values
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
+	podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
 		--env-file envvars \
@@ -234,7 +234,7 @@ run: setup re-run
 
 .PHONY: shell-run
 shell-run: set-run-variable-values
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
+	podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
 		--env-file envvars \
