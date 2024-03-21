@@ -6,7 +6,7 @@ RUN adduser --system gazette && \
 	apt-get clean
 
 # install Apache Tika
-RUN curl -o /tika-server.jar http://archive.apache.org/dist/tika/tika-server-1.24.1.jar && \
+RUN curl -o /tika-server.jar https://dlcdn.apache.org/tika/2.9.1/tika-server-standard-2.9.1.jar && \
 	chmod 755 /tika-server.jar
 
 USER gazette
