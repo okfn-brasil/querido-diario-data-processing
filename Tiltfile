@@ -128,5 +128,4 @@ for envVar in minio_job["spec"]["template"]["spec"]["containers"][0]["env"]:
 
 
 k8s_yaml(encode_yaml(minio_job))
-k8s_resource(workload='diarios-upload-job', labels=['minio'],  resource_deps=['minio'])
 k8s_resource(workload='diarios-upload-job', labels=['minio'],  resource_deps=['minio', 'download-diarios'])
