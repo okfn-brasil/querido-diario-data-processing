@@ -3,7 +3,7 @@ IMAGE_NAME ?= querido-diario-data-processing
 IMAGE_TAG ?= latest
 APACHE_TIKA_IMAGE_NAME ?=  querido-diario-apache-tika-server
 APACHE_TIKA_IMAGE_TAG ?= latest
-POD_NAME ?= querido-diario-data-extraction
+POD_NAME ?= querido-diario
 
 # S3 mock
 STORAGE_BUCKET ?= queridodiariobucket
@@ -19,15 +19,19 @@ POSTGRES_USER ?= $(POSTGRES_PASSWORD)
 POSTGRES_DB ?= queridodiariodb
 POSTGRES_HOST ?= localhost
 POSTGRES_PORT ?= 5432
-POSTGRES_IMAGE ?= docker.io/postgres:10
+POSTGRES_IMAGE ?= docker.io/postgres:11
 DATABASE_RESTORE_FILE ?= contrib/data/queridodiariodb.tar
-# Elasticsearch info to run the tests
-ELASTICSEARCH_PORT1 ?= 9200
-ELASTICSEARCH_PORT2 ?= 9300
-ELASTICSEARCH_CONTAINER_NAME ?= queridodiario-elasticsearch
+# OpenSearch port info
+OPENSEARCH_PORT1 ?= 9200
+OPENSEARCH_PORT2 ?= 9300
+OPENSEARCH_CONTAINER_NAME ?= queridodiario-opensearch
 APACHE_TIKA_CONTAINER_NAME ?= queridodiario-apache-tika-server
+# Backend and API
+FULL_PROJECT ?= false
+API_PORT ?= 8080
+BACKEND_PORT ?= 8000
 
-run-command=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
+run-command=(podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
 	--pod $(POD_NAME) \
 	--env PYTHONPATH=/mnt/code \
 	--env POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
@@ -37,7 +41,7 @@ run-command=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 	--env POSTGRES_PORT=$(POSTGRES_PORT) \
 	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) $1)
 
-wait-for=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
+wait-for=(podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
 	--pod $(POD_NAME) \
 	--env PYTHONPATH=/mnt/code \
 	--env POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
@@ -49,7 +53,7 @@ wait-for=(podman run --rm -ti --volume $(PWD):/mnt/code:rw \
 
 .PHONY: black
 black:
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
+	podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
 		--env PYTHONPATH=/mnt/code \
 		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
 		black .
@@ -57,12 +61,12 @@ black:
 .PHONY: build-devel
 build-devel:
 	podman build --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
-		-f scripts/Dockerfile $(PWD)
+		-f scripts/Dockerfile $(CURDIR)
 
 .PHONY: build-tika-server
 build-tika-server:
 	podman build --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
-		-f scripts/Dockerfile_apache_tika $(PWD)
+		-f scripts/Dockerfile_apache_tika $(CURDIR)
 
 .PHONY: build
 build: build-devel build-tika-server
@@ -85,12 +89,21 @@ destroy-pod:
 	podman pod rm --force --ignore $(POD_NAME)
 
 create-pod: destroy-pod
+ifeq ($(FULL_PROJECT), true)
 	podman pod create -p $(POSTGRES_PORT):$(POSTGRES_PORT) \
-					  -p $(ELASTICSEARCH_PORT1):$(ELASTICSEARCH_PORT1) \
-					  -p $(STORAGE_PORT):$(STORAGE_PORT) \
-	                  --name $(POD_NAME)
+				-p $(OPENSEARCH_PORT1):$(OPENSEARCH_PORT1) \
+				-p $(STORAGE_PORT):$(STORAGE_PORT) \
+				-p $(API_PORT):$(API_PORT) \
+				-p $(BACKEND_PORT):$(BACKEND_PORT) \
+				--name $(POD_NAME)
+else
+	podman pod create -p $(POSTGRES_PORT):$(POSTGRES_PORT) \
+				-p $(OPENSEARCH_PORT1):$(OPENSEARCH_PORT1) \
+				-p $(STORAGE_PORT):$(STORAGE_PORT) \
+				--name $(POD_NAME)
+endif
 
-prepare-test-env: create-pod storage apache-tika-server elasticsearch database
+prepare-test-env: create-pod storage apache-tika-server opensearch database
 
 .PHONY: test
 test: prepare-test-env retest
@@ -117,7 +130,7 @@ retest-main:
 
 .PHONY: retest-index
 retest-index:
-	$(call run-command, python -m unittest -f tests/elasticsearch.py)
+	$(call run-command, python -m unittest -f tests/opensearch.py)
 
 .PHONY: retest-tika
 retest-tika:
@@ -137,7 +150,7 @@ apache-tika-server: stop-apache-tika-server start-apache-tika-server
 
 
 shell: set-run-variable-values
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
+	podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
 		--env-file envvars \
@@ -198,9 +211,6 @@ endif
 
 set-run-variable-values:
 	cp --no-clobber contrib/sample.env envvars || true
-	$(eval POD_NAME=run-$(POD_NAME))
-	$(eval DATABASE_CONTAINER_NAME=run-$(DATABASE_CONTAINER_NAME))
-	$(eval ELASTICSEARCH_CONTAINER_NAME=run-$(ELASTICSEARCH_CONTAINER_NAME))
 
 .PHONY: sql
 sql: set-run-variable-values
@@ -209,11 +219,11 @@ sql: set-run-variable-values
 		$(POSTGRES_IMAGE) psql -h localhost -U $(POSTGRES_USER) $(POSTGRES_DB)
 
 .PHONY: setup
-setup: set-run-variable-values create-pod storage apache-tika-server elasticsearch database
+setup: set-run-variable-values create-pod storage apache-tika-server opensearch database
 
 .PHONY: re-run
 re-run: set-run-variable-values
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
+	podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
 		--env-file envvars \
@@ -224,7 +234,7 @@ run: setup re-run
 
 .PHONY: shell-run
 shell-run: set-run-variable-values
-	podman run --rm -ti --volume $(PWD):/mnt/code:rw \
+	podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
 		--env-file envvars \
@@ -235,19 +245,20 @@ shell-database: set-run-variable-values
 	podman exec -it $(DATABASE_CONTAINER_NAME) \
 	    psql -h localhost -d $(POSTGRES_DB) -U $(POSTGRES_USER)
 
-elasticsearch: stop-elasticsearch start-elasticsearch wait-elasticsearch
+opensearch: stop-opensearch start-opensearch wait-opensearch
 
-start-elasticsearch:
+start-opensearch:
 	podman run -d --rm -ti \
-		--name $(ELASTICSEARCH_CONTAINER_NAME) \
+		--name $(OPENSEARCH_CONTAINER_NAME) \
 		--pod $(POD_NAME) \
 		--env discovery.type=single-node \
-		docker.io/elasticsearch:7.9.1
+		--env plugins.security.ssl.http.enabled=false \
+		docker.io/opensearchproject/opensearch:2.9.0
 
-stop-elasticsearch:
-	podman rm --force --ignore $(ELASTICSEARCH_CONTAINER_NAME)
+stop-opensearch:
+	podman rm --force --ignore $(OPENSEARCH_CONTAINER_NAME)
 
-wait-elasticsearch:
+wait-opensearch:
 	$(call wait-for, localhost:9200)
 
 .PHONY: publish-tag
