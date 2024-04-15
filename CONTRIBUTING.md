@@ -52,6 +52,10 @@ ferramentas:
 - **Docker**: Uma plataforma de desenvolvimento que permite a criação, execução
   e compartilhamento de aplicações em containers. [Saiba
   mais](https://www.docker.com/).
+- **ctlptl**: Uma ferramenta desenvolvida pelo time do Tolt que facilita a
+  inicialização de um cluster Kubernetes e um container registry local. [Saiba
+  mais](https://github.com/tilt-dev/ctlptl)
+  
 
 ## Ambiente Padrão de Desenvolvimento com Minikube 
 
@@ -78,7 +82,7 @@ Minikube, adotando o contexto padrão, a menos que seja especificado outro.
 As seguintes ferramentas são essenciais para configurar e gerenciar o ambiente
 de desenvolvimento:
 
-### Kubernetes Local com Minikube
+### Kubernetes Local no Minikube configurado pelo ctlptl
 
 O Minikube permite subir um cluster de Kubernetes localmente. Utilizamos
 targets específicos no `Makefile` do projeto para esta finalidade. Por exemplo,
@@ -88,6 +92,10 @@ usar comandos como:
 ```bash 
 make cluster
 ```
+
+Esse comando ira executar o `ctlptl` para subir o cluster de Kubernetes local
+utilizando o Minikube. E também ira configurar um container registry local para
+armazenar as imagens Docker utilizadas no ambiente de desenvolvimento.
 
 ### Tilt
 
@@ -166,63 +174,17 @@ utilizada no comando.
 Para o pleno funcionamento do Tilt, é necessário ter acesso a um container
 registry, onde as imagens Docker da aplicação serão armazenadas e
 posteriormente acessadas durante o processo de desenvolvimento e deploy. Em
-nosso projeto, o registro de container utilizado é o GitHub Container Registry
-(ghcr.io), uma escolha feita pela sua integração direta com o GitHub e a
-facilidade de gerenciar permissões e acessos.
+nosso projeto, o registro de container utilizado é o configurado pelo `ctlptl` 
+localmente. É possivel visualizar o container rodando o registry executando o
+seguinte comando:
 
-#### Configurando o Acesso ao GitHub Container Registry
-
-Antes de iniciar o desenvolvimento com o Tilt, é essencial que você faça o
-login no GitHub Container Registry. Isso garantirá que o Tilt possa puxar as
-imagens necessárias para rodar os containers durante o desenvolvimento. Para
-fazer o login, utilize o seguinte comando no seu terminal:
-
-```bash 
-docker login ghcr.io
+```bash
+docker ps
 ```
 
-Você será solicitado a inserir seu nome de usuário e senha do GitHub. Se você
-ativou a autenticação de dois fatores no GitHub, será necessário gerar um token
-de acesso pessoal e usá-lo como senha durante o login no `ghcr.io`.
-
-#### Alteração no Arquivo `tilt-settings.yaml`
-
-Após o login bem-sucedido, é necessário ajustar a configuração do Tilt para
-usar o seu usuário do GitHub. No diretório do projeto, localize o arquivo
-`tilt-settings.yaml` e modifique a variável `github_user` para corresponder ao
-seu nome de usuário no GitHub. Isso é crucial para que o Tilt saiba de qual
-registro puxar as imagens.
-
-Exemplo de configuração no `tilt-settings.yaml`:
-
-```yaml 
-github_user: seu_usuario_aqui 
-```
-
-#### Tornando os Containers Acessíveis
-
-Por padrão, os repositórios no GitHub Container Registry são privados. Para que
-o Kubernetes consiga baixar as imagens necessárias sem problemas de
-autenticação, é preciso configurar o repositório de imagens para ser público.
-Para fazer isso, acesse o GitHub, vá até a seção "Packages" do seu perfil,
-selecione o pacote que deseja modificar, clique em "Settings" e altere a
-visibilidade para "Public".
-
-Essa configuração é essencial para evitar erros de permissão que podem ocorrer
-quando o Kubernetes tenta acessar imagens em um registro privado. Ao tornar o
-repositório público, você facilita o processo de desenvolvimento e deploy,
-garantindo que os containers possam ser puxados sem a necessidade de
-configurações adicionais de autenticação no lado do Kubernetes.
-
-
-Com essas configurações, você estará pronto para utilizar o Tilt
-eficientemente, assegurando um ambiente de desenvolvimento dinâmico e
-simplificado. A integração com o GitHub Container Registry otimiza o fluxo de
-trabalho de desenvolvimento, permitindo que você se concentre no que realmente
-importa: contribuir para o projeto. Caso tenha qualquer dúvida ou necessite de
-assistência adicional, não hesite em consultar a documentação oficial do Tilt e
-do GitHub Container Registry, ou entrar em contato com a equipe de
-desenvolvimento.
+Por padrão o nome do container configurado quando executados o `make cluster` é
+`querido-diario-registry`. Tilt ira detectar automaticamente o container registry
+configurado e utilizar para armazenar as imagens Docker.
 
 # Comandos uteis durante o desenvolvimento
 

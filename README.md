@@ -19,7 +19,7 @@ chart usado para instalá-lo em um cluster Kubernetes.
 
 Para informações sobre contribuições e de como rodar o pipeline, leia o
 [CONTRIBUTING.md](./CONTRIBUTING.md). Mas se você já tem instalado na máquina o
-minikube, docker e o tilt, execute:
+minikube, docker, ctlptl e o tilt, execute:
 
 ```console
 $ make cluster

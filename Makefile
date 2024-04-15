@@ -8,16 +8,15 @@ FILES_DIR ?= files
 DIARIOS_DIR ?= $(FILES_DIR)/diarios
 QUERIDO_DIARIO_CDN ?= https://querido-diario.nyc3.cdn.digitaloceanspaces.com/
 QUERIDO_DIARIO_BASEDADOS ?= https://querido-diario-misc.nyc3.cdn.digitaloceanspaces.com/queridodiario_dump.zip
+REGISTRY_NAME ?= querido-diario-registry
 
 k8s=kubectl --context $(CLUSTER_NAME) $(1)
 
 start-cluster:
-	minikube start --nodes $(CLUSTER_NODES_COUNT) --container-runtime=docker --profile $(CLUSTER_NAME)
-	# Ja baixa uma imagem que pode ser utilizada para iteragir com o opensearch
-	minikube image load curlimages/curl:latest  --profile $(CLUSTER_NAME)
+	ctlptl create cluster minikube --registry=querido-diario-registry --name "$(CLUSTER_NAME)" --minikube-start-flags "--nodes=$(CLUSTER_NODES_COUNT)" --minikube-container-runtime "docker"
 
 delete-cluster:
-	minikube delete --profile $(CLUSTER_NAME)
+	ctlptl delete cluster $(CLUSTER_NAME) --cascade "true" --ignore-not-found
 
 .PHONY: cluster
 cluster: delete-cluster start-cluster

@@ -6,10 +6,6 @@ update_settings(k8s_upsert_timeout_secs = 180)
 tilt_settings_file = "./tilt-settings.yaml"
 settings = read_yaml(tilt_settings_file)
 
-github_user = settings.get("github_user")
-if github_user == None or len(github_user) == 0:
-	fail("Você deve informar o seu usuário do github no arquivo tilt-settings.yaml")
-
 # helm repos
 helm_repo('tika', 'https://apache.jfrog.io/artifactory/tika', 
 	resource_name='helm-repo-tika', labels=['tika'])
@@ -75,17 +71,17 @@ k8s_resource(new_name='opensearch',
 	resource_deps=['opensearch-operator'])
 
 # querido-diario pipeline
-docker_build('ghcr.io/' + github_user + '/querido-diario-data-processing', '.', dockerfile='scripts/Dockerfile')
+docker_build('querido-diario-data-processing', '.', dockerfile='scripts/Dockerfile')
 
 chart_values = read_yaml('./charts/querido-diario-pipeline/values.yaml')
 pipeline_helm = helm('./charts/querido-diario-pipeline/', 
 	name = "querido-diario",
 	namespace = "querido-diario",
-	set=["textExtractionJob.image.repository=ghcr.io/" + github_user + "/querido-diario-data-processing"])
+	set=["textExtractionJob.image.repository=querido-diario-data-processing"])
 k8s_yaml(pipeline_helm)
 
 # container utilizado para ajustar a base de dados
-postgresql_job_container_image = 'ghcr.io/' + github_user + '/querido-diario-data-processing-postgresql-client'
+postgresql_job_container_image = 'querido-diario-data-processing-postgresql-client'
 
 docker_build(postgresql_job_container_image, os.getcwd(), dockerfile='scripts/postgresql-client.dockerfile')
 
@@ -110,7 +106,7 @@ for envVar in base_de_dados_job["spec"]["template"]["spec"]["containers"][0]["en
 k8s_yaml(encode_yaml(base_de_dados_job))
 k8s_resource(workload='cria-base-de-dados', labels=['postgresql'], resource_deps=['postgresql'])
 
-minio_job_container_image = 'ghcr.io/' + github_user + '/querido-diario-data-processing-minio-client'
+minio_job_container_image = 'querido-diario-data-processing-minio-client'
 minio_values = read_yaml('./scripts/minio-values.yaml') 
 docker_build(minio_job_container_image, os.getcwd(), dockerfile='scripts/minio-client.dockerfile')
 
