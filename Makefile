@@ -265,3 +265,10 @@ wait-opensearch:
 publish-tag:
 	podman tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG} $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
 	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
+
+.PHONY: aggregate-gazettes
+# aggregate-gazettes: set-run-variable-values
+#	podman exec -it $(STORAGE_CONTAINER_NAME) \
+# 	ls
+aggregate-gazettes: 
+	python3 tasks/gazette_txt_to_xml.py
