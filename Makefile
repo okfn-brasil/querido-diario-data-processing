@@ -267,8 +267,9 @@ publish-tag:
 	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
 
 .PHONY: aggregate-gazettes
-# aggregate-gazettes: set-run-variable-values
-#	podman exec -it $(STORAGE_CONTAINER_NAME) \
-# 	ls
-aggregate-gazettes: 
-	python3 tasks/gazette_txt_to_xml.py
+aggregate-gazettes:  set-run-variable-values
+	podman run -ti --volume $(CURDIR):/mnt/code:rw \
+		--pod $(POD_NAME) \
+		--env PYTHONPATH=/mnt/code \
+		--env-file envvars \
+		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python tasks/gazette_txt_to_xml.py
