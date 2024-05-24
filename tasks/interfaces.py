@@ -56,6 +56,18 @@ class StorageInterface(abc.ABC):
         Upload the given content to the destination on the host
         """
 
+    @abc.abstractmethod
+    def copy_file(self, source_file_key: str, destination_file_key: str) -> None:
+        """
+        Copy the given source file to the destination place on the host
+        """
+
+    @abc.abstractmethod
+    def delete_file(self, file_key: str) -> None:
+        """
+        Delete a file in the bucket S3.
+        """
+
 
 class IndexInterface(abc.ABC):
     """

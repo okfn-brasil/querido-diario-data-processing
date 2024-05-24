@@ -83,3 +83,15 @@ class DigitalOceanSpaces(StorageInterface):
         self._client.upload_fileobj(
             f, self._bucket, file_key, ExtraArgs={"ACL": permission}
         )
+
+    def copy_file(self, source_file_key: str, destination_file_key: str) -> None:
+        logging.debug(f"Copying {source_file_key} to {destination_file_key}")
+        self._client.copy_object(
+            Bucket=self._bucket,
+            CopySource={'Bucket': self._bucket, 'Key': source_file_key},
+            Key=destination_file_key
+        )
+
+    def delete_file(self, file_key: str) -> None:
+        logging.debug(f"Deletando {file_key}")
+        self._client.delete_object(Bucket=self._bucket, Key=file_key)
