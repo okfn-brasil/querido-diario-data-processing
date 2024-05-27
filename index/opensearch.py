@@ -37,7 +37,7 @@ class OpenSearchInterface(IndexInterface):
 
     def refresh_index(self, index_name: str = "") -> None:
         index_name = self.get_index_name(index_name)
-        if self.index_exists(index_name):
+        if not self.index_exists(index_name):
             return
         self._search_engine.indices.refresh(
             index=index_name,
