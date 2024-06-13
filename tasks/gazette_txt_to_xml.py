@@ -3,13 +3,15 @@ from io import BytesIO
 from database import create_database_interface
 from storage import create_storage_interface
 import xml.etree.cElementTree as ET
-import hashlib
+import hashlib, traceback
+from datetime import datetime
 
 
 def hash_text(text):
     """
     Receives a text and returns its SHA-256 hash of a text content
     """
+
     # Cria um objeto sha256
     hasher = hashlib.sha256()
 
@@ -17,94 +19,89 @@ def hash_text(text):
     hasher.update(text.encode('utf-8'))
 
     # Obtém o hash hexadecimal
-    return hasher.hexdigest()
+    return hasher.hexdigest()    
 
-def txt_to_xml(path_xml, txt: str, meta_info: dict, storage):
+def create_xml_for_territory_and_year(territory_info:tuple, database, storage):
     """
-    Transform a .txt file into a .xml file and upload it to the storage bucket
+    Create a .xml files for each year of gazettes for a territory  
     """
-    # Cria uma tag (elemento) chamado 'root' e um subelemento deste chamado 'doc'
-    root = ET.Element("root")
-    meta_info_tag = ET.SubElement(root, "meta")
 
-    # Cria um subelemento do 'doc' chamado 'field1' e 'field2' com atributos 'name' e um texto
-    ET.SubElement(meta_info_tag, "data", name="dia").text = meta_info['dia']
-    ET.SubElement(meta_info_tag, "data", name="mes").text = meta_info['mes']
+    actual_year = datetime.now().year
+    base_year = 1960
 
-    ET.SubElement(meta_info_tag, "localidade", name="municipio").text = "some vlaue2"
-    ET.SubElement(meta_info_tag, "localidade", name="estado").text = "estado"
-    ET.SubElement(meta_info_tag, "criado_em").text = "criado_em"
+    for year in range(base_year, actual_year+1):
+        query_content = list(database.select(f"SELECT * FROM gazettes\
+                                        WHERE territory_id='{territory_info[0]}' AND\
+                                        date BETWEEN '{year}-01-01' AND '{year}-12-31'\
+                                        ORDER BY date ASC;"))
 
-    gazettes_tag = ET.SubElement(root, "gazettes")
-    
-    ET.SubElement(gazettes_tag, "gazette").text = txt
-    
-    # Adiciona a uma árvore de elementos XML (ou seja, o elemento 'root' onde contém todo o documento)
-    # e o adiciona a um arquivo binário que será enviado para o storage bucket em formato .xml
-    tree = ET.ElementTree(root)
+        if len(query_content) > 0:
+            print(f"Gerando XML para cidade {territory_info[1]}-{territory_info[2]} no ano {year}")
+            root = ET.Element("root")
+            meta_info_tag = ET.SubElement(root, "meta")
+            ET.SubElement(meta_info_tag, "localidade", name="municipio").text = territory_info[1]
+            ET.SubElement(meta_info_tag, "localidade", name="estado").text = territory_info[2]
+            ET.SubElement(meta_info_tag, "criado_em").text = str(datetime.now())
+            ET.SubElement(meta_info_tag, "ano").text = str(year)
+            all_gazettes_tag = ET.SubElement(root, "diarios")  
 
-    file_xml = BytesIO()
+            path_xml = f"{territory_info[0]}/{year}/{territory_info[1]}-{territory_info[2]}-{year}.xml"
 
-    tree.write(file_xml, encoding='utf-8', xml_declaration=True)
-    file_xml.seek(0) # Volta o cursor de leitura do arquivo para o começo dele
+            for gazette in query_content:
+                try:
+                    file_gazette_txt = BytesIO()
+                    path_arq_bucket = str(gazette[7]).replace(".pdf",".txt") # É a posição 7 que contem o caminho do arquivo dentro do S3
+                    
+                    storage.get_file(path_arq_bucket, file_gazette_txt)
 
-    content_file_xml = file_xml.getvalue().decode('utf-8')
+                except:
+                    print(f"Erro na obtenção do conteúdo de texto do diário de {territory_info[1]}-{territory_info[2]}-{gazette[2]}")
+                    continue
 
-    storage.upload_content(path_xml, content_file_xml)
-    
+                gazette_tag = ET.SubElement(all_gazettes_tag, "gazette")
+                meta_gazette = ET.SubElement(gazette_tag, "meta-gazette")
+                ET.SubElement(meta_gazette, "url_pdf").text = gazette[8]
+                ET.SubElement(meta_gazette, "poder").text = gazette[5]
+                ET.SubElement(meta_gazette, "edicao_extra").text = 'Sim' if gazette[4] else 'Não'
+                ET.SubElement(meta_gazette, "numero_edicao").text = str(gazette[3]) if str(gazette[3]) is not None else "Não há"
+                ET.SubElement(meta_gazette, "data_diario").text = datetime.strftime(gazette[2], "%d/%m")
+                ET.SubElement(gazette_tag, "conteudo").text = file_gazette_txt.getvalue().decode('utf-8')
 
-def organize_files_by_city_and_date():
-    """
-    Organize the files in the S3 bucket by city and date
-    """
+                file_gazette_txt.close()
+            
+            tree = ET.ElementTree(root)
+
+            file_xml = BytesIO()
+
+            tree.write(file_xml, encoding='utf-8', xml_declaration=True)
+            file_xml.seek(0) # Volta o cursor de leitura do arquivo para o começo dele
+
+            content_file_xml = file_xml.getvalue().decode('utf-8')
+
+            storage.upload_content(path_xml, content_file_xml)
+
+            file_xml.close()
+        else:
+            "Teste de saida"
+            # print(f"Nada encontrado para cidade {territory_info[1]}-{territory_info[2]} no ano {year}")
+
+def create_xml_territories():
+
     database = create_database_interface()
     storage = create_storage_interface()
 
-    print("TESTE - Script que agrega os arquivos .txt para .xml")
+    print("Script que agrega os arquivos .txt para .xml")
 
-    results_query = database.select("SELECT g.*, t.name, t.state_code FROM gazettes AS g\
-                                    JOIN territories AS t ON g.territory_id = t.id;")
+    # results_query = database.select("SELECT * FROM territories WHERE name='Sampaio' OR name='Xique-Xique';")
+    results_query = database.select("SELECT * FROM territories;")
 
-    # Imprime cada resultado da query do banco de dados
-    for resultado in results_query:   # Precisa do ponto e vírgula no final
+    for t in results_query:
         try:
-            arquivo = BytesIO()
-            path_arq_bucket = str(resultado[7]).replace(".pdf",".txt") # É a posição 7 que contem o caminho do arquivo dentro do S3
-            
-            storage.get_file(path_arq_bucket, arquivo)  # Pega o conteúdo do objeto do arquivo do S3 e coloca no BytesIO
-
-            dict_gazzete_info = {
-                "dia": str(resultado[2].day),
-                "mes": str(resultado[2].month),
-                "ano": str(resultado[2].year),
-                "municipio": resultado[-2],
-                "estado": resultado[-1],
-            }
-            
-            # print(arquivo.getvalue().decode('utf-8')) # Imprime o conteúdo do arquivo com codificação utf-8
-
-            print("\n---------------------------------------------\n")
-
-            # Faz a copia do arquivo txt para pasta no S3
-            path_bucket_separado = path_arq_bucket.split("/")
-            path_bucket_separado[1] = str(resultado[2].year)
-
-            path_novo_bucket = "/".join(path_bucket_separado)
-            print(path_novo_bucket)
-
-            storage.copy_file(path_arq_bucket, path_novo_bucket)
-
-            arquivo.close()
-            
+            create_xml_for_territory_and_year(t, database, storage)
         except:
+            print(traceback.format_exc())
             continue
-
-    path_xml = "/".join(path_novo_bucket.split("/")[:-1]) + f"/{dict_gazzete_info['municipio']}-{dict_gazzete_info['estado']}.xml"
-
-    print(path_xml)
-
-    txt_to_xml(path_xml, "teste", dict_gazzete_info, storage)
 
 
 if __name__ == "__main__":
-    organize_files_by_city_and_date()
+    create_xml_territories()
