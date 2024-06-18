@@ -266,10 +266,16 @@ publish-tag:
 	podman tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG} $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
 	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
 
+.PHONY: stop-aggregate-gazettes
+stop-aggregate-gazettes:
+	podman stop --ignore agg-gazettes
+	podman rm --force --ignore agg-gazettes
+
 .PHONY: aggregate-gazettes
-aggregate-gazettes:  set-run-variable-values
+aggregate-gazettes:  stop-aggregate-gazettes set-run-variable-values
 	podman run -ti --volume $(CURDIR):/mnt/code:rw \
 		--pod $(POD_NAME) \
 		--env PYTHONPATH=/mnt/code \
 		--env-file envvars \
+		--name agg-gazettes \
 		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python tasks/gazette_txt_to_xml.py
