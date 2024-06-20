@@ -5,18 +5,18 @@ from storage import create_storage_interface
 import xml.etree.cElementTree as ET
 import hashlib, traceback
 from datetime import datetime
+from zipfile import ZipFile, ZIP_DEFLATED
 
-
-def hash_text(text):
+def hash_text(zip):
     """
-    Receives a text and returns its SHA-256 hash of a text content
+    Receives a zip and returns its SHA-256 hash of a zip content
     """
 
     # Cria um objeto sha256
     hasher = hashlib.sha256()
 
-    # Atualiza o objeto com o texto codificado em UTF-8
-    hasher.update(text.encode('utf-8'))
+    # Atualiza o objeto com o zip codificado em UTF-8
+    hasher.update(zip.encode('utf-8'))
 
     # Obtém o hash hexadecimal
     return hasher.hexdigest()    
@@ -45,7 +45,7 @@ def create_xml_for_territory_and_year(territory_info:tuple, database, storage):
             ET.SubElement(meta_info_tag, "ano").text = str(year)
             all_gazettes_tag = ET.SubElement(root, "diarios")  
 
-            path_xml = f"{territory_info[0]}/{year}/{territory_info[1]}-{territory_info[2]}-{year}.xml"
+            path_xml = f"aggregates/{territory_info[0]}/{year}/{territory_info[1]}-{territory_info[2]}-{year}.xml"
 
             for gazette in query_content:
                 try:
@@ -54,35 +54,45 @@ def create_xml_for_territory_and_year(territory_info:tuple, database, storage):
                     
                     storage.get_file(path_arq_bucket, file_gazette_txt)
 
+                    gazette_tag = ET.SubElement(all_gazettes_tag, "gazette")
+                    meta_gazette = ET.SubElement(gazette_tag, "meta-gazette")
+                    ET.SubElement(meta_gazette, "url_pdf").text = gazette[8]
+                    ET.SubElement(meta_gazette, "poder").text = gazette[5]
+                    ET.SubElement(meta_gazette, "edicao_extra").text = 'Sim' if gazette[4] else 'Não'
+                    ET.SubElement(meta_gazette, "numero_edicao").text = str(gazette[3]) if str(gazette[3]) is not None else "Não há"
+                    ET.SubElement(meta_gazette, "data_diario").text = datetime.strftime(gazette[2], "%d/%m")
+                    ET.SubElement(gazette_tag, "conteudo").text = file_gazette_txt.getvalue().decode('utf-8')
+
+                    file_gazette_txt.close()
                 except:
                     print(f"Erro na obtenção do conteúdo de texto do diário de {territory_info[1]}-{territory_info[2]}-{gazette[2]}")
                     continue
-
-                gazette_tag = ET.SubElement(all_gazettes_tag, "gazette")
-                meta_gazette = ET.SubElement(gazette_tag, "meta-gazette")
-                ET.SubElement(meta_gazette, "url_pdf").text = gazette[8]
-                ET.SubElement(meta_gazette, "poder").text = gazette[5]
-                ET.SubElement(meta_gazette, "edicao_extra").text = 'Sim' if gazette[4] else 'Não'
-                ET.SubElement(meta_gazette, "numero_edicao").text = str(gazette[3]) if str(gazette[3]) is not None else "Não há"
-                ET.SubElement(meta_gazette, "data_diario").text = datetime.strftime(gazette[2], "%d/%m")
-                ET.SubElement(gazette_tag, "conteudo").text = file_gazette_txt.getvalue().decode('utf-8')
-
-                file_gazette_txt.close()
             
             tree = ET.ElementTree(root)
 
             file_xml = BytesIO()
 
-            tree.write(file_xml, encoding='utf-8', xml_declaration=True)
+            tree.write(file_xml, encoding='utf8', xml_declaration=True)
             file_xml.seek(0) # Volta o cursor de leitura do arquivo para o começo dele
 
-            content_file_xml = file_xml.getvalue().decode('utf-8')
+            try:
+                zip_buffer = BytesIO()
+                with ZipFile(zip_buffer, 'w', ZIP_DEFLATED) as zip_file:
+                    zip_file.writestr(f"{territory_info[1]}-{territory_info[2]}-{year}.xml", file_xml.getvalue())
+                zip_buffer.seek(0)  # Volta o cursor de leitura do zip para o começo dele
 
-            storage.upload_content(path_xml, content_file_xml)
+                zip_path = f"aggregates/{territory_info[0]}/{year}.zip"
 
-            file_xml.close()
+                storage.upload_content(zip_path, zip_buffer.getvalue())
+                
+                zip_buffer.close()
+                file_xml.close()
+            except Exception as e:
+                print(f"Erro ao criar e enviar o arquivo zip: {e}")
+                continue
+            
         else:
-            "Teste de saida"
+            pass
             # print(f"Nada encontrado para cidade {territory_info[1]}-{territory_info[2]} no ano {year}")
 
 def create_xml_territories():
