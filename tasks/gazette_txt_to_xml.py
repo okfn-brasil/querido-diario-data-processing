@@ -3,23 +3,26 @@ from io import BytesIO
 from database import create_database_interface
 from storage import create_storage_interface
 import xml.etree.cElementTree as ET
-import hashlib, traceback
+import hashlib, traceback, os
 from datetime import datetime
 from zipfile import ZipFile, ZIP_DEFLATED
 
-def hash_text(zip):
+
+def hash_xml(content : str):
     """
-    Receives a zip and returns its SHA-256 hash of a zip content
+    Receives a text content of a XML file and returns its SHA-256 hash
     """
 
-    # Cria um objeto sha256
-    hasher = hashlib.sha256()
+    seed_hash = bytes(os.environ['SEED_HASH'].encode('utf-8'))
 
-    # Atualiza o objeto com o zip codificado em UTF-8
-    hasher.update(zip.encode('utf-8'))
+    # Escolha o algoritmo de hash (no caso, SHA-256)
+    algorithm = hashlib.sha256
+    result_hash = hashlib.pbkdf2_hmac(algorithm().name, content.encode('utf-8'), seed_hash, 100000)
 
-    # Obtém o hash hexadecimal
-    return hasher.hexdigest()    
+    # Converta o resultado para uma representação legível (hexadecimal)
+    hash_hex = result_hash.hex()
+
+    return hash_hex
 
 def create_xml_for_territory_and_year(territory_info:tuple, database, storage):
     """
@@ -41,11 +44,8 @@ def create_xml_for_territory_and_year(territory_info:tuple, database, storage):
             meta_info_tag = ET.SubElement(root, "meta")
             ET.SubElement(meta_info_tag, "localidade", name="municipio").text = territory_info[1]
             ET.SubElement(meta_info_tag, "localidade", name="estado").text = territory_info[2]
-            ET.SubElement(meta_info_tag, "criado_em").text = str(datetime.now())
             ET.SubElement(meta_info_tag, "ano").text = str(year)
-            all_gazettes_tag = ET.SubElement(root, "diarios")  
-
-            path_xml = f"aggregates/{territory_info[0]}/{year}/{territory_info[1]}-{territory_info[2]}-{year}.xml"
+            all_gazettes_tag = ET.SubElement(root, "diarios")
 
             for gazette in query_content:
                 try:
@@ -77,14 +77,18 @@ def create_xml_for_territory_and_year(territory_info:tuple, database, storage):
 
             try:
                 zip_buffer = BytesIO()
+
                 with ZipFile(zip_buffer, 'w', ZIP_DEFLATED) as zip_file:
                     zip_file.writestr(f"{territory_info[1]}-{territory_info[2]}-{year}.xml", file_xml.getvalue())
+
                 zip_buffer.seek(0)  # Volta o cursor de leitura do zip para o começo dele
 
                 zip_path = f"aggregates/{territory_info[0]}/{year}.zip"
 
-                storage.upload_content(zip_path, zip_buffer.getvalue())
+                storage.upload_zip(zip_path, zip_buffer)
                 
+                hx = hash_xml(file_xml.getvalue().decode('utf-8'))
+
                 zip_buffer.close()
                 file_xml.close()
             except Exception as e:
