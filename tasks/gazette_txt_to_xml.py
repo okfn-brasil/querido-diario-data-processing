@@ -70,44 +70,79 @@ def create_xml_for_territory_and_year(territory_info:tuple, database, storage):
             
             tree = ET.ElementTree(root)
 
-            file_xml = BytesIO()
+            xml_file = BytesIO()
 
-            tree.write(file_xml, encoding='utf8', xml_declaration=True)
-            file_xml.seek(0) # Volta o cursor de leitura do arquivo para o começo dele
+            tree.write(xml_file, encoding='utf8', xml_declaration=True)
+            xml_file.seek(0) # Volta o cursor de leitura do arquivo para o começo dele
+
+            hx = hash_xml(xml_file.getvalue().decode('utf-8'))
+            zip_path = f"aggregates/{territory_info[0]}/{year}.zip"
+
+            query_existing_aggregate = list(database.select(f"SELECT hash_info FROM aggregates \
+                                                        WHERE url_zip='{zip_path}';"))
+
+            need_update = False
+
+            if query_existing_aggregate:
+                need_update = hx != query_existing_aggregate[0][0]
+
+                if not need_update:
+                    xml_file.close()
+                    continue
 
             try:
                 zip_buffer = BytesIO()
 
                 with ZipFile(zip_buffer, 'w', ZIP_DEFLATED) as zip_file:
-                    zip_file.writestr(f"{territory_info[1]}-{territory_info[2]}-{year}.xml", file_xml.getvalue())
+                    zip_file.writestr(f"{territory_info[1]}-{territory_info[2]}-{year}.xml", xml_file.getvalue())
+
+                zip_size = round(zip_buffer.getbuffer().nbytes / (1024 * 1024), 2)
 
                 zip_buffer.seek(0)  # Volta o cursor de leitura do zip para o começo dele
 
-                zip_path = f"aggregates/{territory_info[0]}/{year}.zip"
-
                 storage.upload_zip(zip_path, zip_buffer)
-                
-                hx = hash_xml(file_xml.getvalue().decode('utf-8'))
+
+                dict_query_info = {
+                    "territory_id" : territory_info[0],
+                    "url_zip": zip_path,
+                    "year": year,
+                    "hash_info": hx,
+                    "file_size": zip_size,
+                }
+
+                if need_update:
+                    database.insert("UPDATE aggregates SET \
+                        territory_id=%(territory_id)s, last_updated=NOW(), \
+                        hash_info=%(hash_info)s, file_size=%(file_size)s \
+                        WHERE url_zip=%(url_zip)s;", dict_query_info)
+                else:
+                    database.insert("INSERT INTO aggregates \
+                        (territory_id, url_zip, year, last_updated, hash_info, file_size)\
+                        VALUES (%(territory_id)s, %(url_zip)s, %(year)s, NOW(), \
+                        %(hash_info)s, %(file_size)s);", dict_query_info)
 
                 zip_buffer.close()
-                file_xml.close()
+                xml_file.close()
+
             except Exception as e:
                 print(f"Erro ao criar e enviar o arquivo zip: {e}")
                 continue
             
         else:
-            pass
-            # print(f"Nada encontrado para cidade {territory_info[1]}-{territory_info[2]} no ano {year}")
+            print(f"Nada encontrado para cidade {territory_info[1]}-{territory_info[2]} no ano {year}")
 
 def create_xml_territories():
+    """
+    Create xml for all territories available in database
+    """
 
     database = create_database_interface()
     storage = create_storage_interface()
 
     print("Script que agrega os arquivos .txt para .xml")
 
-    # results_query = database.select("SELECT * FROM territories WHERE name='Sampaio' OR name='Xique-Xique';")
     results_query = database.select("SELECT * FROM territories;")
+    # results_query = database.select("SELECT * FROM territories WHERE id='1718808';")
 
     for t in results_query:
         try:
