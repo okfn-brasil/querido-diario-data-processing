@@ -7,6 +7,18 @@ import hashlib, traceback, os
 from datetime import datetime
 from zipfile import ZipFile, ZIP_DEFLATED
 
+def create_aggregates_table(database):
+    database._commit_changes(
+        """
+        CREATE TABLE IF NOT EXISTS aggregates (
+            id SERIAL PRIMARY KEY ,
+            territory_id VARCHAR NOT NULL,
+            url_zip VARCHAR(255),
+            year INTEGER,
+            last_updated TIMESTAMP,
+            hash_info VARCHAR(64),
+            file_size BIGINT
+        ); """)
 
 def hash_xml(content : str):
     """
@@ -141,8 +153,10 @@ def create_xml_territories():
 
     print("Script que agrega os arquivos .txt para .xml")
 
-    results_query = database.select("SELECT * FROM territories;")
-    # results_query = database.select("SELECT * FROM territories WHERE id='1718808';")
+    # results_query = database.select("SELECT * FROM territories;")
+    results_query = database.select("SELECT * FROM territories WHERE id='1718808';")
+
+    create_aggregates_table(database)
 
     for t in results_query:
         try:
