@@ -1,22 +1,23 @@
 load('ext://helm_resource', 'helm_resource', 'helm_repo')
 load('ext://namespace', 'namespace_create')
+load('ext://cert_manager', 'deploy_cert_manager')
 
 update_settings(k8s_upsert_timeout_secs = 180)
-
-tilt_settings_file = "./tilt-settings.yaml"
-settings = read_yaml(tilt_settings_file)
 
 # helm repos
 helm_repo('tika', 'https://apache.jfrog.io/artifactory/tika', 
 	resource_name='helm-repo-tika', labels=['tika'])
 helm_repo('bitnami', 'https://charts.bitnami.com/bitnami', 
 	resource_name='helm-repo-bitnami', labels=['minio','postgresql'])
-helm_repo('opensearch-operator', 
-	'https://opensearch-project.github.io/opensearch-k8s-operator/', 
-	resource_name='helm-repo-opensearch-operator', 
+helm_repo('opensearch', 
+	'https://opensearch-project.github.io/helm-charts/', 
+	resource_name='helm-repo-operator', 
 	labels=['opensearch'])
 
+# deploy_cert_manager()
+
 namespace_create('querido-diario')
+namespace_create('opensearch')
 
 # algumas das dependencias para rodar o pipeline 
 helm_resource('tika', 
@@ -57,18 +58,15 @@ local_resource(
   labels=["makefile"],
 )
 
+k8s_yaml('./scripts/opensearch-certificates.yaml')
+
 # opensearch
-helm_resource('opensearch-operator',  
-	'opensearch-operator/opensearch-operator', 
-	namespace='opensearch-operator-system', 
-	flags=['--create-namespace', '--version=2.4.0'], 
-	resource_deps=['helm-repo-opensearch-operator'], 
+helm_resource('opensearch',  
+	'opensearch/opensearch', 
+	namespace='querido-diario', 
+	flags=['--create-namespace', '--values=./scripts/opensearch-cluster-values.yaml'], 
+	# resource_deps=['helm-repo-opensearch-operator'], 
 	labels=['opensearch'])
-k8s_yaml('./scripts/opensearch-cluster.yaml')
-k8s_resource(new_name='opensearch', 
-	objects=['querido-diario-opensearsch-cluster:OpenSearchCluster:querido-diario'],  
-	labels=['opensearch'], 
-	resource_deps=['opensearch-operator'])
 
 # querido-diario pipeline
 docker_build('querido-diario-data-processing', '.', dockerfile='scripts/Dockerfile')

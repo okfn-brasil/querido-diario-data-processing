@@ -27,11 +27,11 @@ postgresql:
   database_restore_file: contrib/data/queridodiariodb.tar
   
 elasticsearch:
-  host: https://querido-diario-opensearsch-cluster.querido-diario.svc.cluster.local:9200
+  host: https://querido-diario-opensearch-cluster-master.querido-diario.svc.cluster.local:9200
   index: querido-diario
   user: admin
-  password: "admin"
-  certificatesSecretName: "querido-diario-opensearsch-cluster-ca"
+  password: "Quer1do-d1ar1o!"
+  certificatesSecretName: "querido-diario-opensearch-cert"
   ca_cert_directory: "/etc/querido-diario/opensearch/ssl/certs"
 
 

@@ -1,0 +1,20 @@
+manager:
+  livenessProbe:
+    failureThreshold: 50
+    httpGet:
+      path: /healthz
+      port: 8081
+    periodSeconds: 15
+    successThreshold: 1
+    timeoutSeconds: 60
+    initialDelaySeconds: 10
+
+  readinessProbe:
+    failureThreshold: 50
+    httpGet:
+      path: /readyz
+      port: 8081
+    periodSeconds: 15
+    successThreshold: 1
+    timeoutSeconds: 60
+    initialDelaySeconds: 10

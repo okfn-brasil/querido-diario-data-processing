@@ -1,0 +1,28 @@
+# cert-manager resources
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: querido-diario-opensearch-cert
+  namespace: querido-diario
+spec:
+  duration: 8766h # 1 year
+  dnsNames:
+  - querido-diario-opensearch-cluster-master.querido-diario.svc
+  - querido-diario-opensearch-cluster-master.querido-diario.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: querido-diario-opensearch-selfsigned-issuer
+  secretName: querido-diario-opensearch-cert
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS8
+    size: 4096
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: querido-diario-opensearch-selfsigned-issuer
+  namespace: querido-diario
+spec:
+  selfSigned: {}

@@ -243,7 +243,7 @@ comandos `curl` para interagir com o OpenSearch. Por exemplo, você pode
 executar um comando `curl` para verificar a saúde do cluster OpenSearch:
 
 ```bash
-curl -XGET 'https://querido-diario-opensearsch-cluster.querido-diario.svc.cluster.local:9200/_cluster/health?pretty' -u 'admin:admin' --insecure
+curl -XGET 'https://querido-diario-opensearch-cluster-master.querido-diario.svc.cluster.local:9200/_cluster/health?pretty' -u 'admin:Quer1do-d1ar1o!' --insecure
 ```
 
 Este comando faz uma requisição `GET` para verificar a saúde do cluster
@@ -270,7 +270,7 @@ os metadados e texto extraídos:
 
 ```bash
 # Apenas baixando um arquivo PDF para enviar para o Apache Tika Server
-curl -XGET https://querido-diario.nyc3.cdn.digitaloceanspaces.com/2917359/2024-04-05/f6108244f24fdd6adc218fae72e8ce81fe30ca2b -o file.pdf
+curl -XGET https://querido-diario.nyc3.cdn.digitaloceanspaces.com/1302603/2023-08-16/eb5522a3e160ba9129bd05617a68badd4e8ee381.pdf -o file.pdf
 curl -T file.pdf http://tika.tika.svc.cluster.local:9998/meta
 ```
 

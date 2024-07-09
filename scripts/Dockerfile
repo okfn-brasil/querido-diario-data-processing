@@ -20,4 +20,4 @@ COPY . $WORKDIR
 WORKDIR $WORKDIR
 USER $USER
 
-RUN python -c "import sentence_transformers; sentence_transformers.SentenceTransformer('neuralmind/bert-base-portuguese-cased').save('"$USER_HOME"/models/bert-base-portuguese-cased')"
+# RUN python -c "import sentence_transformers; sentence_transformers.SentenceTransformer('neuralmind/bert-base-portuguese-cased').save('"$USER_HOME"/models/bert-base-portuguese-cased')"
