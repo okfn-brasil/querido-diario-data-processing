@@ -6,6 +6,8 @@ import traceback
 from datetime import datetime
 from zipfile import ZipFile, ZIP_DEFLATED
 from utils.hash import hash_xml, hash_zip
+from xml.dom import minidom
+
 
 need_update_zip_state = False
 
@@ -189,8 +191,12 @@ def create_aggregates_for_territories_and_states(territories_list:list, state, d
 
                 xml_content_generate(gazzetes_query_content, root, territories[0], storage)
 
-                tree = ET.ElementTree(root)
-                tree.write(xml_file, encoding='utf8', xml_declaration=True)
+                # Format XML file
+                xml_str = ET.tostring(root, encoding='unicode')
+                format_xml = minidom.parseString(xml_str).toprettyxml(indent=" ")
+                xml_bytes = format_xml.encode('utf-8')
+
+                xml_file.write(xml_bytes)
                 xml_file.seek(0)
 
                 meta_xml={
