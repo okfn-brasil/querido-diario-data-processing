@@ -13,3 +13,6 @@ from .territories import (
     get_territory_slug,
     get_territory_data,
 )
+from .hash import (
+    hash_xml,
+)

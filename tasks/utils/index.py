@@ -1,6 +1,6 @@
 from typing import Dict, Iterable, List
 
-from ..interfaces import IndexInterface
+from tasks.interfaces import IndexInterface
 
 
 def get_documents_with_ids(
