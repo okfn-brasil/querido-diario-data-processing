@@ -278,4 +278,4 @@ aggregate-gazettes:  stop-aggregate-gazettes set-run-variable-values
 		--env PYTHONPATH=/mnt/code \
 		--env-file envvars \
 		--name agg-gazettes \
-		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python tasks/gazette_txt_to_xml.py
+		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python main -p aggregates

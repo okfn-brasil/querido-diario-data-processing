@@ -1,7 +1,8 @@
 import logging
 import os
-from typing import Generator
+from typing import Generator, Union
 from io import BytesIO
+from pathlib import Path
 
 import boto3
 
@@ -68,32 +69,27 @@ class DigitalOceanSpaces(StorageInterface):
             aws_secret_access_key=self._access_secret,
         )
 
-    def get_file(self, file_key: str, destination) -> None:
-        logging.debug(f"Getting {file_key}")
-        self._client.download_fileobj(self._bucket, file_key, destination)
+    def get_file(self, file_to_be_downloaded: Union[str, Path], destination) -> None:
+        logging.debug(f"Getting {file_to_be_downloaded}")
+        self._client.download_fileobj(self._bucket, str(file_to_be_downloaded), destination)
 
     def upload_content(
         self,
         file_key: str,
-        content_to_be_uploaded: str,
+        content_to_be_uploaded: Union[str, BytesIO],
         permission: str = "public-read",
     ) -> None:
         logging.debug(f"Uploading {file_key}")
-        f = BytesIO(content_to_be_uploaded.encode())
-        self._client.upload_fileobj(
-            f, self._bucket, file_key, ExtraArgs={"ACL": permission}
-        )
 
-    def upload_zip(
-        self,
-        file_key: str,
-        content_to_be_uploaded: BytesIO,
-        permission: str = "public-read",
-    ) -> None:
-        logging.debug(f"Uploading {file_key}")
-        self._client.upload_fileobj(
+        if isinstance(content_to_be_uploaded, str):
+            f = BytesIO(content_to_be_uploaded.encode())
+            self._client.upload_fileobj(
+                f, self._bucket, file_key, ExtraArgs={"ACL": permission}
+            )
+        else:
+            self._client.upload_fileobj(
             content_to_be_uploaded, self._bucket, file_key, ExtraArgs={"ACL": permission}
-        )
+            )
 
     def copy_file(self, source_file_key: str, destination_file_key: str) -> None:
         logging.debug(f"Copying {source_file_key} to {destination_file_key}")
@@ -104,5 +100,5 @@ class DigitalOceanSpaces(StorageInterface):
         )
 
     def delete_file(self, file_key: str) -> None:
-        logging.debug(f"Deletando {file_key}")
+        logging.debug(f"Deleting {file_key}")
         self._client.delete_object(Bucket=self._bucket, Key=file_key)
