@@ -32,6 +32,8 @@ def create_aggregates(database:DatabaseInterface, storage:StorageInterface):
                                                                     territory_id 
                                                                 FROM 
                                                                     gazettes
+                                                                WHERE
+                                                                    territory_id NOT LIKE '%00000'
                                                                 )
                                                        GROUP BY 
                                                         code
