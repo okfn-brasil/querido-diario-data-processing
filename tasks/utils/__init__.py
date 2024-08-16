@@ -13,3 +13,9 @@ from .territories import (
     get_territory_slug,
     get_territory_data,
 )
+from .hash import (
+    hash_content,
+)
+from .need_upsert import (
+    zip_needs_upsert,
+)
