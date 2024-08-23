@@ -4,7 +4,7 @@ import logging
 
 import psycopg2
 
-from tasks import DatabaseInterface
+from .interfaces import DatabaseInterface
 
 
 def get_database_name():

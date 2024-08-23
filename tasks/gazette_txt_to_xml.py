@@ -8,15 +8,17 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from pathlib import Path
 
 from .utils import hash_content, zip_needs_upsert, get_territory_slug
-from .interfaces import StorageInterface,DatabaseInterface
 
 from botocore.exceptions import ClientError
+
+from database import DatabaseInterface
+from storage import StorageInterface
 
 logger = logging.getLogger(__name__)
 br_timezone = timedelta(hours=-3)
 
 
-def create_aggregates(database:DatabaseInterface, storage:StorageInterface):
+def create_aggregates(database: DatabaseInterface, storage: StorageInterface):
     """
     Create xml for all territories available in database
     """

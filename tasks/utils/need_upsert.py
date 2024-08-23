@@ -1,5 +1,5 @@
 from typing import Union
-from ..interfaces import DatabaseInterface
+from database import DatabaseInterface
 
 
 def zip_needs_upsert(hx: Union[str, bytes], zip_path:str, database:DatabaseInterface):

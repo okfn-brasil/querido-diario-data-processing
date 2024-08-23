@@ -1,7 +1,7 @@
 import hashlib
 from typing import Dict, Iterable, List
 
-from .interfaces import IndexInterface
+from index import IndexInterface
 from .utils import batched, clean_extra_whitespaces, get_documents_from_query_with_highlights
 
 

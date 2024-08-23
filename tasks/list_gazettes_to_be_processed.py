@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Iterable
 
-from .interfaces import DatabaseInterface
+from database import DatabaseInterface
 
 
 def get_gazettes_to_be_processed(

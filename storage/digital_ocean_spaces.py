@@ -6,7 +6,7 @@ from pathlib import Path
 
 import boto3
 
-from tasks import StorageInterface
+from .interfaces import StorageInterface
 
 
 def get_storage_region():

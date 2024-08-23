@@ -1,15 +1,14 @@
-from unittest import TestCase, expectedFailure
-from unittest.mock import patch, sentinel
 import datetime
 import hashlib
 import tempfile
-
-from botocore.stub import Stubber
-import boto3
 from io import BytesIO
+from unittest import TestCase, expectedFailure
+from unittest.mock import patch, sentinel
 
-from storage import DigitalOceanSpaces, create_storage_interface
-from tasks import StorageInterface
+import boto3
+from botocore.stub import Stubber
+
+from storage import DigitalOceanSpaces, StorageInterface, create_storage_interface
 
 
 @patch.dict(

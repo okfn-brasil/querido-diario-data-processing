@@ -5,7 +5,7 @@ import subprocess
 
 import requests
 
-from tasks import TextExtractorInterface
+from .interfaces import TextExtractorInterface
 
 
 class ApacheTikaTextExtractor(TextExtractorInterface):

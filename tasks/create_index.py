@@ -1,6 +1,6 @@
 from typing import Dict
 
-from .interfaces import IndexInterface
+from index import IndexInterface
 
 
 def create_gazettes_index(index: IndexInterface) -> None:

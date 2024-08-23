@@ -6,11 +6,5 @@ from .gazette_text_extraction import extract_text_from_gazettes
 from .gazette_themed_excerpts_extraction import extract_themed_excerpts_from_gazettes
 from .gazette_themes_listing import get_themes
 from .gazette_txt_to_xml import create_aggregates
-from .interfaces import (
-    DatabaseInterface,
-    StorageInterface,
-    IndexInterface,
-    TextExtractorInterface,
-)
 from .list_gazettes_to_be_processed import get_gazettes_to_be_processed
 from .list_territories import get_territories
