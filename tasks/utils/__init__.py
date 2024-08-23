@@ -1,3 +1,4 @@
+from .datetime import br_timezone
 from .index import (
     get_documents_from_query_with_highlights,
     get_documents_with_ids,
@@ -15,7 +16,5 @@ from .territories import (
 )
 from .hash import (
     hash_content,
-)
-from .need_upsert import (
-    zip_needs_upsert,
+    hash_file,
 )

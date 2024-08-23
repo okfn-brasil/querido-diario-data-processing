@@ -91,6 +91,67 @@ class DigitalOceanSpaces(StorageInterface):
             content_to_be_uploaded, self._bucket, file_key, ExtraArgs={"ACL": permission}
             )
 
+    def upload_file(
+        self,
+        file_key: str,
+        file_path: str,
+        permission: str = "public-read",
+    ) -> None:
+        logging.debug(f"Uploading {file_key}")
+        self._client.upload_file(
+            file_path, self._bucket, file_key, ExtraArgs={"ACL": permission}
+        )
+
+    def upload_file_multipart(
+        self,
+        file_key: str,
+        file_path: str,
+        permission: str = "public-read",
+        part_size: int = 100 * 1024 * 1024,
+    ) -> None:
+        logging.debug(f"Uploading {file_key} with multipart")
+
+        multipart_upload = self._client.create_multipart_upload(Bucket=self._bucket, Key=file_key, ACL=permission)
+        upload_id = multipart_upload['UploadId']
+
+        parts = []
+
+        try:
+            with open(file_path, 'rb') as file:
+                part_number = 1
+                while True:
+                    data = file.read(part_size)
+                    if not data:
+                        break
+
+                    response = self._client.upload_part(
+                        Bucket=self._bucket,
+                        Key=file_key,
+                        PartNumber=part_number,
+                        UploadId=upload_id,
+                        Body=data
+                    )
+
+                    parts.append({
+                        'PartNumber': part_number,
+                        'ETag': response['ETag']
+                    })
+                    part_number += 1
+
+            self._client.complete_multipart_upload(
+                Bucket=self._bucket,
+                Key=file_key,
+                UploadId=upload_id,
+                MultipartUpload={'Parts': parts}
+            )
+
+        except Exception as e:
+            logging.debug(f"Aborted uploading {file_key} with multipart")
+            self._client.abort_multipart_upload(Bucket=self._bucket, Key=file_key, UploadId=upload_id)
+            raise e
+        else:
+            logging.debug(f"Finished uploading {file_key} with multipart")
+
     def copy_file(self, source_file_key: str, destination_file_key: str) -> None:
         logging.debug(f"Copying {source_file_key} to {destination_file_key}")
         self._client.copy_object(
