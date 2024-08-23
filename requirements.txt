@@ -10,3 +10,4 @@ scikit-learn==1.0.2
 sentence-transformers==2.2.0
 huggingface-hub==0.10.1  # fix: https://github.com/UKPLab/sentence-transformers/issues/1762
 python-slugify[unidecode]==8.0.1
+numpy==1.26.4  # fix numpy dtype size changed error with numpy>=2.0.0
