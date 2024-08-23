@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Generator, Union
+from typing import Union
 from io import BytesIO
 from pathlib import Path
 
