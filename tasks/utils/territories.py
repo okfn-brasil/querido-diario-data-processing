@@ -2,7 +2,6 @@ from typing import Any, Dict, Iterable, Tuple, Union
 
 from slugify import slugify
 
-
 _territory_slug_to_data_map = {}
 
 
@@ -10,10 +9,14 @@ def get_territory_slug(name: str, state_code: str) -> str:
     full_name = f"{state_code} {name}"
     stopwords = ["de", "d", "da", "do", "das", "dos"]
     replacements = [("´", "'"), ("`", "'")]
-    return slugify(full_name, separator="", stopwords=stopwords, replacements=replacements)
+    return slugify(
+        full_name, separator="", stopwords=stopwords, replacements=replacements
+    )
 
 
-def get_territory_data(identifier: Union[str, Tuple[str, str]], territories: Iterable[Dict[str, Any]]) -> Dict[str, Dict]:
+def get_territory_data(
+    identifier: Union[str, Tuple[str, str]], territories: Iterable[Dict[str, Any]]
+) -> Dict[str, Dict]:
     if isinstance(identifier, tuple):
         territory_name, state_code = identifier
         territory_slug = get_territory_slug(territory_name, state_code)
@@ -25,12 +28,14 @@ def get_territory_data(identifier: Union[str, Tuple[str, str]], territories: Ite
     slug_to_data = get_territory_slug_to_data_map(territories)
 
     if territory_slug not in slug_to_data:
-        raise KeyError(f"Couldn't find info for \"{territory_slug}\"")
+        raise KeyError(f'Couldn\'t find info for "{territory_slug}"')
 
     return slug_to_data[territory_slug]
 
 
-def get_territory_slug_to_data_map(territories: Iterable[Dict[str, Any]]) -> Dict[str, Dict]:
+def get_territory_slug_to_data_map(
+    territories: Iterable[Dict[str, Any]],
+) -> Dict[str, Dict]:
     global _territory_slug_to_data_map
     if not _territory_slug_to_data_map:
         territory_to_data = {

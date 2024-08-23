@@ -1,5 +1,5 @@
-from typing import Dict, Iterable, List, Union
 import os
+from typing import Dict, Iterable, List, Union
 
 import opensearchpy
 
@@ -7,8 +7,17 @@ from .interfaces import IndexInterface
 
 
 class OpenSearchInterface(IndexInterface):
-    def __init__(self, hosts: List, user: str, password: str, timeout: int = 30, default_index: str = ""):
-        self._search_engine = opensearchpy.OpenSearch(hosts=hosts, http_auth=(user, password))
+    def __init__(
+        self,
+        hosts: List,
+        user: str,
+        password: str,
+        timeout: int = 30,
+        default_index: str = "",
+    ):
+        self._search_engine = opensearchpy.OpenSearch(
+            hosts=hosts, http_auth=(user, password)
+        )
         self._timeout = timeout
         self._default_index = default_index
 
@@ -51,7 +60,9 @@ class OpenSearchInterface(IndexInterface):
         refresh: bool = False,
     ) -> None:
         index = self.get_index_name(index)
-        self._search_engine.index(index=index, body=document, id=document_id, refresh=refresh)
+        self._search_engine.index(
+            index=index, body=document, id=document_id, refresh=refresh
+        )
 
     def search(self, query: Dict, index: str = "") -> Dict:
         index = self.get_index_name(index)
@@ -60,7 +71,9 @@ class OpenSearchInterface(IndexInterface):
 
     def analyze(self, text: str, field: str, index: str = "") -> Dict:
         index = self.get_index_name(index)
-        result = self._search_engine.indices.analyze(body={"text": text, "field":field}, index=index)
+        result = self._search_engine.indices.analyze(
+            body={"text": text, "field": field}, index=index
+        )
         return result
 
     def paginated_search(
@@ -96,11 +109,14 @@ def get_opensearch_host():
 def get_opensearch_index():
     return os.environ["OPENSEARCH_INDEX"]
 
+
 def get_opensearch_user():
     return os.environ["OPENSEARCH_USER"]
 
+
 def get_opensearch_password():
     return os.environ["OPENSEARCH_PASSWORD"]
+
 
 def create_index_interface() -> IndexInterface:
     hosts = get_opensearch_host()
@@ -109,4 +125,9 @@ def create_index_interface() -> IndexInterface:
     default_index_name = get_opensearch_index()
     if not isinstance(default_index_name, str) or len(default_index_name) == 0:
         raise Exception("Invalid index name")
-    return OpenSearchInterface([hosts], get_opensearch_user(), get_opensearch_password(), default_index=default_index_name)
+    return OpenSearchInterface(
+        [hosts],
+        get_opensearch_user(),
+        get_opensearch_password(),
+        default_index=default_index_name,
+    )

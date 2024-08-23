@@ -1,7 +1,7 @@
-import re
 import logging
-
+import re
 from typing import Any, Dict, List
+
 from segmentation.base import AssociationSegmenter, GazetteSegment
 from tasks.utils import batched, get_checksum, get_territory_data, get_territory_slug
 
@@ -64,15 +64,17 @@ class ALAssociacaoMunicipiosSegmenter(AssociationSegmenter):
         )
         territory_data = get_territory_data(territory_slug, self.territories)
 
-        return GazetteSegment(**{
-            **gazette,
-            # segment specific values
-            "processed": True,
-            "file_checksum": get_checksum(segment_text),
-            "source_text": segment_text.strip(),
-            "territory_name": territory_data["territory_name"],
-            "territory_id": territory_data["id"],
-        })
+        return GazetteSegment(
+            **{
+                **gazette,
+                # segment specific values
+                "processed": True,
+                "file_checksum": get_checksum(segment_text),
+                "source_text": segment_text.strip(),
+                "territory_name": territory_data["territory_name"],
+                "territory_id": territory_data["id"],
+            }
+        )
 
     def _normalize_territory_name(self, territory_name: str) -> str:
         clean_name = territory_name.strip().replace("\n", "")

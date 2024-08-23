@@ -38,7 +38,7 @@ def create_gazettes_index(index: IndexInterface) -> None:
                             "analyzer": "exact",
                             "index_options": "offsets",
                             "term_vector": "with_positions_offsets",
-                        }
+                        },
                     },
                 },
                 "state_code": {"type": "keyword"},
@@ -52,8 +52,8 @@ def create_gazettes_index(index: IndexInterface) -> None:
         },
         "settings": {
             "index": {
-              "sort.field": ["territory_id", "date"],
-              "sort.order": ["asc", "desc"]
+                "sort.field": ["territory_id", "date"],
+                "sort.order": ["asc", "desc"],
             },
             "analysis": {
                 "filter": {
@@ -72,7 +72,7 @@ def create_gazettes_index(index: IndexInterface) -> None:
                         "filter": ["lowercase"],
                     },
                 },
-            }
+            },
         },
     }
     index.create_index(body=body)
@@ -127,8 +127,8 @@ def create_themed_excerpts_index(theme: Dict, index: IndexInterface) -> None:
         },
         "settings": {
             "index": {
-              "sort.field": ["source_territory_id", "source_date"],
-              "sort.order": ["asc", "desc"]
+                "sort.field": ["source_territory_id", "source_date"],
+                "sort.order": ["asc", "desc"],
             },
             "analysis": {
                 "filter": {
@@ -147,7 +147,7 @@ def create_themed_excerpts_index(theme: Dict, index: IndexInterface) -> None:
                         "filter": ["lowercase"],
                     },
                 },
-            }
+            },
         },
     }
     index.create_index(index_name=theme["index"], body=body)

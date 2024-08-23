@@ -2,6 +2,7 @@ import re
 from typing import Dict, List
 
 from index import IndexInterface
+
 from .utils import (
     get_documents_from_query_with_highlights,
     get_documents_with_ids,
@@ -24,9 +25,7 @@ def tag_theme_cases(theme: Dict, excerpt_ids: List[str], index: IndexInterface) 
         )
         for document in documents:
             excerpt = document["_source"]
-            highlight = document["highlight"][
-                "excerpt.with_stopwords"
-            ][0]
+            highlight = document["highlight"]["excerpt.with_stopwords"][0]
             excerpt.update(
                 {
                     "excerpt_entities": list(

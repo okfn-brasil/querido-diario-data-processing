@@ -1,6 +1,5 @@
 from importlib import import_module
 
-
 AVAILABLE_TASKS = {
     "create_aggregates": "tasks.gazette_txt_to_xml",
     "create_gazettes_index": "tasks.create_index",

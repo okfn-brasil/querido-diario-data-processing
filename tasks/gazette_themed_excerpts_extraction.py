@@ -2,7 +2,12 @@ import hashlib
 from typing import Dict, Iterable, List
 
 from index import IndexInterface
-from .utils import batched, clean_extra_whitespaces, get_documents_from_query_with_highlights
+
+from .utils import (
+    batched,
+    clean_extra_whitespaces,
+    get_documents_from_query_with_highlights,
+)
 
 
 def extract_themed_excerpts_from_gazettes(
@@ -14,7 +19,7 @@ def extract_themed_excerpts_from_gazettes(
             for excerpt in get_excerpts_from_gazettes_with_themed_query(
                 theme_query, batch, index
             ):
-                # excerpts with less than 10% of the expected size of excerpt account for 
+                # excerpts with less than 10% of the expected size of excerpt account for
                 # fewer than 1% of excerpts yet their score is usually high
                 if len(excerpt["excerpt"]) < 200:
                     continue
@@ -99,9 +104,13 @@ def get_es_query_from_themed_query(
                 phrase_block = {
                     "span_near": {"clauses": [], "slop": 0, "in_order": True}
                 }
-                tokenized_term = index.analyze(text=term, field="source_text.with_stopwords")
+                tokenized_term = index.analyze(
+                    text=term, field="source_text.with_stopwords"
+                )
                 for token in tokenized_term["tokens"]:
-                    word_block = {"span_term": {"source_text.with_stopwords": token["token"]}}
+                    word_block = {
+                        "span_term": {"source_text.with_stopwords": token["token"]}
+                    }
                     phrase_block["span_near"]["clauses"].append(word_block)
                 synonym_block["span_or"]["clauses"].append(phrase_block)
             proximity_block["span_near"]["clauses"].append(synonym_block)

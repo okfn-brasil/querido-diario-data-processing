@@ -1,13 +1,13 @@
 import logging
-import tempfile
 import os
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
-from segmentation import get_segmenter
 
 from data_extraction import TextExtractorInterface
 from database import DatabaseInterface
 from index import IndexInterface
+from segmentation import get_segmenter
 from storage import StorageInterface
 
 

@@ -1,5 +1,5 @@
-from typing import Dict, Iterable
 import abc
+from typing import Dict, Iterable
 
 
 class IndexInterface(abc.ABC):
@@ -40,5 +40,3 @@ class IndexInterface(abc.ABC):
         """
         Searches the index with the provided query, with pagination
         """
-
-

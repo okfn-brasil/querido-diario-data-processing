@@ -4,6 +4,7 @@ from typing import Dict, List
 import sentence_transformers
 
 from index import IndexInterface
+
 from .utils import get_documents_with_ids
 
 

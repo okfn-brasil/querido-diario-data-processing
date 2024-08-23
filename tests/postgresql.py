@@ -1,7 +1,7 @@
 import os
 import uuid
 from datetime import date, datetime
-from unittest import TestCase, expectedFailure
+from unittest import TestCase
 from unittest.mock import patch
 
 import psycopg2
@@ -71,7 +71,6 @@ class PostgreSQLConnectionTests(TestCase):
 
 
 class PostgreSQLTests(TestCase):
-
     _data = []
 
     def setUp(self):
@@ -267,7 +266,7 @@ class PostgreSQLTests(TestCase):
 
     def get_gazettes_pending_to_be_processed(self):
         for gazette in self._data:
-            if gazette["processed"] == False:
+            if not gazette["processed"]:
                 yield gazette
 
     def clean_database(self):

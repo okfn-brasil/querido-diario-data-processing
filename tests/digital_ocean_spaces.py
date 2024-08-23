@@ -1,12 +1,6 @@
-import datetime
-import hashlib
 import tempfile
-from io import BytesIO
 from unittest import TestCase, expectedFailure
 from unittest.mock import patch, sentinel
-
-import boto3
-from botocore.stub import Stubber
 
 from storage import DigitalOceanSpaces, StorageInterface, create_storage_interface
 
@@ -43,7 +37,6 @@ class StorageInterfaceCreationTests(TestCase):
 
 
 class DigitalOceanSpacesIntegrationTests(TestCase):
-
     REGION = "fake3"
     ACCESS_KEY = "fake key"
     ACCESS_SECRET = "fake secret"
@@ -53,7 +46,7 @@ class DigitalOceanSpacesIntegrationTests(TestCase):
     def test_if_digital_ocean_spaces_class_implements_the_right_tasks_interface(self):
         with patch(
             "boto3.Session.client",
-        ) as mock:
+        ):
             spaces = DigitalOceanSpaces(
                 self.REGION,
                 self.ENDPOINT,
@@ -107,7 +100,7 @@ class DigitalOceanSpacesIntegrationTests(TestCase):
     def test_get_file_when_boto3_fail(self):
         with patch(
             "boto3.s3.inject.download_fileobj", side_effect=Exception("Dummy error")
-        ) as mock:
+        ):
             spaces = DigitalOceanSpaces(
                 self.REGION,
                 self.ENDPOINT,

@@ -1,0 +1,30 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+    - id: check-case-conflict
+      fail_fast: true
+    - id: check-merge-conflict
+      fail_fast: true
+    - id: debug-statements
+      fail_fast: true
+    - id: detect-aws-credentials
+      fail_fast: true
+      args: ["--allow-missing-credentials"]
+    - id: detect-private-key
+      fail_fast: true
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: 'v0.6.2'
+    hooks:
+    - id: ruff
+      fail_fast: true
+      args: ["--fix", "--ignore", "E501", "--select", "I"]
+    - id: ruff-format
+
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.3.3
+    hooks:
+    - id: python-safety-dependencies-check
+      fail_fast: true
+      files: requirements\/[a-z]+\.txt

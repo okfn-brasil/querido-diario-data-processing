@@ -1,11 +1,11 @@
-from os import environ
 import argparse
 import logging
+from os import environ
 
 from data_extraction import create_apache_tika_text_extraction
 from database import create_database_interface
-from storage import create_storage_interface
 from index import create_index_interface
+from storage import create_storage_interface
 from tasks import run_task
 
 
@@ -37,12 +37,24 @@ def gazette_texts_pipeline():
 
     run_task("create_gazettes_index", index)
     territories = run_task("get_territories", database)
-    gazettes_to_be_processed = run_task("get_gazettes_to_be_processed", execution_mode, database)
-    indexed_gazette_ids = run_task("extract_text_from_gazettes", gazettes_to_be_processed, territories, database, storage, index, text_extractor)
-   
+    gazettes_to_be_processed = run_task(
+        "get_gazettes_to_be_processed", execution_mode, database
+    )
+    indexed_gazette_ids = run_task(
+        "extract_text_from_gazettes",
+        gazettes_to_be_processed,
+        territories,
+        database,
+        storage,
+        index,
+        text_extractor,
+    )
+
     for theme in themes:
         run_task("create_themed_excerpts_index", theme, index)
-        themed_excerpt_ids = run_task("extract_themed_excerpts_from_gazettes", theme, indexed_gazette_ids, index)
+        themed_excerpt_ids = run_task(
+            "extract_themed_excerpts_from_gazettes", theme, indexed_gazette_ids, index
+        )
         run_task("embedding_rerank_excerpts", theme, themed_excerpt_ids, index)
         run_task("tag_entities_in_excerpts", theme, themed_excerpt_ids, index)
 

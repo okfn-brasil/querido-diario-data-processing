@@ -1,6 +1,6 @@
-from typing import Dict, Iterable, Tuple
-import os
 import logging
+import os
+from typing import Dict, Iterable, Tuple
 
 import psycopg2
 
@@ -59,16 +59,16 @@ class PostgreSQL(DatabaseInterface):
             logging.debug(f"Finished query: {cursor.query}")
 
     def insert(self, command: str, data: Dict = {}):
-        logging.debug(f"Inserting:")
+        logging.debug("Inserting:")
         self._commit_changes(command, data)
-        logging.debug(f"Finished inserting")
+        logging.debug("Finished inserting")
 
     def update(self, command: str, data: Dict = {}):
-        logging.debug(f"Updating:")
+        logging.debug("Updating:")
         self._commit_changes(command, data)
-        logging.debug(f"Finished updating")
+        logging.debug("Finished updating")
 
     def delete(self, command: str, data: Dict = {}):
-        logging.debug(f"Deleting:")
+        logging.debug("Deleting:")
         self._commit_changes(command, data)
-        logging.debug(f"Finished deleting")
+        logging.debug("Finished deleting")

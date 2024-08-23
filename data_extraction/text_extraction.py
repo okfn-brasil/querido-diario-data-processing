@@ -1,8 +1,7 @@
 import logging
-import magic
 import os
-import subprocess
 
+import magic
 import requests
 
 from .interfaces import TextExtractorInterface

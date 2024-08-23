@@ -13,6 +13,5 @@ def create_aggregates_table(database: DatabaseInterface):
             file_size_mb REAL,
             hash_info VARCHAR(64),
             last_updated TIMESTAMP
-        ); """)
-
-        
+        ); """
+    )

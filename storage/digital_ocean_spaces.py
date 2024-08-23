@@ -1,8 +1,8 @@
 import logging
 import os
-from typing import Union
 from io import BytesIO
 from pathlib import Path
+from typing import Union
 
 import boto3
 
@@ -71,7 +71,9 @@ class DigitalOceanSpaces(StorageInterface):
 
     def get_file(self, file_to_be_downloaded: Union[str, Path], destination) -> None:
         logging.debug(f"Getting {file_to_be_downloaded}")
-        self._client.download_fileobj(self._bucket, str(file_to_be_downloaded), destination)
+        self._client.download_fileobj(
+            self._bucket, str(file_to_be_downloaded), destination
+        )
 
     def upload_content(
         self,
@@ -88,7 +90,10 @@ class DigitalOceanSpaces(StorageInterface):
             )
         else:
             self._client.upload_fileobj(
-            content_to_be_uploaded, self._bucket, file_key, ExtraArgs={"ACL": permission}
+                content_to_be_uploaded,
+                self._bucket,
+                file_key,
+                ExtraArgs={"ACL": permission},
             )
 
     def upload_file(
@@ -111,13 +116,15 @@ class DigitalOceanSpaces(StorageInterface):
     ) -> None:
         logging.debug(f"Uploading {file_key} with multipart")
 
-        multipart_upload = self._client.create_multipart_upload(Bucket=self._bucket, Key=file_key, ACL=permission)
-        upload_id = multipart_upload['UploadId']
+        multipart_upload = self._client.create_multipart_upload(
+            Bucket=self._bucket, Key=file_key, ACL=permission
+        )
+        upload_id = multipart_upload["UploadId"]
 
         parts = []
 
         try:
-            with open(file_path, 'rb') as file:
+            with open(file_path, "rb") as file:
                 part_number = 1
                 while True:
                     data = file.read(part_size)
@@ -129,25 +136,24 @@ class DigitalOceanSpaces(StorageInterface):
                         Key=file_key,
                         PartNumber=part_number,
                         UploadId=upload_id,
-                        Body=data
+                        Body=data,
                     )
 
-                    parts.append({
-                        'PartNumber': part_number,
-                        'ETag': response['ETag']
-                    })
+                    parts.append({"PartNumber": part_number, "ETag": response["ETag"]})
                     part_number += 1
 
             self._client.complete_multipart_upload(
                 Bucket=self._bucket,
                 Key=file_key,
                 UploadId=upload_id,
-                MultipartUpload={'Parts': parts}
+                MultipartUpload={"Parts": parts},
             )
 
         except Exception as e:
             logging.debug(f"Aborted uploading {file_key} with multipart")
-            self._client.abort_multipart_upload(Bucket=self._bucket, Key=file_key, UploadId=upload_id)
+            self._client.abort_multipart_upload(
+                Bucket=self._bucket, Key=file_key, UploadId=upload_id
+            )
             raise e
         else:
             logging.debug(f"Finished uploading {file_key} with multipart")
@@ -156,8 +162,8 @@ class DigitalOceanSpaces(StorageInterface):
         logging.debug(f"Copying {source_file_key} to {destination_file_key}")
         self._client.copy_object(
             Bucket=self._bucket,
-            CopySource={'Bucket': self._bucket, 'Key': source_file_key},
-            Key=destination_file_key
+            CopySource={"Bucket": self._bucket, "Key": source_file_key},
+            Key=destination_file_key,
         )
 
     def delete_file(self, file_key: str) -> None:

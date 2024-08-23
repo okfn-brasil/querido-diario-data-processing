@@ -1,13 +1,14 @@
 from typing import Any, Dict, Iterable
 
-from segmentation.base import AssociationSegmenter
 from segmentation import segmenters
-
+from segmentation.base import AssociationSegmenter
 
 _segmenter_instances = {}
 
 
-def get_segmenter(territory_id: str, territories: Iterable[Dict[str, Any]]) -> AssociationSegmenter:
+def get_segmenter(
+    territory_id: str, territories: Iterable[Dict[str, Any]]
+) -> AssociationSegmenter:
     """
     Factory method to return a AssociationSegmenter
 

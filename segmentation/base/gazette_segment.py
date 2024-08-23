@@ -1,5 +1,5 @@
-from datetime import date, datetime
 from dataclasses import dataclass
+from datetime import date, datetime
 
 
 @dataclass
@@ -8,6 +8,7 @@ class GazetteSegment:
     Dataclass to represent a gazette segment of a association
     related to a city
     """
+
     id: str
     territory_name: str
     source_text: str

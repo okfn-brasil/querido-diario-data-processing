@@ -7,7 +7,6 @@ from database import DatabaseInterface
 def get_gazettes_to_be_processed(
     execution_mode: str, database: DatabaseInterface
 ) -> Iterable[Dict]:
-
     if execution_mode == "DAILY":
         yield from get_gazettes_extracted_since_yesterday(database)
     elif execution_mode == "ALL":

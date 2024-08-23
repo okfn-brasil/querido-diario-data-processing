@@ -1,4 +1,4 @@
-from functools import lru_cache 
+from functools import lru_cache
 from typing import Dict, Iterable
 
 from database import DatabaseInterface

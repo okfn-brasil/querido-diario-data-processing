@@ -19,7 +19,7 @@ def hash_file(file) -> str:
     chunk_size = 128 * hash.block_size
 
     if isinstance(file, str):
-        with open(file, 'rb') as f:
+        with open(file, "rb") as f:
             _chunk_hashing(hash, chunk_size, f)
     else:
         file.seek(0)
@@ -30,5 +30,5 @@ def hash_file(file) -> str:
 
 
 def _chunk_hashing(hash, chunk_size, file):
-    for chunk in iter(lambda: file.read(chunk_size), b''): 
+    for chunk in iter(lambda: file.read(chunk_size), b""):
         hash.update(chunk)

@@ -1,9 +1,8 @@
+import os
+import tempfile
+from datetime import date, datetime
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
-import os
-import logging
-from datetime import date, datetime
-import tempfile
 
 from data_extraction import TextExtractorInterface
 from tasks import (
@@ -155,9 +154,7 @@ class TextExtractionTaskTests(TestCase):
         database_mock.get_pending_gazettes = MagicMock(return_value=data)
         database_mock.set_gazette_as_processed = MagicMock()
 
-        tmp_gazette_file = self.copy_file_to_temporary_file(
-            "tests/data/fake_gazette.txt"
-        )
+        self.copy_file_to_temporary_file("tests/data/fake_gazette.txt")
         text_extraction_function = MagicMock(spec=TextExtractorInterface)
         text_extraction_function.extract_text.return_value = expected_data[
             "source_text"
@@ -177,7 +174,6 @@ class TextExtractionTaskTests(TestCase):
         )
 
     def test_invalid_file_type_should_be_skipped(self):
-
         text_extraction_function = MagicMock(spec=TextExtractorInterface)
         text_extraction_function.extract_text.side_effect = Exception(
             "Unsupported file type"

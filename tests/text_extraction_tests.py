@@ -1,8 +1,11 @@
-from unittest import TestCase, skip
-from unittest.mock import patch, mock_open, MagicMock
-import os
+from unittest import TestCase
+from unittest.mock import MagicMock, mock_open, patch
 
-from data_extraction import ApacheTikaTextExtractor, TextExtractorInterface
+from data_extraction import (
+    ApacheTikaTextExtractor,
+    TextExtractorInterface,
+    create_apache_tika_text_extraction,
+)
 
 
 class ApacheTikaTextExtractorTest(TestCase):
@@ -40,7 +43,7 @@ class ApacheTikaTextExtractorTest(TestCase):
     @patch("magic.from_file", return_value="application/pdf")
     def test_odt_file_content_extraction(self, magic_mock, open_mock, request_get_mock):
         with self.assertRaisesRegex(Exception, "Could not extract file content"):
-            text = self.extractor.extract_text("tests/data/fake_gazette.pdf")
+            self.extractor.extract_text("tests/data/fake_gazette.pdf")
 
     def test_extract_from_pdf_file_should_return_text_file(self):
         text = self.extractor.extract_text("tests/data/fake_gazette.pdf")

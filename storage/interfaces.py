@@ -1,7 +1,7 @@
-from typing import Union
-from pathlib import Path
 import abc
 from io import BytesIO
+from pathlib import Path
+from typing import Union
 
 
 class StorageInterface(abc.ABC):
@@ -16,7 +16,9 @@ class StorageInterface(abc.ABC):
         """
 
     @abc.abstractmethod
-    def upload_content(self, file_key: str, content_to_be_uploaded: Union[str, BytesIO]) -> None:
+    def upload_content(
+        self, file_key: str, content_to_be_uploaded: Union[str, BytesIO]
+    ) -> None:
         """
         Upload the given content to the destination on the host
         """

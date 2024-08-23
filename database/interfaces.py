@@ -1,5 +1,5 @@
-from typing import Dict, Iterable, Tuple
 import abc
+from typing import Dict, Iterable, Tuple
 
 
 class DatabaseInterface(abc.ABC):

@@ -5,7 +5,7 @@ import xml.etree.cElementTree as ET
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from tempfile import mkstemp, TemporaryDirectory, NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory, mkstemp
 from typing import Iterable
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -13,6 +13,7 @@ from botocore.exceptions import ClientError
 
 from database import DatabaseInterface
 from storage import StorageInterface
+
 from .utils import br_timezone, get_territory_slug, hash_file
 
 logger = logging.getLogger(__name__)

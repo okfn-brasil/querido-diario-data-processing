@@ -1,9 +1,8 @@
-import os
 import logging
-from unittest import TestCase, expectedFailure
+from unittest import TestCase
 from unittest.mock import patch
 
-from main import enable_debug_if_necessary, start_to_process_pending_gazettes
+from main import enable_debug_if_necessary
 
 
 class MainModuleTests(TestCase):
