@@ -6,19 +6,7 @@ from data_extraction import create_apache_tika_text_extraction
 from database import create_database_interface
 from storage import create_storage_interface
 from index import create_index_interface
-from tasks import (
-    create_aggregates,
-    create_gazettes_index,
-    create_aggregates_table,
-    create_themed_excerpts_index,
-    embedding_rerank_excerpts,
-    extract_text_from_gazettes,
-    extract_themed_excerpts_from_gazettes,
-    get_gazettes_to_be_processed,
-    get_themes,
-    get_territories,
-    tag_entities_in_excerpts,
-)
+from tasks import run_task
 
 
 def is_debug_enabled():
@@ -44,30 +32,27 @@ def gazette_texts_pipeline():
     storage = create_storage_interface()
     index = create_index_interface()
     text_extractor = create_apache_tika_text_extraction()
-    themes = get_themes()
 
-    create_gazettes_index(index)
-    territories = get_territories(database)
-    gazettes_to_be_processed = get_gazettes_to_be_processed(execution_mode, database)
-    indexed_gazette_ids = extract_text_from_gazettes(
-        gazettes_to_be_processed, territories, database, storage, index, text_extractor
-    )
+    themes = run_task("get_themes")
+
+    run_task("create_gazettes_index", index)
+    territories = run_task("get_territories", database)
+    gazettes_to_be_processed = run_task("get_gazettes_to_be_processed", execution_mode, database)
+    indexed_gazette_ids = run_task("extract_text_from_gazettes", gazettes_to_be_processed, territories, database, storage, index, text_extractor)
    
     for theme in themes:
-        create_themed_excerpts_index(theme, index)
-        themed_excerpt_ids = extract_themed_excerpts_from_gazettes(
-            theme, indexed_gazette_ids, index
-        )
-        embedding_rerank_excerpts(theme, themed_excerpt_ids, index)
-        tag_entities_in_excerpts(theme, themed_excerpt_ids, index)
+        run_task("create_themed_excerpts_index", theme, index)
+        themed_excerpt_ids = run_task("extract_themed_excerpts_from_gazettes", theme, indexed_gazette_ids, index)
+        run_task("embedding_rerank_excerpts", theme, themed_excerpt_ids, index)
+        run_task("tag_entities_in_excerpts", theme, themed_excerpt_ids, index)
 
 
 def aggregates_pipeline():
     database = create_database_interface()
     storage = create_storage_interface()
 
-    create_aggregates_table(database)
-    create_aggregates(database, storage)
+    run_task("create_aggregates_table", database)
+    run_task("create_aggregates", database, storage)
 
 
 def execute_pipeline(pipeline):
