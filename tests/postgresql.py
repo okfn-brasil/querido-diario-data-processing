@@ -6,8 +6,7 @@ from unittest.mock import patch
 
 import psycopg2
 
-from database import PostgreSQL, create_database_interface
-from tasks import DatabaseInterface
+from database import DatabaseInterface, PostgreSQL, create_database_interface
 
 
 def get_database_name():

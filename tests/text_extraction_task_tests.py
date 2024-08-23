@@ -5,10 +5,10 @@ import logging
 from datetime import date, datetime
 import tempfile
 
+from data_extraction import TextExtractorInterface
 from tasks import (
     extract_text_pending_gazettes,
     upload_gazette_raw_text,
-    TextExtractorInterface,
 )
 
 

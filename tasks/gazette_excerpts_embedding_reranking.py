@@ -3,7 +3,7 @@ from typing import Dict, List
 
 import sentence_transformers
 
-from .interfaces import IndexInterface
+from index import IndexInterface
 from .utils import get_documents_with_ids
 
 

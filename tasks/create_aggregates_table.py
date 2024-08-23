@@ -1,4 +1,4 @@
-from .interfaces import DatabaseInterface
+from database import DatabaseInterface
 
 
 def create_aggregates_table(database: DatabaseInterface):

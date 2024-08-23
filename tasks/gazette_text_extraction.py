@@ -5,12 +5,10 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
 from segmentation import get_segmenter
 
-from .interfaces import (
-    DatabaseInterface,
-    IndexInterface,
-    StorageInterface,
-    TextExtractorInterface,
-)
+from data_extraction import TextExtractorInterface
+from database import DatabaseInterface
+from index import IndexInterface
+from storage import StorageInterface
 
 
 def extract_text_from_gazettes(

@@ -1,7 +1,7 @@
 import re
 from typing import Dict, List
 
-from .interfaces import IndexInterface
+from index import IndexInterface
 from .utils import (
     get_documents_from_query_with_highlights,
     get_documents_with_ids,

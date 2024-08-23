@@ -1,12 +1,11 @@
+import uuid
 from datetime import date, datetime
 from unittest import TestCase, expectedFailure
-from unittest.mock import patch, MagicMock
-import uuid
+from unittest.mock import MagicMock, patch
 
-import opensearch
+import opensearchpy
 
-from index.opensearch import OpenSearchInterface, create_index_interface
-from tasks import IndexInterface
+from index import IndexInterface, OpenSearchInterface, create_index_interface
 
 
 class IndexInterfaceFactoryFunctionTests(TestCase):
@@ -92,12 +91,12 @@ class OpensearchBasicTests(TestCase):
     def test_opensearch_should_implement_index_interface(self):
         self.assertIsInstance(OpenSearchInterface([]), IndexInterface)
 
-    @patch("opensearch.Opensearch", autospec=True)
+    @patch("opensearchpy.Opensearch", autospec=True)
     def test_opensearch_connection(self, opensearch_mock):
         interface = OpenSearchInterface(["127.0.0.1"])
         opensearch_mock.assert_called_once_with(hosts=["127.0.0.1"])
 
-    @patch("opensearch.Opensearch", autospec=True)
+    @patch("opensearchpy.Opensearch", autospec=True)
     def test_opensearch_index_creation_should_check_if_index_exists(
         self, opensearch_mock
     ):
@@ -107,7 +106,7 @@ class OpensearchBasicTests(TestCase):
         interface.create_index("querido-diario")
         interface.search_engine.indices.exists.assert_called_once_with(index="querido-diario")
 
-    @patch("opensearch.Opensearch", autospec=True)
+    @patch("opensearchpy.Opensearch", autospec=True)
     def test_opensearch_index_creation_should_failed_when_no_index_is_provided(
         self, opensearch_mock
     ):
@@ -117,7 +116,7 @@ class OpensearchBasicTests(TestCase):
         with self.assertRaisesRegex(Exception, "Index name not defined"):
             interface.create_index()
 
-    @patch("opensearch.Opensearch", autospec=True)
+    @patch("opensearchpy.Opensearch", autospec=True)
     def test_opensearch_index_creation_with_default_index_value(
         self, opensearch_mock
     ):
@@ -129,7 +128,7 @@ class OpensearchBasicTests(TestCase):
         interface.create_index()
         interface.search_engine.indices.exists.assert_called_once_with(index="querido-diario2")
 
-    @patch("opensearch.Opensearch", autospec=True)
+    @patch("opensearchpy.Opensearch", autospec=True)
     def test_opensearch_index_default_timeout_should_be_30s(
         self, opensearch_mock
     ):
@@ -144,7 +143,7 @@ class OpensearchBasicTests(TestCase):
             timeout="30s",
         )
 
-    @patch("opensearch.Opensearch", autospec=True)
+    @patch("opensearchpy.Opensearch", autospec=True)
     def test_opensearch_index_should_allow_change_default_timeout(
         self, opensearch_mock
     ):
@@ -159,7 +158,7 @@ class OpensearchBasicTests(TestCase):
             timeout="2m",
         )
 
-    @patch("opensearch.Opensearch", autospec=True)
+    @patch("opensearchpy.Opensearch", autospec=True)
     def test_opensearch_index_creation_should_not_recreate_index_if_it_exists(
         self, opensearch_mock
     ):
@@ -171,7 +170,7 @@ class OpensearchBasicTests(TestCase):
         interface.search_engine.indices.exists.assert_called_once_with(index="querido-diario")
         interface.search_engine.indices.create.assert_not_called()
 
-    @patch("opensearch.Opensearch", autospec=True)
+    @patch("opensearchpy.Opensearch", autospec=True)
     def test_opensearch_should_create_index_if_it_does_not_exists(
         self, opensearch_mock
     ):
@@ -187,7 +186,7 @@ class OpensearchBasicTests(TestCase):
             timeout="30s",
         )
 
-    @patch("opensearch.Opensearch", autospec=True)
+    @patch("opensearchpy.Opensearch", autospec=True)
     def test_opensearch_should_create_index_with_default_value_with_function_has_no_arguments(
         self, opensearch_mock
     ):
@@ -205,7 +204,7 @@ class OpensearchBasicTests(TestCase):
             timeout="30s",
         )
 
-    @patch("opensearch.Opensearch", autospec=True)
+    @patch("opensearchpy.Opensearch", autospec=True)
     def test_upload_document_to_index(self, opensearch_mock):
         interface = OpenSearchInterface(["127.0.0.1"])
         document_checksum = str(uuid.uuid1())
@@ -216,7 +215,7 @@ class OpensearchBasicTests(TestCase):
             id=self.fake_document["file_checksum"],
         )
 
-    @patch("opensearch.Opensearch", autospec=True)
+    @patch("opensearchpy.Opensearch", autospec=True)
     def test_upload_document_to_index_using_default_index(self, opensearch_mock):
         interface = OpenSearchInterface(
             ["127.0.0.1"], default_index="querido-diario2"
@@ -249,7 +248,7 @@ class OpensearchIntegrationTests(TestCase):
             "state_code": "SC",
             "territory_name": "Gaspar",
         }
-        self.search_engine = opensearch.Opensearch(hosts=["127.0.0.1"])
+        self.search_engine = opensearchpy.Opensearch(hosts=["127.0.0.1"])
 
     def clean_index(self, index):
         self.search_engine.delete_by_query(

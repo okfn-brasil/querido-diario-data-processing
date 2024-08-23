@@ -1,4 +1,4 @@
-FROM docker.io/python:3.8
+FROM docker.io/python:3.9
 
 ENV USER gazette
 ENV USER_HOME /home/$USER
@@ -16,8 +16,8 @@ ENV PYTHONPATH $WORKDIR
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+USER $USER
+RUN python -c "import sentence_transformers; sentence_transformers.SentenceTransformer('neuralmind/bert-base-portuguese-cased').save('"$USER_HOME"/models/bert-base-portuguese-cased')"
+
 COPY . $WORKDIR
 WORKDIR $WORKDIR
-USER $USER
-
-RUN python -c "import sentence_transformers; sentence_transformers.SentenceTransformer('neuralmind/bert-base-portuguese-cased').save('"$USER_HOME"/models/bert-base-portuguese-cased')"

@@ -3,7 +3,7 @@ import os
 
 import opensearchpy
 
-from tasks import IndexInterface
+from .interfaces import IndexInterface
 
 
 class OpenSearchInterface(IndexInterface):

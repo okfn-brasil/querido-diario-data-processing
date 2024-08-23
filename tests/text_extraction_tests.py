@@ -2,8 +2,7 @@ from unittest import TestCase, skip
 from unittest.mock import patch, mock_open, MagicMock
 import os
 
-from data_extraction import ApacheTikaTextExtractor, create_apache_tika_text_extraction
-from tasks import TextExtractorInterface
+from data_extraction import ApacheTikaTextExtractor, TextExtractorInterface
 
 
 class ApacheTikaTextExtractorTest(TestCase):
