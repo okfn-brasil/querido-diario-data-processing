@@ -1,6 +1,6 @@
 from typing import Any, Dict, Iterable, List, Union
 
-from segmentation.base import GazetteSegment
+from .gazette_segment import GazetteSegment
 
 
 class AssociationSegmenter:
