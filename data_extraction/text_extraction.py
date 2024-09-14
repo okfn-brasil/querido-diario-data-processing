@@ -25,7 +25,10 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         if self.is_txt(filepath):
             return self._return_file_content(filepath)
         with open(filepath, "rb") as file:
-            headers = {"Content-Type": self._get_file_type(filepath)}
+            headers = {
+                "Content-Type": self._get_file_type(filepath),
+                "Accept": "text/plain",
+            }
             response = requests.put(f"{self._url}/tika", data=file, headers=headers)
             response.encoding = "UTF-8"
             return response.text
