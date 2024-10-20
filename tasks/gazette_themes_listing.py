@@ -1,3 +1,5 @@
+"""Tarefa para listar os temas descritos na configuração dos índices temáticos"""
+
 import json
 import pathlib
 from typing import Dict, List

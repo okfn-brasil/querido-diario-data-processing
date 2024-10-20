@@ -1,3 +1,11 @@
+"""
+Tarefas para criar índices no motor de busca
+
+Criação do índice principal (que contém os textos completos de cada edição de diário
+oficial) e dos índices temáticos (excertos relacionados a algum tema que são
+encontrados nos textos dos diários).
+"""
+
 from typing import Dict
 
 from index import IndexInterface

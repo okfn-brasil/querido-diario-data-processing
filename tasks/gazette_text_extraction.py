@@ -1,3 +1,9 @@
+"""
+Tarefa para extrair o conteúdo textual dos diários
+
+Extrai o conteúdo dos diários, realiza segmentações (se necessário) e os indexa.
+"""
+
 import logging
 import os
 import tempfile

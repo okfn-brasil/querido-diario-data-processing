@@ -1,3 +1,11 @@
+"""
+Tarefa para reranquear entradas dos índices temáticos com vetores de palavras
+
+Realiza comparação semântica do conteúdo do excerto com frases relevantes para os
+subtemas, buscando impulsionar os resultados com pontuação maior nos resultados de
+busca.
+"""
+
 import os
 from typing import Dict, List
 

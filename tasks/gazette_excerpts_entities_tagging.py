@@ -1,3 +1,10 @@
+"""
+Tarefa para etiquetar termos relevantes nos excertos temáticos
+
+Marca termos nos excertos temáticos que são considerados relevantes para a temática,
+permitindo seu destaque em aplicações que consumam os resultados temáticos.
+"""
+
 import re
 from typing import Dict, List
 

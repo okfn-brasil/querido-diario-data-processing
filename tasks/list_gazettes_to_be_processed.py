@@ -1,3 +1,5 @@
+"""Tarefa para listar os documentos a ser processados de acordo com o modo de execução"""
+
 import logging
 from typing import Dict, Iterable
 

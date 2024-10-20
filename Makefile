@@ -20,7 +20,7 @@ POSTGRES_DB ?= queridodiariodb
 POSTGRES_HOST ?= localhost
 POSTGRES_PORT ?= 5432
 POSTGRES_IMAGE ?= docker.io/postgres:11
-DATABASE_RESTORE_FILE ?= contrib/data/queridodiariodb.tar
+DATABASE_RESTORE_FILE ?= data/queridodiariodb.tar
 # OpenSearch port info
 OPENSEARCH_PORT1 ?= 9200
 OPENSEARCH_PORT2 ?= 9300
@@ -61,12 +61,12 @@ black:
 .PHONY: build-devel
 build-devel:
 	podman build --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
-		-f scripts/Dockerfile $(CURDIR)
+		-f Dockerfile $(CURDIR)
 
 .PHONY: build-tika-server
 build-tika-server:
 	podman build --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
-		-f scripts/Dockerfile_apache_tika $(CURDIR)
+		-f Dockerfile_apache_tika $(CURDIR)
 
 .PHONY: build
 build: build-devel build-tika-server
@@ -210,7 +210,7 @@ else
 endif
 
 set-run-variable-values:
-	cp --no-clobber contrib/sample.env envvars || true
+	cp --no-clobber config/sample.env envvars || true
 
 .PHONY: sql
 sql: set-run-variable-values
