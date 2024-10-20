@@ -1,3 +1,10 @@
+"""
+Tarefa para encontrar e carregar excertos temáticos
+
+Realiza buscas de acordo com as palavras-chave definidas no arquivo de configuração dos
+filtros temáticos e indexa os resultados.
+"""
+
 import hashlib
 from typing import Dict, Iterable, List
 

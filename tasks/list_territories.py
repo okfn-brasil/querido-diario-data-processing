@@ -1,3 +1,5 @@
+"""Tarefa para listar os metadados dos municípios"""
+
 from functools import lru_cache
 from typing import Dict, Iterable
 

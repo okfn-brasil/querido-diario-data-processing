@@ -1,3 +1,5 @@
+"""Tarefa para transformar converter conteúdo textual para formato de dados abertos"""
+
 import logging
 import os
 import traceback

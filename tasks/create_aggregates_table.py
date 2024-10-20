@@ -1,3 +1,10 @@
+"""
+Tarefa para criar tabela de dados agregados no banco relacional
+
+Cria tabela para armazenar os metadados de cada arquivo gerado em formato de dados
+abertos.
+"""
+
 from database import DatabaseInterface
 
 
