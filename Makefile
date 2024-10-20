@@ -20,7 +20,7 @@ POSTGRES_DB ?= queridodiariodb
 POSTGRES_HOST ?= localhost
 POSTGRES_PORT ?= 5432
 POSTGRES_IMAGE ?= docker.io/postgres:11
-DATABASE_RESTORE_FILE ?= contrib/data/queridodiariodb.tar
+DATABASE_RESTORE_FILE ?= data/queridodiariodb.tar
 # OpenSearch port info
 OPENSEARCH_PORT1 ?= 9200
 OPENSEARCH_PORT2 ?= 9300
@@ -210,7 +210,7 @@ else
 endif
 
 set-run-variable-values:
-	cp --no-clobber contrib/sample.env envvars || true
+	cp --no-clobber config/sample.env envvars || true
 
 .PHONY: sql
 sql: set-run-variable-values
