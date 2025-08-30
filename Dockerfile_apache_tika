@@ -1,6 +1,6 @@
 FROM docker.io/debian
 
-RUN adduser --system gazette && \
+RUN useradd --system --no-create-home --shell /usr/sbin/nologin gazette && \
 	apt-get update -y && \
 	apt-get -y install default-jre curl && \
 	apt-get clean
