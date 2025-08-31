@@ -1,23 +1,46 @@
 name: Test pull request
-on: 
+on:
   pull_request:
     branches:
       - main
 
-
 jobs:
-  everything:
+  test:
     name: Build, test and show code coverage
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm64
+    runs-on: ${{ matrix.runner }}
+
     steps:
       - name: Checkout source code
-        uses: actions/checkout@master
+        uses: actions/checkout@v4
 
-      - name: Build container image
+      - name: Install Podman
         run: |
-          make build
+          # Update package list
+          sudo apt-get update
+
+          # Install Podman
+          sudo apt-get install -y podman
+
+          # Configure Podman for rootless operation
+          echo 'unqualified-search-registries = ["docker.io"]' | sudo tee /etc/containers/registries.conf
+
+      - name: Build container images for platform
+        env:
+          BUILDAH_FORMAT: docker
+        run: |
+          # Build main image for specific platform
+          podman build --platform ${{ matrix.platform }} --tag okfn-brasil/querido-diario-data-processing:latest -f Dockerfile .
+
+          # Build Apache Tika server for specific platform  
+          podman build --platform ${{ matrix.platform }} --tag okfn-brasil/querido-diario-apache-tika-server:latest -f Dockerfile_apache_tika .
 
       - name: Run tests and show code coverage
         run: |
           make coverage
-

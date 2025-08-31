@@ -5,17 +5,249 @@ on:
     tags:
       - "v*"
 
-name: Build container images
+name: Build and Test container images
 
 jobs:
-  build-data-processing:
-    name: Build data processing container image
-    runs-on: ubuntu-latest
+  test-multi-arch:
+    name: Test on multiple architectures
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm64
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:v0.12.5
+
+      - name: Build test image for ${{ matrix.platform }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: ${{ matrix.platform }}
+          load: ${{ matrix.platform == 'linux/amd64' }}
+          cache-from: type=gha,scope=test-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=test-${{ matrix.platform }}
+          tags: |
+            test-data-processing:${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+
+      - name: Build Apache Tika test image for ${{ matrix.platform }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile_apache_tika
+          platforms: ${{ matrix.platform }}
+          load: ${{ matrix.platform == 'linux/amd64' }}
+          cache-from: type=gha,scope=tika-test-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=tika-test-${{ matrix.platform }}
+          tags: |
+            test-apache-tika:${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+
+      # Run functional tests on both architectures with native execution
+      - name: Test Python dependencies
+        run: |
+          docker run --rm test-data-processing:${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }} python -c "
+          import sentence_transformers
+          import psycopg2
+          import opensearchpy
+          import boto3
+          import sklearn
+          import numpy
+          print('✅ All major dependencies imported successfully on ${{ matrix.platform }}')
+          print('✅ sentence-transformers version:', sentence_transformers.__version__)
+          print('✅ psycopg2 version:', psycopg2.__version__)
+          print('✅ opensearchpy version:', opensearchpy.__version__)
+          print('✅ boto3 version:', boto3.__version__)
+          print('✅ scikit-learn version:', sklearn.__version__)
+          print('✅ numpy version:', numpy.__version__)
+          "
+
+      - name: Test Apache Tika server
+        run: |
+          # Start Tika server
+          CONTAINER_ID=$(docker run -d -p 9998:9998 test-apache-tika:${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }})
+          echo "Waiting for Tika server to start on ${{ matrix.platform }}..."
+          sleep 15
+
+          # Test if Tika is responding (with retry)
+          TIKA_READY=false
+          for i in {1..6}; do
+            if curl -f http://localhost:9998/version > /dev/null 2>&1; then
+              TIKA_READY=true
+              break
+            fi
+            echo "Attempt $i/6: Tika not ready yet, waiting 5 more seconds..."
+            sleep 5
+          done
+
+          if [ "$TIKA_READY" = true ]; then
+            echo "✅ Apache Tika server is responding on ${{ matrix.platform }}"
+            TIKA_VERSION=$(curl -s http://localhost:9998/version)
+            echo "✅ Tika version: $TIKA_VERSION"
+          else
+            echo "❌ Apache Tika server is not responding after 45 seconds on ${{ matrix.platform }}"
+            echo "Container logs:"
+            docker logs $CONTAINER_ID
+            docker stop $CONTAINER_ID
+            exit 1
+          fi
+
+          # Cleanup
+          docker stop $CONTAINER_ID
+
+  test-python-unit:
+    name: Run Python unit tests
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            arch: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm64
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    services:
+      postgres:
+        image: postgres:11
+        env:
+          POSTGRES_PASSWORD: queridodiario
+          POSTGRES_USER: queridodiario
+          POSTGRES_DB: queridodiariodb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      opensearch:
+        image: opensearchproject/opensearch:2.9.0
+        env:
+          discovery.type: single-node
+          plugins.security.ssl.http.enabled: false
+        options: >-
+          --health-cmd "curl -f http://localhost:9200/_cluster/health"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 9200:9200
+
+      minio:
+        image: bitnami/minio:2021.4.6
+        env:
+          MINIO_ACCESS_KEY: minio-access-key
+          MINIO_SECRET_KEY: minio-secret-key
+          MINIO_DEFAULT_BUCKETS: queridodiariobucket:public
+        ports:
+          - 9000:9000
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:v0.12.5
+
+      - name: Build test image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: ${{ matrix.platform }}
+          load: true
+          cache-from: type=gha,scope=unittest-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=unittest-${{ matrix.arch }}
+          tags: test-data-processing:unittest-${{ matrix.arch }}
+
+      - name: Build Apache Tika test image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile_apache_tika
+          platforms: ${{ matrix.platform }}
+          load: true
+          cache-from: type=gha,scope=tika-unittest-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=tika-unittest-${{ matrix.arch }}
+          tags: test-apache-tika:unittest-${{ matrix.arch }}
+
+      - name: Start Apache Tika server
+        run: |
+          docker run -d -p 9998:9998 --name tika-server-${{ matrix.arch }} test-apache-tika:unittest-${{ matrix.arch }}
+          sleep 15
+
+          # Verify Tika is running
+          for i in {1..6}; do
+            if curl -f http://localhost:9998/version > /dev/null 2>&1; then
+              echo "✅ Apache Tika server is ready on ${{ matrix.platform }}"
+              break
+            fi
+            echo "Waiting for Tika server on ${{ matrix.platform }}... ($i/6)"
+            sleep 5
+          done
+
+      - name: Run Python unit tests
+        run: |
+          docker run --rm \
+            --network host \
+            -e PYTHONPATH=/mnt/code \
+            -e POSTGRES_PASSWORD=queridodiario \
+            -e POSTGRES_USER=queridodiario \
+            -e POSTGRES_DB=queridodiariodb \
+            -e POSTGRES_HOST=localhost \
+            -e POSTGRES_PORT=5432 \
+            test-data-processing:unittest-${{ matrix.arch }} \
+            python -m unittest discover -s tests -p "*.py" -v
+
+      - name: Run coverage report
+        run: |
+          docker run --rm \
+            --network host \
+            -e PYTHONPATH=/mnt/code \
+            -e POSTGRES_PASSWORD=queridodiario \
+            -e POSTGRES_USER=queridodiario \
+            -e POSTGRES_DB=queridodiariodb \
+            -e POSTGRES_HOST=localhost \
+            -e POSTGRES_PORT=5432 \
+            test-data-processing:unittest-${{ matrix.arch }} \
+            bash -c "coverage run -m unittest discover -s tests -p '*.py' && coverage report -m"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop tika-server-${{ matrix.arch }} || true
+          docker rm tika-server-${{ matrix.arch }} || true
+
+  build-data-processing:
+    name: Build data processing container image
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            arch: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm64
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    needs: [test-multi-arch, test-python-unit]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
@@ -36,12 +268,12 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64, linux/arm64
+          platforms: ${{ matrix.platform }}
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=main-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=main-${{ matrix.arch }}
           tags: |
-            ghcr.io/${{env.REPOSITORY}}:latest
+            ghcr.io/${{env.REPOSITORY}}:latest-${{ matrix.arch }}
       - name: Retrieve tag name
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
@@ -52,21 +284,29 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64, linux/arm64
+          platforms: ${{ matrix.platform }}
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=tag-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=tag-${{ matrix.arch }}
           tags: |
-            ghcr.io/${{env.REPOSITORY}}:${{ env.TAG_NAME }}
+            ghcr.io/${{env.REPOSITORY}}:${{ env.TAG_NAME }}-${{ matrix.arch }}
 
   build-apache-tika:
     name: Build Apache Tika container image
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            arch: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm64
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    needs: [test-multi-arch, test-python-unit]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
@@ -87,12 +327,12 @@ jobs:
         with:
           context: .
           file: ./Dockerfile_apache_tika
-          platforms: linux/amd64, linux/arm64
+          platforms: ${{ matrix.platform }}
           push: true
-          cache-from: type=gha,scope=tika
-          cache-to: type=gha,mode=max,scope=tika
+          cache-from: type=gha,scope=tika-main-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=tika-main-${{ matrix.arch }}
           tags: |
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest
+            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest-${{ matrix.arch }}
       - name: Retrieve tag name
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
@@ -103,9 +343,71 @@ jobs:
         with:
           context: .
           file: ./Dockerfile_apache_tika
-          platforms: linux/amd64, linux/arm64
+          platforms: ${{ matrix.platform }}
           push: true
-          cache-from: type=gha,scope=tika
-          cache-to: type=gha,mode=max,scope=tika
+          cache-from: type=gha,scope=tika-tag-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=tika-tag-${{ matrix.arch }}
           tags: |
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ env.TAG_NAME }}
+            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ env.TAG_NAME }}-${{ matrix.arch }}
+  create-data-processing-manifest:
+    name: Create data processing multi-arch manifest
+    runs-on: ubuntu-latest
+    needs: build-data-processing
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Retrieve repository name
+        run: |
+          echo REPOSITORY=$(echo $GITHUB_REPOSITORY) >> $GITHUB_ENV
+      - name: Create and push development manifest
+        if: ${{ startsWith(github.ref, 'refs/heads/') }}
+        run: |
+          docker manifest create ghcr.io/${{env.REPOSITORY}}:latest \
+            ghcr.io/${{env.REPOSITORY}}:latest-amd64 \
+            ghcr.io/${{env.REPOSITORY}}:latest-arm64
+          docker manifest push ghcr.io/${{env.REPOSITORY}}:latest
+      - name: Retrieve tag name
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+      - name: Create and push tagged manifest
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          docker manifest create ghcr.io/${{env.REPOSITORY}}:${{ env.TAG_NAME }} \
+            ghcr.io/${{env.REPOSITORY}}:${{ env.TAG_NAME }}-amd64 \
+            ghcr.io/${{env.REPOSITORY}}:${{ env.TAG_NAME }}-arm64
+          docker manifest push ghcr.io/${{env.REPOSITORY}}:${{ env.TAG_NAME }}
+
+  create-apache-tika-manifest:
+    name: Create Apache Tika multi-arch manifest
+    runs-on: ubuntu-latest
+    needs: build-apache-tika
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create and push Apache Tika development manifest
+        if: ${{ startsWith(github.ref, 'refs/heads/') }}
+        run: |
+          docker manifest create ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest \
+            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest-amd64 \
+            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest-arm64
+          docker manifest push ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest
+      - name: Retrieve tag name
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+      - name: Create and push Apache Tika tagged manifest
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          docker manifest create ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ env.TAG_NAME }} \
+            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ env.TAG_NAME }}-amd64 \
+            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ env.TAG_NAME }}-arm64
+          docker manifest push ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ env.TAG_NAME }}
