@@ -1,9 +1,9 @@
 on:
   push:
     branches:
-    - main
+      - main
     tags:
-    - 'v*'
+      - "v*"
 
 name: Build container images
 
@@ -12,50 +12,42 @@ jobs:
     name: Build container image
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout code
-        uses: actions/checkout@v2
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      -
-        name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      -
-        name: Retrieve repository name
+      - name: Retrieve repository name
         run: |
           echo REPOSITORY=$(echo $GITHUB_REPOSITORY) >> $GITHUB_ENV
-      -
-        name: Build and push development container image
+      - name: Build and push development container image
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./scripts/Dockerfile
-          platforms: linux/amd64
+          file: ./Dockerfile
+          platforms: linux/amd64, linux/arm64
           push: true
           tags: |
             ghcr.io/${{env.REPOSITORY}}:latest
-      -
-        name: Retrieve tag name
+      - name: Retrieve tag name
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
           echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
-      -
-        name: Build and push tagged container image
+      - name: Build and push tagged container image
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./scripts/Dockerfile
-          platforms: linux/amd64
+          file: ./Dockerfile
+          platforms: linux/amd64, linux/arm64
           push: true
           tags: |
             ghcr.io/${{env.REPOSITORY}}:${{ env.TAG_NAME }}
