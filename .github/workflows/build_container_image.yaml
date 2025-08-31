@@ -18,6 +18,9 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:v0.12.5
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -35,6 +38,8 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64, linux/arm64
           push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
             ghcr.io/${{env.REPOSITORY}}:latest
       - name: Retrieve tag name
@@ -49,6 +54,8 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64, linux/arm64
           push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
             ghcr.io/${{env.REPOSITORY}}:${{ env.TAG_NAME }}
 
@@ -62,6 +69,9 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:v0.12.5
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -79,6 +89,8 @@ jobs:
           file: ./Dockerfile_apache_tika
           platforms: linux/amd64, linux/arm64
           push: true
+          cache-from: type=gha,scope=tika
+          cache-to: type=gha,mode=max,scope=tika
           tags: |
             ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest
       - name: Retrieve tag name
@@ -93,5 +105,7 @@ jobs:
           file: ./Dockerfile_apache_tika
           platforms: linux/amd64, linux/arm64
           push: true
+          cache-from: type=gha,scope=tika
+          cache-to: type=gha,mode=max,scope=tika
           tags: |
             ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ env.TAG_NAME }}
