@@ -22,11 +22,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Free up disk space
+        run: |
+          # Remove unnecessary packages and clean up
+          sudo apt-get autoremove -y
+          sudo apt-get autoclean
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker system prune -af
+          df -h
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
           driver-opts: |
             image=moby/buildkit:v0.12.5
+
+      - name: Monitor disk usage before build
+        run: |
+          echo "=== Disk usage before build ==="
+          df -h
+          echo "=== Docker system info ==="
+          docker system df
 
       - name: Build test image for ${{ matrix.platform }}
         uses: docker/build-push-action@v5
@@ -36,9 +55,16 @@ jobs:
           platforms: ${{ matrix.platform }}
           load: ${{ matrix.platform == 'linux/amd64' }}
           cache-from: type=gha,scope=test-${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=test-${{ matrix.platform }}
+          cache-to: type=gha,mode=min,scope=test-${{ matrix.platform }}
           tags: |
             test-data-processing:${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+
+      - name: Monitor disk usage after build
+        run: |
+          echo "=== Disk usage after build ==="
+          df -h
+          echo "=== Docker system info ==="
+          docker system df
 
       - name: Build Apache Tika test image for ${{ matrix.platform }}
         uses: docker/build-push-action@v5
@@ -48,7 +74,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           load: ${{ matrix.platform == 'linux/amd64' }}
           cache-from: type=gha,scope=tika-test-${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=tika-test-${{ matrix.platform }}
+          cache-to: type=gha,mode=min,scope=tika-test-${{ matrix.platform }}
           tags: |
             test-apache-tika:${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
 
@@ -104,6 +130,12 @@ jobs:
           # Cleanup
           docker stop $CONTAINER_ID
 
+      - name: Clean up test images
+        if: always()
+        run: |
+          docker system prune -f
+          docker image prune -af
+
   test-python-unit:
     name: Run Python unit tests
     strategy:
@@ -156,6 +188,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Free up disk space
+        run: |
+          # Remove unnecessary packages and clean up
+          sudo apt-get autoremove -y
+          sudo apt-get autoclean
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker system prune -af
+          df -h
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -231,6 +275,8 @@ jobs:
         run: |
           docker stop tika-server-${{ matrix.arch }} || true
           docker rm tika-server-${{ matrix.arch }} || true
+          docker system prune -f
+          docker image prune -af
 
   build-data-processing:
     name: Build data processing container image
@@ -248,6 +294,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Free up disk space
+        run: |
+          # Remove unnecessary packages and clean up
+          sudo apt-get autoremove -y
+          sudo apt-get autoclean
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker system prune -af
+          df -h
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
@@ -307,6 +364,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Free up disk space
+        run: |
+          # Remove unnecessary packages and clean up
+          sudo apt-get autoremove -y
+          sudo apt-get autoclean
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker system prune -af
+          df -h
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
