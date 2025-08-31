@@ -1,15 +1,16 @@
-FROM docker.io/debian
+FROM docker.io/debian:bookworm-slim
 
 RUN useradd --system --no-create-home --shell /usr/sbin/nologin gazette && \
 	apt-get update -y && \
-	apt-get -y install default-jre curl && \
-	apt-get clean
+	apt-get -y install default-jre-headless curl ca-certificates && \
+	apt-get clean && \
+	rm -rf /var/lib/apt/lists/*
 
-# install Apache Tika
-RUN curl -o /tika-server.jar https://dlcdn.apache.org/tika/2.9.2/tika-server-standard-2.9.2.jar && \
+# Install Apache Tika (updated to latest version)
+RUN curl -o /tika-server.jar https://dlcdn.apache.org/tika/3.2.2/tika-server-standard-3.2.2.jar && \
 	chmod 755 /tika-server.jar
 
 USER gazette
 EXPOSE 9998
 
-CMD java -jar /tika-server.jar
+CMD ["java", "-jar", "/tika-server.jar", "--host", "0.0.0.0"]
