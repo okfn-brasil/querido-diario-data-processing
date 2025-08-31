@@ -1,5 +1,5 @@
 # Build stage for dependencies
-FROM docker.io/python:3.11-slim as builder
+FROM docker.io/python:3.11-slim AS builder
 
 # Install build dependencies
 RUN apt-get update -y && \

@@ -5,6 +5,27 @@ APACHE_TIKA_IMAGE_NAME ?=  querido-diario-apache-tika-server
 APACHE_TIKA_IMAGE_TAG ?= latest
 POD_NAME ?= querido-diario
 
+# Architecture detection and configuration
+CURRENT_ARCH := $(shell uname -m)
+ifeq ($(CURRENT_ARCH),x86_64)
+    DEFAULT_PLATFORM := linux/amd64
+else ifeq ($(CURRENT_ARCH),aarch64)
+    DEFAULT_PLATFORM := linux/arm64
+else ifeq ($(CURRENT_ARCH),arm64)
+    DEFAULT_PLATFORM := linux/arm64
+else
+    DEFAULT_PLATFORM := linux/amd64
+endif
+
+# Allow override via command line flags
+ifdef amd64
+    PLATFORM := linux/amd64
+else ifdef arm64
+    PLATFORM := linux/arm64
+else
+    PLATFORM := $(DEFAULT_PLATFORM)
+endif
+
 # S3 mock
 STORAGE_BUCKET ?= queridodiariobucket
 STORAGE_IMAGE ?= docker.io/bitnami/minio:2021.4.6
@@ -31,41 +52,29 @@ FULL_PROJECT ?= false
 API_PORT ?= 8080
 BACKEND_PORT ?= 8000
 
-run-command=(podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
-	--pod $(POD_NAME) \
-	--env PYTHONPATH=/mnt/code \
-	--env POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
-	--env POSTGRES_USER=$(POSTGRES_USER) \
-	--env POSTGRES_DB=$(POSTGRES_DB) \
-	--env POSTGRES_HOST=$(POSTGRES_HOST) \
-	--env POSTGRES_PORT=$(POSTGRES_PORT) \
-	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) $1)
+run-command=docker compose run --rm app $1
 
-wait-for=(podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
-	--pod $(POD_NAME) \
-	--env PYTHONPATH=/mnt/code \
-	--env POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
-	--env POSTGRES_USER=$(POSTGRES_USER) \
-	--env POSTGRES_DB=$(POSTGRES_DB) \
-	--env POSTGRES_HOST=$(POSTGRES_HOST) \
-	--env POSTGRES_PORT=$(POSTGRES_PORT) \
-	$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) wait-for-it --timeout=60 $1)
+wait-for=docker compose run --rm app wait-for-it --timeout=60 $1
 
 .PHONY: black
 black:
-	podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
-		--env PYTHONPATH=/mnt/code \
-		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
-		black .
+	$(call run-command, black .)
 
 .PHONY: build-devel
 build-devel:
-	podman build --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
+	docker build --platform $(PLATFORM) --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
 		-f Dockerfile $(CURDIR)
 
 .PHONY: build-tika-server
 build-tika-server:
-	podman build --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
+	docker build --platform $(PLATFORM) --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
+		-f Dockerfile_apache_tika $(CURDIR)
+
+.PHONY: build-multi-arch
+build-multi-arch:
+	docker buildx build --platform linux/amd64,linux/arm64 --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
+		-f Dockerfile $(CURDIR)
+	docker buildx build --platform linux/amd64,linux/arm64 --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
 		-f Dockerfile_apache_tika $(CURDIR)
 
 .PHONY: build
@@ -73,37 +82,25 @@ build: build-devel build-tika-server
 
 .PHONY: login
 login:
-	podman login --username $(REGISTRY_USER) --password "$(REGISTRY_PASSWORD)" https://index.docker.io/v1/
+	docker login --username $(REGISTRY_USER) --password "$(REGISTRY_PASSWORD)" https://index.docker.io/v1/
 
 .PHONY: publish
 publish:
-	podman tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG} $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell date --rfc-3339=date --utc)
-	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell date --rfc-3339=date --utc)
-	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG}
+	docker tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG} $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell date --rfc-3339=date --utc)
+	docker push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell date --rfc-3339=date --utc)
+	docker push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG}
 
 .PHONY: destroy
 destroy:
-	podman rmi --force $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)
+	docker rmi --force $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)
 
-destroy-pod:
-	podman pod rm --force --ignore $(POD_NAME)
+destroy-services:
+	docker compose down --volumes --remove-orphans
 
-create-pod: destroy-pod
-ifeq ($(FULL_PROJECT), true)
-	podman pod create -p $(POSTGRES_PORT):$(POSTGRES_PORT) \
-				-p $(OPENSEARCH_PORT1):$(OPENSEARCH_PORT1) \
-				-p $(STORAGE_PORT):$(STORAGE_PORT) \
-				-p $(API_PORT):$(API_PORT) \
-				-p $(BACKEND_PORT):$(BACKEND_PORT) \
-				--name $(POD_NAME)
-else
-	podman pod create -p $(POSTGRES_PORT):$(POSTGRES_PORT) \
-				-p $(OPENSEARCH_PORT1):$(OPENSEARCH_PORT1) \
-				-p $(STORAGE_PORT):$(STORAGE_PORT) \
-				--name $(POD_NAME)
-endif
+create-services: destroy-services
+	docker compose up -d postgres opensearch minio apache-tika
 
-prepare-test-env: create-pod storage apache-tika-server opensearch database
+prepare-test-env: create-services
 
 .PHONY: test
 test: prepare-test-env retest
@@ -137,24 +134,17 @@ retest-tika:
 	$(call run-command, python -m unittest -f tests/text_extraction_tests.py)
 
 start-apache-tika-server:
-	podman run -d --pod $(POD_NAME) --name $(APACHE_TIKA_CONTAINER_NAME) \
-    	$(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
-		java -jar /tika-server.jar
+	docker compose up -d apache-tika
 
 stop-apache-tika-server:
-	podman stop --ignore $(APACHE_TIKA_CONTAINER_NAME)
-	podman rm --force --ignore $(APACHE_TIKA_CONTAINER_NAME)
+	docker compose stop apache-tika
 
 .PHONY: apache-tika-server
 apache-tika-server: stop-apache-tika-server start-apache-tika-server
 
 
 shell: set-run-variable-values
-	podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
-		--pod $(POD_NAME) \
-		--env PYTHONPATH=/mnt/code \
-		--env-file envvars \
-		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) bash
+	$(call run-command, bash)
 
 .PHONY: coverage
 coverage: prepare-test-env
@@ -164,46 +154,34 @@ coverage: prepare-test-env
 
 .PHONY: stop-storage
 stop-storage:
-	podman rm --force --ignore $(STORAGE_CONTAINER_NAME)
+	docker compose stop minio
 
 .PHONY: storage
 storage: stop-storage start-storage wait-storage
 
 start-storage:
-	podman run -d --rm -ti \
-		--name $(STORAGE_CONTAINER_NAME) \
-		--pod $(POD_NAME) \
-		-e MINIO_ACCESS_KEY=$(STORAGE_ACCESS_KEY) \
-		-e MINIO_SECRET_KEY=$(STORAGE_ACCESS_SECRET) \
-		-e MINIO_DEFAULT_BUCKETS=$(STORAGE_BUCKET):public \
-        $(STORAGE_IMAGE)
+	docker compose up -d minio
 
 wait-storage:
-	$(call wait-for, localhost:9000)
+	$(call wait-for, minio:9000)
 
 .PHONY: stop-database
 stop-database:
-	podman rm --force --ignore $(DATABASE_CONTAINER_NAME)
+	docker compose stop postgres
 
 .PHONY: database
 database: stop-database start-database wait-database
 
 start-database:
-	podman run -d --rm -ti \
-		--name $(DATABASE_CONTAINER_NAME) \
-		--pod $(POD_NAME) \
-		-e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
-		-e POSTGRES_USER=$(POSTGRES_USER) \
-		-e POSTGRES_DB=$(POSTGRES_DB) \
-		$(POSTGRES_IMAGE)
+	docker compose up -d postgres
 
 wait-database:
-	$(call wait-for, localhost:5432)
+	$(call wait-for, postgres:5432)
 
 load-database: set-run-variable-values
 ifneq ("$(wildcard $(DATABASE_RESTORE_FILE))","")
-	podman cp $(DATABASE_RESTORE_FILE) $(DATABASE_CONTAINER_NAME):/mnt/dump_file
-	podman exec $(DATABASE_CONTAINER_NAME) bash -c "pg_restore -v -c -h localhost -U $(POSTGRES_USER) -d $(POSTGRES_DB) /mnt/dump_file || true"
+	docker compose cp $(DATABASE_RESTORE_FILE) postgres:/mnt/dump_file
+	docker compose exec postgres bash -c "pg_restore -v -c -h localhost -U $(POSTGRES_USER) -d $(POSTGRES_DB) /mnt/dump_file || true"
 else
 	@echo "cannot restore because file does not exists '$(DATABASE_RESTORE_FILE)'"
 	@exit 1
@@ -214,68 +192,52 @@ set-run-variable-values:
 
 .PHONY: sql
 sql: set-run-variable-values
-	podman run --rm -ti \
-		--pod $(POD_NAME) \
-		$(POSTGRES_IMAGE) psql -h localhost -U $(POSTGRES_USER) $(POSTGRES_DB)
+	docker compose exec postgres psql -h localhost -U $(POSTGRES_USER) $(POSTGRES_DB)
 
 .PHONY: setup
-setup: set-run-variable-values create-pod storage apache-tika-server opensearch database
+setup: set-run-variable-values create-services
 
 .PHONY: re-run
 re-run: set-run-variable-values
-	podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
-		--pod $(POD_NAME) \
-		--env PYTHONPATH=/mnt/code \
-		--env-file envvars \
-		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python main
+	$(call run-command, python main)
 
 .PHONY: run
 run: setup re-run
 
 .PHONY: shell-run
 shell-run: set-run-variable-values
-	podman run --rm -ti --volume $(CURDIR):/mnt/code:rw \
-		--pod $(POD_NAME) \
-		--env PYTHONPATH=/mnt/code \
-		--env-file envvars \
-		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) bash
+	$(call run-command, bash)
 
 .PHONY: shell-database
 shell-database: set-run-variable-values
-	podman exec -it $(DATABASE_CONTAINER_NAME) \
-	    psql -h localhost -d $(POSTGRES_DB) -U $(POSTGRES_USER)
+	docker compose exec postgres psql -h localhost -d $(POSTGRES_DB) -U $(POSTGRES_USER)
 
 opensearch: stop-opensearch start-opensearch wait-opensearch
 
 start-opensearch:
-	podman run -d --rm -ti \
-		--name $(OPENSEARCH_CONTAINER_NAME) \
-		--pod $(POD_NAME) \
-		--env discovery.type=single-node \
-		--env plugins.security.ssl.http.enabled=false \
-		docker.io/opensearchproject/opensearch:2.9.0
+	docker compose up -d opensearch
 
 stop-opensearch:
-	podman rm --force --ignore $(OPENSEARCH_CONTAINER_NAME)
+	docker compose stop opensearch
 
 wait-opensearch:
-	$(call wait-for, localhost:9200)
+	$(call wait-for, opensearch:9200)
 
 .PHONY: publish-tag
 publish-tag:
-	podman tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG} $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
-	podman push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
-
-.PHONY: stop-aggregate-gazettes
-stop-aggregate-gazettes:
-	podman stop --ignore agg-gazettes
-	podman rm --force --ignore agg-gazettes
+	docker tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):${IMAGE_TAG} $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
+	docker push $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(shell git describe --tags)
 
 .PHONY: aggregate-gazettes
-aggregate-gazettes:  stop-aggregate-gazettes set-run-variable-values
-	podman run -ti --volume $(CURDIR):/mnt/code:rw \
-		--pod $(POD_NAME) \
-		--env PYTHONPATH=/mnt/code \
-		--env-file envvars \
-		--name agg-gazettes \
-		$(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) python main -p aggregates
+aggregate-gazettes: set-run-variable-values
+	$(call run-command, python main -p aggregates)
+
+.PHONY: help-arch
+help-arch:
+	@echo "Architecture build options:"
+	@echo "  make build                - Build for current architecture ($(DEFAULT_PLATFORM))"
+	@echo "  make build amd64=1        - Build for AMD64 architecture"
+	@echo "  make build arm64=1        - Build for ARM64 architecture"
+	@echo "  make build-multi-arch     - Build for both amd64 and arm64 architectures"
+	@echo ""
+	@echo "Current system architecture: $(CURRENT_ARCH) -> $(DEFAULT_PLATFORM)"
