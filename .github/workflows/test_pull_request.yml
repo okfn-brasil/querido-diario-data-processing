@@ -13,7 +13,7 @@ jobs:
           - platform: linux/amd64
             runner: ubuntu-latest
           - platform: linux/arm64
-            runner: ubuntu-24.04-arm64
+            runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
 
     steps:
@@ -38,7 +38,7 @@ jobs:
           # Build main image for specific platform
           podman build --platform ${{ matrix.platform }} --tag okfn-brasil/querido-diario-data-processing:latest -f Dockerfile .
 
-          # Build Apache Tika server for specific platform  
+          # Build Apache Tika server for specific platform
           podman build --platform ${{ matrix.platform }} --tag okfn-brasil/querido-diario-apache-tika-server:latest -f Dockerfile_apache_tika .
 
       - name: Run tests and show code coverage
