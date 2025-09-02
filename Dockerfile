@@ -32,7 +32,8 @@ ENV USER_HOME=/home/$USER
 ENV WORKDIR=/mnt/code
 
 # Install only runtime dependencies
-RUN adduser --system $USER --home $USER_HOME && \
+RUN addgroup --system $USER && \
+    adduser --system --ingroup $USER $USER --home $USER_HOME && \
     apt-get update -y && \
     apt-get -y install \
         libpq5 \
