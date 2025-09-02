@@ -84,7 +84,7 @@ def create_aggregates_for_territories_and_state(
                 FROM 
                     gazettes g 
                 WHERE
-                    g.territory_id='{territory['id']}'
+                    g.territory_id='{territory["id"]}'
                     and date_part('Year', g.date)={year}
                     and g.processed=true
                 ORDER BY
@@ -371,9 +371,10 @@ def generate_xml_name(xml_info):
 
 
 def write_file_to_zip(file_path, name_in_zip, zip_file):
-    with open(file_path, "rb") as open_xml_file, zip_file.open(
-        name_in_zip, "w"
-    ) as xml_in_zip:
+    with (
+        open(file_path, "rb") as open_xml_file,
+        zip_file.open(name_in_zip, "w") as xml_in_zip,
+    ):
         chunk_size = 5 * 1024 * 1024
         while True:
             chunk = open_xml_file.read(chunk_size)
