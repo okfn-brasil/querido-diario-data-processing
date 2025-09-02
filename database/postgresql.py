@@ -72,3 +72,14 @@ class PostgreSQL(DatabaseInterface):
         logging.debug("Deleting:")
         self._commit_changes(command, data)
         logging.debug("Finished deleting")
+
+    def get_pending_gazettes(self):
+        """Get gazettes that need text extraction"""
+        command = "SELECT * FROM gazettes WHERE processed = false"
+        return list(self.select(command))
+
+    def set_gazette_as_processed(self, gazette_id: str, file_path: str = None):
+        """Mark a gazette as processed"""
+        command = "UPDATE gazettes SET processed = true WHERE id = %(id)s"
+        data = {"id": gazette_id}
+        self.update(command, data)

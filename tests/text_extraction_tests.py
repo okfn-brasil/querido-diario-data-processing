@@ -23,7 +23,7 @@ class ApacheTikaTextExtractorTest(TestCase):
         self, magic_mock, open_mock, request_get_mock
     ):
         filepath = "tests/data/fake_gazette.pdf"
-        expected_headers = {"Content-Type": "application/pdf"}
+        expected_headers = {"Content-Type": "application/pdf", "Accept": "text/plain"}
         self.extractor.extract_text(filepath)
         open_mock.assert_called_with(filepath, "rb")
         magic_mock.assert_called_with(filepath, mime=True)

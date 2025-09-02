@@ -73,6 +73,11 @@ jobs:
         ports:
           - 9000:9000
 
+      apache-tika:
+        image: apache/tika:2.9.1
+        ports:
+          - 9998:9998
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
