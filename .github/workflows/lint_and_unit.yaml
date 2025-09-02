@@ -31,9 +31,20 @@ jobs:
           pre-commit run --all-files
 
   unit:
-    name: Unit tests
-    runs-on: ubuntu-latest
+    name: Unit tests (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     needs: lint
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    env:
+      PLATFORM: ${{ matrix.platform }}
     services:
       postgres:
         image: postgres:11
