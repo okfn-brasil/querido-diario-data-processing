@@ -94,7 +94,7 @@ publish:
 destroy:
 	docker rmi --force $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG)
 
-destroy-services:
+destroy-services: set-run-variable-values
 	docker compose down --volumes --remove-orphans
 
 create-services: destroy-services
