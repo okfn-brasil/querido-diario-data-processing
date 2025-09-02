@@ -4,13 +4,23 @@ on:
       - main
     tags:
       - "v*"
+  workflow_dispatch:
 
 name: Build and Test container images
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test-multi-arch:
     name: Test on multiple architectures
     strategy:
+      fail-fast: false
       matrix:
         include:
           - platform: linux/amd64
@@ -18,6 +28,7 @@ jobs:
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -139,6 +150,7 @@ jobs:
   test-python-unit:
     name: Run Python unit tests
     strategy:
+      fail-fast: false
       matrix:
         include:
           - platform: linux/amd64
@@ -148,6 +160,7 @@ jobs:
             runner: ubuntu-24.04-arm
             arch: arm64
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
     services:
       postgres:
         image: postgres:11
@@ -281,6 +294,7 @@ jobs:
   build-data-processing:
     name: Build data processing container image
     strategy:
+      fail-fast: false
       matrix:
         include:
           - platform: linux/amd64
@@ -291,6 +305,7 @@ jobs:
             arch: arm64
     runs-on: ${{ matrix.runner }}
     needs: [test-multi-arch, test-python-unit]
+    timeout-minutes: 90
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -316,9 +331,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Retrieve repository name
-        run: |
-          echo REPOSITORY=$(echo $GITHUB_REPOSITORY) >> $GITHUB_ENV
       - name: Build and push development container image
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
         uses: docker/build-push-action@v5
@@ -330,11 +342,7 @@ jobs:
           cache-from: type=gha,scope=main-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=main-${{ matrix.arch }}
           tags: |
-            ghcr.io/${{env.REPOSITORY}}:latest-${{ matrix.arch }}
-      - name: Retrieve tag name
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        run: |
-          echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+            ghcr.io/${{ github.repository }}:latest-${{ matrix.arch }}
       - name: Build and push tagged container image
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: docker/build-push-action@v5
@@ -346,11 +354,12 @@ jobs:
           cache-from: type=gha,scope=tag-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=tag-${{ matrix.arch }}
           tags: |
-            ghcr.io/${{env.REPOSITORY}}:${{ env.TAG_NAME }}-${{ matrix.arch }}
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-${{ matrix.arch }}
 
   build-apache-tika:
     name: Build Apache Tika container image
     strategy:
+      fail-fast: false
       matrix:
         include:
           - platform: linux/amd64
@@ -361,6 +370,7 @@ jobs:
             arch: arm64
     runs-on: ${{ matrix.runner }}
     needs: [test-multi-arch, test-python-unit]
+    timeout-minutes: 60
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -386,9 +396,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Retrieve repository name
-        run: |
-          echo REPOSITORY=$(echo $GITHUB_REPOSITORY) >> $GITHUB_ENV
       - name: Build and push Apache Tika development container image
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
         uses: docker/build-push-action@v5
@@ -401,10 +408,6 @@ jobs:
           cache-to: type=gha,mode=max,scope=tika-main-${{ matrix.arch }}
           tags: |
             ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest-${{ matrix.arch }}
-      - name: Retrieve tag name
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        run: |
-          echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
       - name: Build and push Apache Tika tagged container image
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: docker/build-push-action@v5
@@ -416,66 +419,117 @@ jobs:
           cache-from: type=gha,scope=tika-tag-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=tika-tag-${{ matrix.arch }}
           tags: |
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ env.TAG_NAME }}-${{ matrix.arch }}
+            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-${{ matrix.arch }}
   create-data-processing-manifest:
     name: Create data processing multi-arch manifest
     runs-on: ubuntu-latest
     needs: build-data-processing
+    timeout-minutes: 15
     steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Retrieve repository name
+      - name: Verify single-arch images availability (branch)
+        if: ${{ startsWith(github.ref, 'refs/heads/') }}
         run: |
-          echo REPOSITORY=$(echo $GITHUB_REPOSITORY) >> $GITHUB_ENV
+          REPO="${{ github.repository }}"
+          for tag in latest-amd64 latest-arm64; do
+            for i in {1..20}; do
+              if docker buildx imagetools inspect ghcr.io/$REPO:$tag > /dev/null 2>&1; then
+                echo "Found ghcr.io/$REPO:$tag";
+                break;
+              fi
+              echo "Waiting for ghcr.io/$REPO:$tag to be available ($i/20)...";
+              sleep 3;
+            done
+          done
       - name: Create and push development manifest
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
         run: |
-          docker manifest create ghcr.io/${{env.REPOSITORY}}:latest \
-            ghcr.io/${{env.REPOSITORY}}:latest-amd64 \
-            ghcr.io/${{env.REPOSITORY}}:latest-arm64
-          docker manifest push ghcr.io/${{env.REPOSITORY}}:latest
-      - name: Retrieve tag name
+          REPO="${{ github.repository }}"
+          docker buildx imagetools create \
+            -t ghcr.io/$REPO:latest \
+            ghcr.io/$REPO:latest-amd64 \
+            ghcr.io/$REPO:latest-arm64
+      - name: Verify single-arch images availability (tag)
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
-          echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+          REPO="${{ github.repository }}"
+          for arch in amd64 arm64; do
+            for i in {1..20}; do
+              if docker buildx imagetools inspect ghcr.io/$REPO:${{ github.ref_name }}-$arch > /dev/null 2>&1; then
+                echo "Found ghcr.io/$REPO:${{ github.ref_name }}-$arch";
+                break;
+              fi
+              echo "Waiting for ghcr.io/$REPO:${{ github.ref_name }}-$arch to be available ($i/20)...";
+              sleep 3;
+            done
+          done
       - name: Create and push tagged manifest
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
-          docker manifest create ghcr.io/${{env.REPOSITORY}}:${{ env.TAG_NAME }} \
-            ghcr.io/${{env.REPOSITORY}}:${{ env.TAG_NAME }}-amd64 \
-            ghcr.io/${{env.REPOSITORY}}:${{ env.TAG_NAME }}-arm64
-          docker manifest push ghcr.io/${{env.REPOSITORY}}:${{ env.TAG_NAME }}
+          REPO="${{ github.repository }}"
+          docker buildx imagetools create \
+            -t ghcr.io/$REPO:${{ github.ref_name }} \
+            ghcr.io/$REPO:${{ github.ref_name }}-amd64 \
+            ghcr.io/$REPO:${{ github.ref_name }}-arm64
 
   create-apache-tika-manifest:
     name: Create Apache Tika multi-arch manifest
     runs-on: ubuntu-latest
     needs: build-apache-tika
+    timeout-minutes: 15
     steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify single-arch images availability (branch)
+        if: ${{ startsWith(github.ref, 'refs/heads/') }}
+        run: |
+          for tag in latest-amd64 latest-arm64; do
+            for i in {1..20}; do
+              if docker buildx imagetools inspect ghcr.io/okfn-brasil/querido-diario-apache-tika-server:$tag > /dev/null 2>&1; then
+                echo "Found ghcr.io/okfn-brasil/querido-diario-apache-tika-server:$tag";
+                break;
+              fi
+              echo "Waiting for ghcr.io/okfn-brasil/querido-diario-apache-tika-server:$tag to be available ($i/20)...";
+              sleep 3;
+            done
+          done
       - name: Create and push Apache Tika development manifest
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
         run: |
-          docker manifest create ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest \
+          docker buildx imagetools create \
+            -t ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest \
             ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest-amd64 \
             ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest-arm64
-          docker manifest push ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest
-      - name: Retrieve tag name
+      - name: Verify single-arch images availability (tag)
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
-          echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+          for arch in amd64 arm64; do
+            for i in {1..20}; do
+              if docker buildx imagetools inspect ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-$arch > /dev/null 2>&1; then
+                echo "Found ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-$arch";
+                break;
+              fi
+              echo "Waiting for ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-$arch to be available ($i/20)...";
+              sleep 3;
+            done
+          done
       - name: Create and push Apache Tika tagged manifest
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
-          docker manifest create ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ env.TAG_NAME }} \
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ env.TAG_NAME }}-amd64 \
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ env.TAG_NAME }}-arm64
-          docker manifest push ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ env.TAG_NAME }}
+          docker buildx imagetools create \
+            -t ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }} \
+            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-amd64 \
+            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-arm64
