@@ -74,7 +74,7 @@ jobs:
           - 9000:9000
 
       apache-tika:
-        image: apache/tika:2.9.1
+        image: apache/tika:2.9.1.0
         ports:
           - 9998:9998
 
