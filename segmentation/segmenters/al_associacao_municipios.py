@@ -60,7 +60,7 @@ class ALAssociacaoMunicipiosSegmenter(AssociationSegmenter):
         self, territory_slug: str, segment_text: str, gazette: Dict
     ) -> GazetteSegment:
         logging.debug(
-            f"Creating segment for territory \"{territory_slug}\" from {gazette['file_path']} file."
+            f'Creating segment for territory "{territory_slug}" from {gazette["file_path"]} file.'
         )
         territory_data = get_territory_data(territory_slug, self.territories)
 

@@ -1,0 +1,92 @@
+name: Test pull request
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Build, test and show code coverage
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Free up disk space
+        run: |
+          echo "=== Disk usage before cleanup ==="
+          df -h
+          
+          # Remove unnecessary packages and files
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          
+          # Clean up Docker
+          sudo docker system prune -af || true
+          
+          # Clean up apt
+          sudo apt-get autoremove -y
+          sudo apt-get autoclean
+          
+          echo "=== Disk usage after cleanup ==="
+          df -h
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+          driver-opts: |
+            image=moby/buildkit:buildx-stable-1
+
+      - name: Build and cache main application image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: false
+          tags: okfn-brasil/querido-diario-data-processing:latest
+          cache-from: type=gha,scope=main-${{ matrix.platform }}
+          cache-to: type=gha,mode=min,scope=main-${{ matrix.platform }}
+          load: ${{ matrix.platform == 'linux/amd64' }}
+
+      - name: Build and cache Apache Tika image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile_apache_tika
+          platforms: ${{ matrix.platform }}
+          push: false
+          tags: okfn-brasil/querido-diario-apache-tika-server:latest
+          cache-from: type=gha,scope=tika-${{ matrix.platform }}
+          cache-to: type=gha,mode=min,scope=tika-${{ matrix.platform }}
+          load: ${{ matrix.platform == 'linux/amd64' }}
+
+      - name: Clean up intermediate Docker layers
+        run: |
+          docker system prune -f
+          echo "=== Disk usage after builds ==="
+          df -h
+
+      - name: Run tests and show code coverage
+        if: matrix.platform == 'linux/amd64'
+        run: |
+          make coverage
+
+      - name: Clean up test artifacts
+        if: always()
+        run: |
+          docker system prune -af || true
+          echo "=== Final cleanup complete ==="
+          df -h
