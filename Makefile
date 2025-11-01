@@ -52,7 +52,7 @@ FULL_PROJECT ?= false
 API_PORT ?= 8080
 BACKEND_PORT ?= 8000
 
-run-command=docker compose run --rm app $1
+run-command=docker compose run --rm app $1 && docker compose logs
 
 wait-for=docker compose run --rm app wait-for-it --timeout=60 $1
 
