@@ -148,8 +148,7 @@ shell: set-run-variable-values
 
 .PHONY: coverage
 coverage: prepare-test-env
-	$(call run-command, coverage erase)
-	docker compose logs minio
+	$(call run-command, coverage erase); docker compose logs minio
 	$(call run-command, coverage run -m unittest tests)
 	$(call run-command, coverage report -m)
 
