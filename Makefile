@@ -52,7 +52,7 @@ FULL_PROJECT ?= false
 API_PORT ?= 8080
 BACKEND_PORT ?= 8000
 
-run-command=docker compose run -d --rm app $1
+run-command=docker compose run --attach --rm app $1
 
 wait-for=docker compose run --rm app wait-for-it --timeout=60 $1
 
@@ -148,7 +148,7 @@ shell: set-run-variable-values
 
 .PHONY: coverage
 coverage: prepare-test-env
-	$(call run-command, coverage erase); docker compose logs minio
+	$(call run-command, coverage erase)
 	$(call run-command, coverage run -m unittest tests)
 	$(call run-command, coverage report -m)
 
