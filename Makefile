@@ -52,7 +52,7 @@ FULL_PROJECT ?= false
 API_PORT ?= 8080
 BACKEND_PORT ?= 8000
 
-run-command=docker compose run --attach --rm app $1
+run-command=docker compose run --rm app $1
 
 wait-for=docker compose run --rm app wait-for-it --timeout=60 $1
 
@@ -99,6 +99,7 @@ destroy-services: set-run-variable-values
 
 create-services: destroy-services
 	docker compose up -d postgres opensearch minio apache-tika
+	docker compose logs -f minio
 
 prepare-test-env: create-services
 
