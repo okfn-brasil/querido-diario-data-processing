@@ -99,7 +99,6 @@ destroy-services: set-run-variable-values
 
 create-services: destroy-services
 	docker compose up -d postgres opensearch minio apache-tika
-	docker compose logs -f minio
 
 prepare-test-env: create-services
 
