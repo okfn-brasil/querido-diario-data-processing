@@ -166,7 +166,9 @@ class TextExtractionTaskTests(TestCase):
             self.index_mock,
             text_extraction_function,
         )
-        self.index_mock.index_document.assert_called_once_with(expected_data)
+        self.index_mock.index_document.assert_called_once_with(
+            expected_data, document_id=expected_data["file_checksum"]
+        )
 
     def file_should_not_exist(self, file_to_check):
         self.assertFalse(
@@ -277,13 +279,14 @@ class TextExtractionTaskTests(TestCase):
             self.index_mock,
             self.text_extraction_function,
         )
-        self.index_mock.index_document.assert_called_once_with(expected_data)
+        self.index_mock.index_document.assert_called_once_with(
+            expected_data, document_id=expected_data["file_checksum"]
+        )
 
     def test_upload_gazette_raw_text(self):
         content = "some content"
-        gazette = dict(file_path="some_file.pdf", source_text=content)
-        upload_gazette_raw_text(gazette, self.storage_mock)
-        self.assertEqual(gazette["file_raw_txt"], "http://test.com/some_file.txt")
-        self.storage_mock.upload_content.assert_called_once_with(
-            "some_file.txt", content
-        )
+        gazette_id = "972aca2e-1174-11eb-b2d5-a86daaca905e"
+        file_key = "some_file.txt"
+        self.storage_mock.upload_content.return_value = "http://test.com/some_file.txt"
+        upload_gazette_raw_text(self.storage_mock, gazette_id, content, file_key)
+        self.storage_mock.upload_content.assert_called_once_with(content, file_key)

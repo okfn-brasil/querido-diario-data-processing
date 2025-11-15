@@ -37,6 +37,7 @@ class MainModuleTests(TestCase):
             enable_debug_if_necessary()
             mock.assert_not_called()
 
+    @patch.dict("os.environ", {}, clear=True)
     def test_run_with_debug_not_defined(self):
         with patch("logging.debug") as mock:
             enable_debug_if_necessary()
