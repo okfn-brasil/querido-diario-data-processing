@@ -154,6 +154,7 @@ jobs:
           ./init-scripts/opensearch/create-opensearch-index.sh
 
       - name: Run unit tests
+        timeout-minutes: 10
         env:
           PYTHONPATH: ${{ github.workspace }}
           POSTGRES_PASSWORD: queridodiario

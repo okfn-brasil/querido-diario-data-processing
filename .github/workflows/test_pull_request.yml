@@ -133,6 +133,7 @@ jobs:
           ./init-scripts/opensearch/create-opensearch-index.sh
 
       - name: Run tests with coverage
+        timeout-minutes: 10
         env:
           PYTHONPATH: ${{ github.workspace }}
           POSTGRES_PASSWORD: queridodiario
@@ -153,5 +154,5 @@ jobs:
           DEBUG: 1
         run: |
           coverage erase
-          coverage run -m unittest discover -s tests -p "*.py"
+          coverage run -m unittest discover -s tests -p "*.py" -v
           coverage report -m
