@@ -124,13 +124,20 @@ jobs:
           echo "MinIO bucket created successfully"
 
       - name: Create OpenSearch index
+        timeout-minutes: 2
         run: |
+          echo "=== Creating OpenSearch index ==="
+          echo "OpenSearch host: $OPENSEARCH_HOST"
+          echo "Testing connectivity..."
+          curl -v http://localhost:9200/_cluster/health || echo "OpenSearch not responding"
+          echo "Running init script..."
           chmod +x init-scripts/opensearch/create-opensearch-index.sh
           OPENSEARCH_HOST=http://localhost:9200 \
           OPENSEARCH_USER=admin \
           OPENSEARCH_PASSWORD=admin \
           INDEX_NAME=querido-diario \
           ./init-scripts/opensearch/create-opensearch-index.sh
+          echo "=== OpenSearch index creation completed ==="
 
       - name: Run tests with coverage
         timeout-minutes: 5
@@ -157,8 +164,22 @@ jobs:
           TRANSFORMERS_OFFLINE: 1
           SENTENCE_TRANSFORMERS_HOME: /tmp/sentence_transformers
         run: |
-          echo "SCRIPT STARTED - If you see this, the shell is working"
-          date
-          python -m unittest discover -s tests -p "*.py" -v
-          echo "SCRIPT FINISHED"
-          date
+          echo "========================================="
+          echo "🧪 STARTING INSTRUMENTED TEST RUN"
+          echo "========================================="
+          echo "Working directory: $(pwd)"
+          echo "Python: $(which python)"
+          echo "Python version: $(python --version)"
+          echo "Time: $(date)"
+          echo ""
+          
+          # Make runner executable
+          chmod +x instrumented_test_runner.py
+          
+          # Run with our instrumented runner
+          python instrumented_test_runner.py
+          
+          echo ""
+          echo "========================================="
+          echo "Test run completed at: $(date)"
+          echo "========================================="
