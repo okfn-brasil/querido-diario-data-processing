@@ -178,6 +178,9 @@ jobs:
           TRANSFORMERS_OFFLINE: 1
           SENTENCE_TRANSFORMERS_HOME: /tmp/sentence_transformers
         run: |
+          echo "========================================="
+          echo "TEST STEP STARTED"
+          echo "========================================="
           echo "Starting tests at $(date)"
           echo "Python version: $(python --version)"
           echo "Checking service availability..."

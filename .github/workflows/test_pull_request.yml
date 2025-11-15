@@ -157,6 +157,9 @@ jobs:
           TRANSFORMERS_OFFLINE: 1
           SENTENCE_TRANSFORMERS_HOME: /tmp/sentence_transformers
         run: |
+          echo "========================================="
+          echo "TEST STEP STARTED"
+          echo "========================================="
           echo "Starting tests at $(date)"
           echo "Python version: $(python --version)"
           echo "Checking service availability..."
@@ -165,9 +168,8 @@ jobs:
           curl -s http://localhost:9000/minio/health/live || echo "MinIO not reachable"
           echo "Services check complete"
           echo "Starting test discovery..."
-          coverage erase
           set +e
-          timeout 180 stdbuf -oL -eL coverage run -m unittest discover -s tests -p "*.py" -v 2>&1
+          timeout 180 stdbuf -oL -eL python -m unittest discover -s tests -p "*.py" -v 2>&1
           EXIT_CODE=$?
           set -e
           echo "Tests finished at $(date)"
@@ -179,4 +181,3 @@ jobs:
             echo "ERROR: Tests failed with exit code $EXIT_CODE"
             exit $EXIT_CODE
           fi
-          coverage report -m
