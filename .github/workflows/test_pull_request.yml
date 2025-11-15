@@ -159,6 +159,17 @@ jobs:
         run: |
           echo "Starting tests at $(date)"
           coverage erase
-          timeout 180 stdbuf -oL -eL coverage run -m unittest discover -s tests -p "*.py" -v 2>&1 || echo "Tests timed out or failed with exit code: $?"
+          set +e
+          timeout 180 stdbuf -oL -eL coverage run -m unittest discover -s tests -p "*.py" -v 2>&1
+          EXIT_CODE=$?
+          set -e
           echo "Tests finished at $(date)"
-          coverage report -m || true
+          echo "Exit code: $EXIT_CODE"
+          if [ $EXIT_CODE -eq 124 ]; then
+            echo "ERROR: Tests timed out after 3 minutes"
+            exit 1
+          elif [ $EXIT_CODE -ne 0 ]; then
+            echo "ERROR: Tests failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+          coverage report -m
