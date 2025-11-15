@@ -82,7 +82,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Start MinIO
         run: |
           docker run -d \
@@ -96,12 +96,12 @@ jobs:
             -e MINIO_ROOT_PASSWORD=minio-secret-key \
             quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z \
             server /data --console-address :9001
-          
+
           # Wait for MinIO to be ready
           echo "Waiting for MinIO to be ready..."
           timeout 60 bash -c 'until curl -sf http://localhost:9000/minio/health/live > /dev/null 2>&1; do sleep 2; done'
           echo "MinIO is ready"
-      
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -123,7 +123,7 @@ jobs:
             echo "Waiting for MinIO... ($i/30)"
             sleep 2
           done
-          
+
           # Detect architecture and download appropriate MinIO client
           ARCH=$(uname -m)
           if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
@@ -131,17 +131,17 @@ jobs:
           else
             MC_URL="https://dl.min.io/client/mc/release/linux-amd64/mc"
           fi
-          
+
           echo "Downloading MinIO client for architecture: $ARCH"
           curl -sLo /tmp/mc "$MC_URL"
           chmod +x /tmp/mc
-          
+
           # Configure MinIO client
           /tmp/mc alias set minio http://localhost:9000 minio-access-key minio-secret-key
-          
+
           # Create bucket if it doesn't exist
           /tmp/mc mb minio/queridodiariobucket --ignore-existing || true
-          
+
           echo "MinIO bucket created successfully"
 
       - name: Create OpenSearch index
@@ -154,9 +154,10 @@ jobs:
           ./init-scripts/opensearch/create-opensearch-index.sh
 
       - name: Run unit tests
-        timeout-minutes: 10
+        timeout-minutes: 5
         env:
           PYTHONPATH: ${{ github.workspace }}
+          PYTHONUNBUFFERED: 1
           POSTGRES_PASSWORD: queridodiario
           POSTGRES_USER: queridodiario
           POSTGRES_DB: queridodiariodb
@@ -177,4 +178,6 @@ jobs:
           TRANSFORMERS_OFFLINE: 1
           SENTENCE_TRANSFORMERS_HOME: /tmp/sentence_transformers
         run: |
-          timeout 300 python -m unittest discover -s tests -p "*.py" -v || echo "Tests timed out or failed"
+          echo "Starting tests at $(date)"
+          timeout 180 stdbuf -oL -eL python -m unittest discover -s tests -p "*.py" -v 2>&1 || echo "Tests timed out or failed with exit code: $?"
+          echo "Tests finished at $(date)"
