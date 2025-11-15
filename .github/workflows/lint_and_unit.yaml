@@ -76,7 +76,7 @@ jobs:
           - 9200:9200
 
       apache-tika:
-        image: apache/tika:2.9.1.0
+        image: ghcr.io/${{ github.repository }}/apache-tika:latest
         ports:
           - 9998:9998
 
