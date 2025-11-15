@@ -158,6 +158,13 @@ jobs:
           SENTENCE_TRANSFORMERS_HOME: /tmp/sentence_transformers
         run: |
           echo "Starting tests at $(date)"
+          echo "Python version: $(python --version)"
+          echo "Checking service availability..."
+          curl -s http://localhost:9200/_cluster/health | python3 -m json.tool || echo "OpenSearch not reachable"
+          curl -s http://localhost:9998/tika || echo "Tika not reachable"
+          curl -s http://localhost:9000/minio/health/live || echo "MinIO not reachable"
+          echo "Services check complete"
+          echo "Starting test discovery..."
           coverage erase
           set +e
           timeout 180 stdbuf -oL -eL coverage run -m unittest discover -s tests -p "*.py" -v 2>&1
