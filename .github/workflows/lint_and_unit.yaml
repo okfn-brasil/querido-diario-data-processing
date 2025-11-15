@@ -178,27 +178,8 @@ jobs:
           TRANSFORMERS_OFFLINE: 1
           SENTENCE_TRANSFORMERS_HOME: /tmp/sentence_transformers
         run: |
-          echo "========================================="
-          echo "TEST STEP STARTED"
-          echo "========================================="
-          echo "Starting tests at $(date)"
-          echo "Python version: $(python --version)"
-          echo "Checking service availability..."
-          curl -s http://localhost:9200/_cluster/health | python3 -m json.tool || echo "OpenSearch not reachable"
-          curl -s http://localhost:9998/tika || echo "Tika not reachable"  
-          curl -s http://localhost:9000/minio/health/live || echo "MinIO not reachable"
-          echo "Services check complete"
-          echo "Starting test discovery..."
-          set +e
-          timeout 180 stdbuf -oL -eL python -m unittest discover -s tests -p "*.py" -v 2>&1
-          EXIT_CODE=$?
-          set -e
-          echo "Tests finished at $(date)"
-          echo "Exit code: $EXIT_CODE"
-          if [ $EXIT_CODE -eq 124 ]; then
-            echo "ERROR: Tests timed out after 3 minutes"
-            exit 1
-          elif [ $EXIT_CODE -ne 0 ]; then
-            echo "ERROR: Tests failed with exit code $EXIT_CODE"
-            exit $EXIT_CODE
-          fi
+          echo "SCRIPT STARTED - If you see this, the shell is working"
+          date
+          python -m unittest discover -s tests -p "*.py" -v
+          echo "SCRIPT FINISHED"
+          date
