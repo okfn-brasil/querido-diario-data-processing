@@ -81,6 +81,39 @@ jobs:
           pip install -r requirements.txt
           pip install coverage
 
+      - name: Create MinIO bucket
+        run: |
+          # Wait for MinIO to be ready
+          for i in {1..30}; do
+            if curl -sf http://localhost:9000/minio/health/live > /dev/null 2>&1; then
+              echo "MinIO is ready"
+              break
+            fi
+            echo "Waiting for MinIO... ($i/30)"
+            sleep 2
+          done
+          
+          # Install MinIO client
+          curl -sLo /tmp/mc https://dl.min.io/client/mc/release/linux-amd64/mc
+          chmod +x /tmp/mc
+          
+          # Configure MinIO client
+          /tmp/mc alias set minio http://localhost:9000 minio-access-key minio-secret-key
+          
+          # Create bucket if it doesn't exist
+          /tmp/mc mb minio/queridodiariobucket --ignore-existing || true
+          
+          echo "MinIO bucket created successfully"
+
+      - name: Create OpenSearch index
+        run: |
+          chmod +x init-scripts/opensearch/create-opensearch-index.sh
+          OPENSEARCH_HOST=http://localhost:9200 \
+          OPENSEARCH_USER=admin \
+          OPENSEARCH_PASSWORD=admin \
+          INDEX_NAME=querido-diario \
+          ./init-scripts/opensearch/create-opensearch-index.sh
+
       - name: Run tests with coverage
         env:
           PYTHONPATH: ${{ github.workspace }}
