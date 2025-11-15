@@ -119,7 +119,7 @@ services:
     volumes:
       - ./init-scripts/opensearch/create-opensearch-index.sh:/create-index.sh:ro
     networks:
-      - backend
+      - default
     entrypoint: ["/bin/sh", "/create-index.sh"]
     environment:
       OPENSEARCH_HOST: http://opensearch:9200
