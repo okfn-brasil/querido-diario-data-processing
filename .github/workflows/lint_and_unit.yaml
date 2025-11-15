@@ -75,15 +75,6 @@ jobs:
         ports:
           - 9200:9200
 
-      minio:
-        image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
-        env:
-          MINIO_ACCESS_KEY: minio-access-key
-          MINIO_SECRET_KEY: minio-secret-key
-          MINIO_DEFAULT_BUCKETS: queridodiariobucket:public
-        ports:
-          - 9000:9000
-
       apache-tika:
         image: apache/tika:2.9.1.0
         ports:
@@ -91,6 +82,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Start MinIO
+        run: |
+          docker run -d \
+            --name minio \
+            --network host \
+            -e MINIO_ROOT_USER=minio-access-key \
+            -e MINIO_ROOT_PASSWORD=minio-secret-key \
+            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z \
+            server /data --address :9000
+          
+          # Wait for MinIO to be ready
+          for i in {1..30}; do
+            if curl -sf http://localhost:9000/minio/health/live > /dev/null 2>&1; then
+              echo "MinIO is ready"
+              break
+            fi
+            echo "Waiting for MinIO to start... ($i/30)"
+            sleep 2
+          done
+      
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
