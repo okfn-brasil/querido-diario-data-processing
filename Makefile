@@ -188,7 +188,7 @@ else
 endif
 
 set-run-variable-values:
-	cp --no-clobber config/sample.env envvars || true
+	cp --update=none config/sample.env envvars || true
 
 .PHONY: sql
 sql: set-run-variable-values
