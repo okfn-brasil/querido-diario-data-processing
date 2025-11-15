@@ -76,7 +76,7 @@ jobs:
           - 9200:9200
 
       minio:
-        image: bitnami/minio:2021.4.6
+        image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
         env:
           MINIO_ACCESS_KEY: minio-access-key
           MINIO_SECRET_KEY: minio-secret-key

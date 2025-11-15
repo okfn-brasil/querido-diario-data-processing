@@ -24,7 +24,7 @@ services:
       - "${OPENSEARCH_PORT1:-9200}:9200"
       - "${OPENSEARCH_PORT2:-9300}:9300"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      test: ["CMD-SHELL", "curl -f -u admin:admin http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -32,7 +32,7 @@ services:
       - opensearch_data:/usr/share/opensearch/data
 
   minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: minio server /data
     environment:
       MINIO_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-minio-access-key}
@@ -92,6 +92,40 @@ services:
       - envvars
     networks:
       - default
+
+  # Bootstrap
+
+  # Create bucket on minio. Run once.
+  minio-createbucket:
+    image: quay.io/minio/mc:RELEASE.2025-03-12T17-29-24Z
+    depends_on:
+      - minio
+    restart: on-failure
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      /usr/bin/mc mb queridodiariobucket;
+      exit 0;
+      "
+
+  # Create OpenSearch index. Run once.
+  opensearch-init:
+    image: curlimages/curl:latest
+    container_name: querido-diario-opensearch-init
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    restart: on-failure
+    volumes:
+      - ./init-scripts/opensearch/create-opensearch-index.sh:/create-index.sh:ro
+    networks:
+      - backend
+    entrypoint: ["/bin/sh", "/create-index.sh"]
+    environment:
+      OPENSEARCH_HOST: http://opensearch:9200
+      OPENSEARCH_USER: admin
+      OPENSEARCH_PASSWORD: admin
+      INDEX_NAME: querido-diario
 
 volumes:
   postgres_data:
