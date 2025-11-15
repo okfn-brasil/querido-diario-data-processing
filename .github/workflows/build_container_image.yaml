@@ -182,10 +182,10 @@ jobs:
           discovery.type: single-node
           plugins.security.ssl.http.enabled: false
         options: >-
-          --health-cmd "curl -f http://localhost:9200/_cluster/health"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd "curl -s http://localhost:9200 >/dev/null || exit 1"
+          --health-interval 15s
+          --health-timeout 10s
+          --health-retries 20
         ports:
           - 9200:9200
 

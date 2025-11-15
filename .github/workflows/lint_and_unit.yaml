@@ -68,10 +68,10 @@ jobs:
           plugins.security.disabled: true
           OPENSEARCH_INITIAL_ADMIN_PASSWORD: admin
         options: >-
-          --health-cmd "curl -f http://localhost:9200/_cluster/health || exit 1"
-          --health-interval 10s
+          --health-cmd "curl -s http://localhost:9200 >/dev/null || exit 1"
+          --health-interval 15s
           --health-timeout 10s
-          --health-retries 10
+          --health-retries 20
         ports:
           - 9200:9200
 
