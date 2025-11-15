@@ -41,7 +41,7 @@ class TextExtractionTaskTests(TestCase):
             }
         ]
         self.database_mock.get_pending_gazettes = MagicMock(return_value=self.data)
-        self.database_mock.set_gazette_as_processed = MagicMock()
+        self.database_mock.update = MagicMock()
         self.storage_mock = MagicMock()
         self.storage_mock.get_file = MagicMock()
         self.storage_mock.upload_content = MagicMock()
@@ -105,8 +105,13 @@ class TextExtractionTaskTests(TestCase):
             self.text_extraction_function,
         )
 
-        self.database_mock.set_gazette_as_processed.assert_called_once_with(
-            1, "972aca2e-1174-11eb-b2d5-a86daaca905e"
+        # Check that database.update was called to mark gazette as processed
+        self.database_mock.update.assert_called_once()
+        call_args = self.database_mock.update.call_args
+        # Check the data parameter contains the expected id and checksum
+        self.assertEqual(call_args[0][1]["id"], 1)
+        self.assertEqual(
+            call_args[0][1]["file_checksum"], "972aca2e-1174-11eb-b2d5-a86daaca905e"
         )
 
     def test_should_index_document(self):
@@ -152,7 +157,7 @@ class TextExtractionTaskTests(TestCase):
             expected_data["source_text"] = f.read()
 
         database_mock.get_pending_gazettes = MagicMock(return_value=data)
-        database_mock.set_gazette_as_processed = MagicMock()
+        database_mock.update = MagicMock()
 
         self.copy_file_to_temporary_file("tests/data/fake_gazette.txt")
         text_extraction_function = MagicMock(spec=TextExtractorInterface)
@@ -166,7 +171,9 @@ class TextExtractionTaskTests(TestCase):
             self.index_mock,
             text_extraction_function,
         )
-        self.index_mock.index_document.assert_called_once_with(expected_data)
+        self.index_mock.index_document.assert_called_once_with(
+            expected_data, document_id=expected_data["file_checksum"]
+        )
 
     def file_should_not_exist(self, file_to_check):
         self.assertFalse(
@@ -187,7 +194,7 @@ class TextExtractionTaskTests(TestCase):
         )
         self.storage_mock.get_file.assert_called_once()
         self.database_mock.get_pending_gazettes.assert_called_once()
-        self.database_mock.set_gazette_as_processed.assert_not_called()
+        self.database_mock.update.assert_not_called()
         self.index_mock.index_document.assert_not_called()
         self.file_should_not_exist(
             text_extraction_function.extract_text.call_args.args[0]
@@ -239,7 +246,7 @@ class TextExtractionTaskTests(TestCase):
             },
         ]
         database_mock.get_pending_gazettes = MagicMock(return_value=data)
-        database_mock.set_gazette_as_processed = MagicMock()
+        database_mock.update = MagicMock()
 
         file_content_returned_by_text_extraction_function_mock = None
         with open("tests/data/fake_gazette.txt", "r") as f:
@@ -261,7 +268,7 @@ class TextExtractionTaskTests(TestCase):
         database_mock.get_pending_gazettes.assert_called_once()
         self.assert_called_twice(self.storage_mock.get_file)
         self.assert_called_twice(text_extraction_function.extract_text)
-        database_mock.set_gazette_as_processed.assert_called_once()
+        database_mock.update.assert_called_once()
         self.index_mock.index_document.assert_called_once()
         self.file_should_not_exist(
             text_extraction_function.extract_text.call_args.args[0]
@@ -277,13 +284,14 @@ class TextExtractionTaskTests(TestCase):
             self.index_mock,
             self.text_extraction_function,
         )
-        self.index_mock.index_document.assert_called_once_with(expected_data)
+        self.index_mock.index_document.assert_called_once_with(
+            expected_data, document_id=expected_data["file_checksum"]
+        )
 
     def test_upload_gazette_raw_text(self):
         content = "some content"
-        gazette = dict(file_path="some_file.pdf", source_text=content)
-        upload_gazette_raw_text(gazette, self.storage_mock)
-        self.assertEqual(gazette["file_raw_txt"], "http://test.com/some_file.txt")
-        self.storage_mock.upload_content.assert_called_once_with(
-            "some_file.txt", content
-        )
+        gazette_id = "972aca2e-1174-11eb-b2d5-a86daaca905e"
+        file_key = "some_file.txt"
+        self.storage_mock.upload_content.return_value = "http://test.com/some_file.txt"
+        upload_gazette_raw_text(self.storage_mock, gazette_id, content, file_key)
+        self.storage_mock.upload_content.assert_called_once_with(content, file_key)
