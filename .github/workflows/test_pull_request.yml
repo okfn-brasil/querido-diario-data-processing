@@ -103,8 +103,16 @@ jobs:
             sleep 2
           done
           
-          # Install MinIO client
-          curl -sLo /tmp/mc https://dl.min.io/client/mc/release/linux-amd64/mc
+          # Detect architecture and download appropriate MinIO client
+          ARCH=$(uname -m)
+          if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+            MC_URL="https://dl.min.io/client/mc/release/linux-arm64/mc"
+          else
+            MC_URL="https://dl.min.io/client/mc/release/linux-amd64/mc"
+          fi
+          
+          echo "Downloading MinIO client for architecture: $ARCH"
+          curl -sLo /tmp/mc "$MC_URL"
           chmod +x /tmp/mc
           
           # Configure MinIO client
