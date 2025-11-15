@@ -64,20 +64,19 @@ jobs:
           docker run -d \
             --name minio \
             --network host \
+            --health-cmd "curl -f http://localhost:9000/minio/health/live || exit 1" \
+            --health-interval 10s \
+            --health-timeout 5s \
+            --health-retries 5 \
             -e MINIO_ROOT_USER=minio-access-key \
             -e MINIO_ROOT_PASSWORD=minio-secret-key \
             quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z \
-            server /data --address :9000
+            server /data --console-address :9001
           
           # Wait for MinIO to be ready
-          for i in {1..30}; do
-            if curl -sf http://localhost:9000/minio/health/live > /dev/null 2>&1; then
-              echo "MinIO is ready"
-              break
-            fi
-            echo "Waiting for MinIO to start... ($i/30)"
-            sleep 2
-          done
+          echo "Waiting for MinIO to be ready..."
+          timeout 60 bash -c 'until curl -sf http://localhost:9000/minio/health/live > /dev/null 2>&1; do sleep 2; done'
+          echo "MinIO is ready"
 
       - name: Set up Python
         uses: actions/setup-python@v5
