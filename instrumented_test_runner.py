@@ -84,7 +84,7 @@ if __name__ == '__main__':
     # Discover and run tests
     loader = unittest.TestLoader()
     start_dir = 'tests'
-    pattern = '*.py'
+    pattern = '*_tests.py'
     
     print(f"\n📁 Discovering tests in: {start_dir}", flush=True)
     print(f"   Pattern: {pattern}", flush=True)
