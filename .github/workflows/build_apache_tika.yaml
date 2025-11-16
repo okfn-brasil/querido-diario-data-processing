@@ -1,7 +1,5 @@
 on:
   push:
-    branches:
-      - main
     paths:
       - 'Dockerfile_apache_tika'
       - '.github/workflows/build_apache_tika.yaml'
@@ -9,7 +7,7 @@ on:
       - "v*"
   workflow_dispatch:
 
-name: Build and Test Apache Tika container image
+name: Build Apache Tika container image
 
 permissions:
   contents: read

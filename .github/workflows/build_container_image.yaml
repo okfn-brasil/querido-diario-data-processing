@@ -1,12 +1,12 @@
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*"
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
   workflow_dispatch:
 
-name: Build and Test container images
+name: Build and publish container images
 
 permissions:
   contents: read
@@ -49,30 +49,35 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push development container image
-        if: ${{ startsWith(github.ref, 'refs/heads/') }}
+
+      - name: Generate image tags
+        id: tags
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Version tag (e.g., v1.0.0)
+            echo "tags=ghcr.io/${{ github.repository }}:${{ github.ref_name }}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+            echo "manifest_tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
+            # Nightly build
+            DATE=$(date +%Y%m%d)
+            echo "tags=ghcr.io/${{ github.repository }}:nightly-${DATE}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+            echo "manifest_tag=nightly" >> $GITHUB_OUTPUT
+          else
+            # Manual dispatch or other
+            echo "tags=ghcr.io/${{ github.repository }}:latest-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+            echo "manifest_tag=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push container image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           platforms: ${{ matrix.platform }}
           push: true
-          cache-from: type=gha,scope=main-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=main-${{ matrix.arch }}
-          tags: |
-            ghcr.io/${{ github.repository }}:latest-${{ matrix.arch }}
-      - name: Build and push tagged container image
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: ${{ matrix.platform }}
-          push: true
-          cache-from: type=gha,scope=tag-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=tag-${{ matrix.arch }}
-          tags: |
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-${{ matrix.arch }}
+          cache-from: type=gha,scope=app-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=app-${{ matrix.arch }}
+          tags: ${{ steps.tags.outputs.tags }}
 
   create-data-processing-manifest:
     name: Create data processing multi-arch manifest
