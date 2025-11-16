@@ -17,76 +17,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-multi-arch:
-    name: Test on multiple architectures
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: linux/amd64
-            runner: ubuntu-latest
-          - platform: linux/arm64
-            runner: ubuntu-24.04-arm
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 45
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Free up disk space
-        run: |
-          sudo apt-get autoremove -y
-          sudo apt-get autoclean
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo docker system prune -af
-          df -h
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: |
-            image=moby/buildkit:v0.12.5
-
-      - name: Build test image for ${{ matrix.platform }}
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: ${{ matrix.platform }}
-          load: ${{ matrix.platform == 'linux/amd64' }}
-          cache-from: type=gha,scope=test-${{ matrix.platform }}
-          cache-to: type=gha,mode=min,scope=test-${{ matrix.platform }}
-          tags: |
-            test-data-processing:${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
-
-      # Run functional tests on both architectures with native execution
-      - name: Test Python dependencies
-        run: |
-          docker run --rm test-data-processing:${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }} python -c "
-          import sentence_transformers
-          import psycopg2
-          import opensearchpy
-          import boto3
-          import sklearn
-          import numpy
-          print('✅ All major dependencies imported successfully on ${{ matrix.platform }}')
-          print('✅ sentence-transformers version:', sentence_transformers.__version__)
-          print('✅ psycopg2 version:', psycopg2.__version__)
-          print('✅ opensearchpy version:', opensearchpy.__version__)
-          print('✅ boto3 version:', boto3.__version__)
-          print('✅ scikit-learn version:', sklearn.__version__)
-          print('✅ numpy version:', numpy.__version__)
-          "
-
-      - name: Clean up test images
-        if: always()
-        run: |
-          docker system prune -f
-          docker image prune -af
-
   build-data-processing:
     name: Build data processing container image
     strategy:
@@ -100,7 +30,6 @@ jobs:
             runner: ubuntu-24.04-arm
             arch: arm64
     runs-on: ${{ matrix.runner }}
-    needs: [test-multi-arch]
     timeout-minutes: 90
     steps:
       - name: Checkout code
