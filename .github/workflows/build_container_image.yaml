@@ -3,7 +3,7 @@ on:
     tags:
       - "v*"
   schedule:
-    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+    - cron: '0 2 1 * *'  # Monthly on the 1st at 2 AM UTC
   workflow_dispatch:
 
 name: Build and publish container images
@@ -58,10 +58,10 @@ jobs:
             echo "tags=ghcr.io/${{ github.repository }}:${{ github.ref_name }}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
             echo "manifest_tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           elif [[ "${{ github.event_name }}" == "schedule" ]]; then
-            # Nightly build
-            DATE=$(date +%Y%m%d)
-            echo "tags=ghcr.io/${{ github.repository }}:nightly-${DATE}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
-            echo "manifest_tag=nightly" >> $GITHUB_OUTPUT
+            # Monthly build
+            DATE=$(date +%Y%m)
+            echo "tags=ghcr.io/${{ github.repository }}:monthly-${DATE}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+            echo "manifest_tag=monthly" >> $GITHUB_OUTPUT
           else
             # Manual dispatch or other
             echo "tags=ghcr.io/${{ github.repository }}:latest-${{ matrix.arch }}" >> $GITHUB_OUTPUT
