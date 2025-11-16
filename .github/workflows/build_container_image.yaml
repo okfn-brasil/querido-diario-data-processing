@@ -77,18 +77,6 @@ jobs:
           echo "=== Docker system info ==="
           docker system df
 
-      - name: Build Apache Tika test image for ${{ matrix.platform }}
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile_apache_tika
-          platforms: ${{ matrix.platform }}
-          load: ${{ matrix.platform == 'linux/amd64' }}
-          cache-from: type=gha,scope=tika-test-${{ matrix.platform }}
-          cache-to: type=gha,mode=min,scope=tika-test-${{ matrix.platform }}
-          tags: |
-            test-apache-tika:${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
-
       # Run functional tests on both architectures with native execution
       - name: Test Python dependencies
         run: |
@@ -107,39 +95,6 @@ jobs:
           print('✅ scikit-learn version:', sklearn.__version__)
           print('✅ numpy version:', numpy.__version__)
           "
-
-      - name: Test Apache Tika server
-        run: |
-          # Start Tika server
-          CONTAINER_ID=$(docker run -d -p 9998:9998 test-apache-tika:${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }})
-          echo "Waiting for Tika server to start on ${{ matrix.platform }}..."
-          sleep 15
-
-          # Test if Tika is responding (with retry)
-          TIKA_READY=false
-          for i in {1..6}; do
-            if curl -f http://localhost:9998/version > /dev/null 2>&1; then
-              TIKA_READY=true
-              break
-            fi
-            echo "Attempt $i/6: Tika not ready yet, waiting 5 more seconds..."
-            sleep 5
-          done
-
-          if [ "$TIKA_READY" = true ]; then
-            echo "✅ Apache Tika server is responding on ${{ matrix.platform }}"
-            TIKA_VERSION=$(curl -s http://localhost:9998/version)
-            echo "✅ Tika version: $TIKA_VERSION"
-          else
-            echo "❌ Apache Tika server is not responding after 45 seconds on ${{ matrix.platform }}"
-            echo "Container logs:"
-            docker logs $CONTAINER_ID
-            docker stop $CONTAINER_ID
-            exit 1
-          fi
-
-          # Cleanup
-          docker stop $CONTAINER_ID
 
       - name: Clean up test images
         if: always()
@@ -218,18 +173,6 @@ jobs:
           echo "Waiting for MinIO to be ready..."
           timeout 60 bash -c 'until curl -sf http://localhost:9000/minio/health/live > /dev/null 2>&1; do sleep 2; done'
           echo "MinIO is ready"
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: requirements.txt
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
 
       - name: Create MinIO bucket
         run: |
@@ -510,70 +453,6 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:${{ github.ref_name }}-${{ matrix.arch }}
 
-  build-apache-tika:
-    name: Build Apache Tika container image
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: linux/amd64
-            runner: ubuntu-latest
-            arch: amd64
-          - platform: linux/arm64
-            runner: ubuntu-24.04-arm
-            arch: arm64
-    runs-on: ${{ matrix.runner }}
-    needs: [test-multi-arch, test-python-unit]
-    timeout-minutes: 60
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Free up disk space
-        run: |
-          # Remove unnecessary packages and clean up
-          sudo apt-get autoremove -y
-          sudo apt-get autoclean
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo docker system prune -af
-          df -h
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: |
-            image=moby/buildkit:v0.12.5
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push Apache Tika development container image
-        if: ${{ startsWith(github.ref, 'refs/heads/') }}
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile_apache_tika
-          platforms: ${{ matrix.platform }}
-          push: true
-          cache-from: type=gha,scope=tika-main-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=tika-main-${{ matrix.arch }}
-          tags: |
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest-${{ matrix.arch }}
-      - name: Build and push Apache Tika tagged container image
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile_apache_tika
-          platforms: ${{ matrix.platform }}
-          push: true
-          cache-from: type=gha,scope=tika-tag-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=tika-tag-${{ matrix.arch }}
-          tags: |
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-${{ matrix.arch }}
   create-data-processing-manifest:
     name: Create data processing multi-arch manifest
     runs-on: ubuntu-latest
@@ -633,57 +512,3 @@ jobs:
             ghcr.io/$REPO:${{ github.ref_name }}-amd64 \
             ghcr.io/$REPO:${{ github.ref_name }}-arm64
 
-  create-apache-tika-manifest:
-    name: Create Apache Tika multi-arch manifest
-    runs-on: ubuntu-latest
-    needs: build-apache-tika
-    timeout-minutes: 15
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Verify single-arch images availability (branch)
-        if: ${{ startsWith(github.ref, 'refs/heads/') }}
-        run: |
-          for tag in latest-amd64 latest-arm64; do
-            for i in {1..20}; do
-              if docker buildx imagetools inspect ghcr.io/okfn-brasil/querido-diario-apache-tika-server:$tag > /dev/null 2>&1; then
-                echo "Found ghcr.io/okfn-brasil/querido-diario-apache-tika-server:$tag";
-                break;
-              fi
-              echo "Waiting for ghcr.io/okfn-brasil/querido-diario-apache-tika-server:$tag to be available ($i/20)...";
-              sleep 3;
-            done
-          done
-      - name: Create and push Apache Tika development manifest
-        if: ${{ startsWith(github.ref, 'refs/heads/') }}
-        run: |
-          docker buildx imagetools create \
-            -t ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest \
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest-amd64 \
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest-arm64
-      - name: Verify single-arch images availability (tag)
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        run: |
-          for arch in amd64 arm64; do
-            for i in {1..20}; do
-              if docker buildx imagetools inspect ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-$arch > /dev/null 2>&1; then
-                echo "Found ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-$arch";
-                break;
-              fi
-              echo "Waiting for ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-$arch to be available ($i/20)...";
-              sleep 3;
-            done
-          done
-      - name: Create and push Apache Tika tagged manifest
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        run: |
-          docker buildx imagetools create \
-            -t ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }} \
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-amd64 \
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-arm64
