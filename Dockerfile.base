@@ -42,6 +42,7 @@ RUN addgroup --system $USER && \
     apt-get update -y && \
     apt-get -y install --no-install-recommends \
         libpq5 \
+        libmagic1 \
         wait-for-it && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
