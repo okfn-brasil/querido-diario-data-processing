@@ -1,5 +1,7 @@
 import argparse
+import gc
 import logging
+import resource
 from os import environ
 
 from data_extraction import create_apache_tika_text_extraction
@@ -7,6 +9,19 @@ from database import create_database_interface
 from index import create_index_interface
 from storage import create_storage_interface
 from tasks import run_task
+
+
+def setup_memory_controls():
+    """
+    Configure memory limits and garbage collection to prevent memory overflow.
+    Set soft/hard memory limits (1.5 GB soft, 1.9 GB hard for 2GB container)
+    """
+    soft_limit = int(1.5 * 1024 * 1024 * 1024)  # 1.5 GB
+    hard_limit = int(1.9 * 1024 * 1024 * 1024)  # 1.9 GB
+    resource.setrlimit(resource.RLIMIT_AS, (soft_limit, hard_limit))
+
+    # More aggressive garbage collection
+    gc.set_threshold(700, 10, 5)
 
 
 def is_debug_enabled():
@@ -68,6 +83,7 @@ def aggregates_pipeline():
 
 
 def execute_pipeline(pipeline):
+    setup_memory_controls()
     enable_debug_if_necessary()
 
     if not pipeline or pipeline == "gazette_texts":
