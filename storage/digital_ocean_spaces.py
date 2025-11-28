@@ -70,7 +70,10 @@ class DigitalOceanSpaces(StorageInterface):
         )
 
     def get_file(self, file_to_be_downloaded: Union[str, Path], destination) -> None:
-        logging.debug(f"Getting {file_to_be_downloaded}")
+        """
+        Download file using streaming to prevent loading entire file in memory (OOM prevention)
+        """
+        logging.debug(f"Getting {file_to_be_downloaded} (streaming)")
         self._client.download_fileobj(
             self._bucket, str(file_to_be_downloaded), destination
         )
@@ -81,6 +84,9 @@ class DigitalOceanSpaces(StorageInterface):
         content_to_be_uploaded: Union[str, BytesIO],
         permission: str = "public-read",
     ) -> None:
+        """
+        Upload content using streaming to prevent loading entire content in memory (OOM prevention)
+        """
         logging.debug(f"Uploading {file_key}")
 
         if isinstance(content_to_be_uploaded, str):
@@ -88,6 +94,8 @@ class DigitalOceanSpaces(StorageInterface):
             self._client.upload_fileobj(
                 f, self._bucket, file_key, ExtraArgs={"ACL": permission}
             )
+            # Explicit cleanup
+            f.close()
         else:
             self._client.upload_fileobj(
                 content_to_be_uploaded,

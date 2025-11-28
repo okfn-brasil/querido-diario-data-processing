@@ -4,6 +4,10 @@ from .digital_ocean_spaces import (
     DigitalOceanSpacesIntegrationTests,
     StorageInterfaceCreationTests,
 )
+from .list_gazettes_pagination_tests import (
+    GazettesListingPaginationTests,
+    GazettesListingRegressionTests,
+)
 from .main_tests import MainModuleTests
 from .opensearch import (
     IndexInterfaceFactoryFunctionTests,
@@ -26,6 +30,8 @@ __all__ = [
     "CreationDatabaseInterfaceFunctionTests",
     "DigitalOceanSpacesIntegrationTests",
     "FactoryMethodApacheTikaTest",
+    "GazettesListingPaginationTests",
+    "GazettesListingRegressionTests",
     "IndexInterfaceFactoryFunctionTests",
     "MainModuleTests",
     "OpensearchBasicTests",
