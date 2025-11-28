@@ -8,7 +8,7 @@ def get_documents_with_ids(
 ) -> Iterable[Dict]:
     query_filter_by_ids = {
         "query": {"bool": {"filter": {"ids": {"values": ids}}}},
-        "size": 100,
+        "size": 50,
     }
     yield from get_documents_from_query(query_filter_by_ids, index, index_name)
 

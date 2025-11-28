@@ -22,7 +22,7 @@ def extract_themed_excerpts_from_gazettes(
 ) -> List[str]:
     ids = []
     for theme_query in theme["queries"]:
-        for batch in batched(gazette_ids, 500):
+        for batch in batched(gazette_ids, 250):
             for excerpt in get_excerpts_from_gazettes_with_themed_query(
                 theme_query, batch, index
             ):
@@ -88,7 +88,7 @@ def get_es_query_from_themed_query(
 ) -> Dict:
     es_query = {
         "query": {"bool": {"must": [], "filter": {"ids": {"values": gazette_ids}}}},
-        "size": 10,
+        "size": 5,
         "highlight": {
             "fields": {
                 "source_text.with_stopwords": {

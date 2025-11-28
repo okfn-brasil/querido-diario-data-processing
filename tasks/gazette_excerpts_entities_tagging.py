@@ -55,7 +55,7 @@ def get_es_query_from_entity_case(
 ) -> Dict:
     es_query = {
         "query": {"bool": {"should": [], "filter": {"ids": {"values": excerpt_ids}}}},
-        "size": 100,
+        "size": 50,
         "highlight": {
             "fields": {
                 "excerpt.with_stopwords": {  # Allows tagging phrases containing stopwords correctly
