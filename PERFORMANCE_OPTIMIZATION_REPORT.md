@@ -4,9 +4,11 @@
 
 Este relatório apresenta uma análise completa das oportunidades de melhoria de performance no pipeline de processamento de dados do Querido Diário, identificando gargalos críticos e propondo soluções práticas com base na arquitetura atual do sistema.
 
+**⚠️ REVISÃO (2025-11-28):** Este plano foi revisado para priorizar iniciativas que endereçam problemas de **Out Of Memory (OOM)** em produção, que têm sido críticos e impactam a estabilidade do sistema.
+
 **Status Atual:** O sistema processa documentos de forma sequencial, sem paralelização, com múltiplos pontos de I/O bloqueante e carregamento completo de documentos em memória.
 
-**Impacto Estimado:** As otimizações propostas podem reduzir o tempo de processamento em 60-80% e o consumo de memória em 40-60%.
+**Impacto Estimado:** As otimizações propostas podem reduzir o tempo de processamento em 60-80% e o consumo de memória em 40-60%. **A prioridade agora é reduzir o consumo de memória para evitar crashes OOM.**
 
 ---
 
@@ -48,21 +50,29 @@ O pipeline principal (`gazette_text_extraction.py`) executa:
 
 ### 1.3 Gargalos Identificados
 
-| Gargalo | Localização | Impacto | Severidade |
-|---------|-------------|---------|------------|
-| **Processamento Sequencial** | `gazette_text_extraction.py:35-46` | Alto | 🔴 Crítico |
-| **Download/Upload Síncrono** | `gazette_text_extraction.py:166-174` | Alto | 🔴 Crítico |
-| **Apache Tika Síncrono** | `text_extraction.py:28-41` | Alto | 🔴 Crítico |
-| **Carregamento Total em Memória** | `text_extraction.py:43-50` | Médio | 🟡 Moderado |
-| **Indexação Individual** | `gazette_text_extraction.py:83-84` | Médio | 🟡 Moderado |
-| **Query sem Paginação** | `list_gazettes_to_be_processed.py:54-55` | Médio | 🟡 Moderado |
-| **Embeddings sem Cache** | `gazette_excerpts_embedding_reranking.py:19-44` | Baixo | 🟢 Menor |
+| Gargalo | Localização | Impacto | Severidade | Impacto OOM |
+|---------|-------------|---------|------------|-------------|
+| **Query sem Paginação** | `list_gazettes_to_be_processed.py:54-55` | Médio | 🔴 **CRÍTICO OOM** | 🔥 Causa OOM |
+| **Carregamento Total em Memória** | `text_extraction.py:43-50` | Médio | 🔴 **CRÍTICO OOM** | 🔥 Causa OOM |
+| **Processamento Sequencial** | `gazette_text_extraction.py:35-46` | Alto | 🟡 Crítico | ⚠️ Retém objetos |
+| **Download/Upload Síncrono** | `gazette_text_extraction.py:166-174` | Alto | 🟡 Crítico | ⚠️ Retém buffers |
+| **Apache Tika Síncrono** | `text_extraction.py:28-41` | Alto | 🟡 Crítico | ⚠️ Retém documentos |
+| **Indexação Individual** | `gazette_text_extraction.py:83-84` | Médio | 🟡 Moderado | ⚠️ Acumula payloads |
+| **Embeddings sem Cache** | `gazette_excerpts_embedding_reranking.py:19-44` | Baixo | 🟢 Menor | ✅ Baixo |
 
 ---
 
 ## 2. Oportunidades de Otimização
 
-### 2.1 Processamento em Batch de Documentos ⭐⭐⭐⭐⭐
+**🔥 PRIORIDADES REVISADAS - FOCO EM OOM:**
+1. **🚨 Crítico OOM** - Implementar IMEDIATAMENTE (previne crashes)
+2. **⚡ Alto OOM** - Implementar em seguida (reduz consumo significativo)
+3. **📊 Médio OOM** - Implementar após estabilização
+4. **✅ Baixo OOM** - Pode aguardar
+
+---
+
+### 2.1 ~~Processamento em Batch de Documentos~~ **[DESPRIORI ZADO]** ⭐⭐⭐
 
 **Problema:** Cada documento é processado individualmente em loop sequencial.
 
@@ -76,6 +86,10 @@ O pipeline principal (`gazette_text_extraction.py`) executa:
 
 **Complexidade:** Média
 
+**Impacto OOM:** ⚠️ Moderado (pode aumentar uso de memória se não controlado)
+
+**⚠️ ATENÇÃO:** Implementar apenas APÓS resolver problemas críticos de memória (2.3 e 2.4), caso contrário pode **AGRAVAR** problemas de OOM ao processar múltiplos documentos simultaneamente.
+
 **Arquivos Afetados:**
 - `tasks/gazette_text_extraction.py`
 - `tasks/list_gazettes_to_be_processed.py`
@@ -83,7 +97,7 @@ O pipeline principal (`gazette_text_extraction.py`) executa:
 
 ---
 
-### 2.2 Processamento Assíncrono com Concurrent Futures ⭐⭐⭐⭐⭐
+### 2.2 ~~Processamento Assíncrono com Concurrent Futures~~ **[POSTERGAR]** ⭐⭐⭐
 
 **Problema:** Operações de rede (download, upload, Apache Tika) são síncronas e bloqueantes.
 
@@ -97,23 +111,28 @@ O pipeline principal (`gazette_text_extraction.py`) executa:
 
 **Complexidade:** Média
 
+**Impacto OOM:** ⚠️ **ALTO - Pode AGRAVAR OOM** se implementado sem correções de memória
+
+**⚠️ ATENÇÃO:** NÃO implementar antes de resolver 2.3 (Streaming) e 2.4 (Paginação), pois paralelizar processos com alto consumo de memória irá **multiplicar o problema** e causar mais crashes.
+
 **Arquivos Afetados:**
 - `tasks/gazette_text_extraction.py`
 - `storage/digital_ocean_spaces.py` (opcional: adicionar métodos async)
 
 ---
 
-### 2.3 Streaming de Arquivos Grandes ⭐⭐⭐⭐
+### 2.3 🚨 **[PRIORIDADE MÁXIMA - OOM]** Streaming de Arquivos Grandes ⭐⭐⭐⭐⭐
 
-**Problema:** Arquivos são carregados completamente na memória durante download/upload.
+**Problema:** Arquivos são carregados completamente na memória durante download/upload, causando **crashes de OOM em produção**.
 
-**Solução:** Implementar streaming com chunks para arquivos grandes.
+**Solução:** Implementar streaming com chunks para arquivos grandes (ex: chunks de 8MB).
 
-**Benefícios:**
+**Benefícios para OOM:**
+- 🔥 **CRÍTICO:** Previne OOM durante processamento de arquivos grandes
 - ✅ Redução de 40-60% no consumo de memória
 - ✅ Possibilidade de processar arquivos maiores que a RAM disponível
 - ✅ Melhor estabilidade do sistema
-- ✅ Redução de crashes por OOM (Out of Memory)
+- ✅ **Elimina causa raiz de crashes OOM**
 
 **Complexidade:** Baixa-Média
 
@@ -124,18 +143,47 @@ O pipeline principal (`gazette_text_extraction.py`) executa:
 
 **Nota:** O código já possui `upload_file_multipart` implementado mas não é utilizado.
 
+**🚨 AÇÃO IMEDIATA:**
+1. Modificar `digital_ocean_spaces.py` para fazer download em chunks
+2. Modificar `text_extraction.py` para processar em streaming via Apache Tika
+3. Usar `upload_file_multipart` já existente para uploads
+4. Adicionar limite de memória explícito (ex: `max_memory_per_file=100MB`)
+
 ---
 
-### 2.4 Bulk Indexing no OpenSearch ⭐⭐⭐⭐
+### 2.4 🚨 **[PRIORIDADE MÁXIMA - OOM]** Paginação PostgreSQL ⭐⭐⭐⭐⭐
 
-**Problema:** Documentos são indexados um por um no OpenSearch.
+**Problema:** Query carrega TODOS os documentos pendentes em memória de uma vez, causando **OOM quando há muitos documentos para processar**.
 
-**Solução:** Usar a API de Bulk Indexing do OpenSearch.
+**Solução:** Implementar paginação/cursor no PostgreSQL para carregar documentos em lotes.
+
+**Benefícios para OOM:**
+- 🔥 **CRÍTICO:** Previne OOM ao listar milhares de documentos
+- ✅ Consumo de memória constante independente do volume
+- ✅ Redução imediata de 60-90% no uso de memória inicial
+- ✅ **Elimina causa raiz de crashes OOM no início do processamento**
+
+**Complexidade:** Baixa
+
+**Arquivos Afetados:**
+- `tasks/list_gazettes_to_be_processed.py`
+
+**🚨 AÇÃO IMEDIATA:**
+1. Adicionar parâmetros `limit` e `offset` ou usar cursor PostgreSQL
+2. Implementar iteração por páginas (ex: 100-1000 docs por página)
+3. Processar cada página antes de carregar a próxima
+
+---
+
+### 2.5 ⚡ **[ALTA PRIORIDADE - OOM]** Bulk Indexing no OpenSearch ⭐⭐⭐⭐
 
 **Benefícios:**
 - ✅ Redução de 70-90% no tempo de indexação
 - ✅ Menor overhead de rede
 - ✅ Melhor throughput do OpenSearch
+- ⚠️ **Reduz acúmulo de payloads em memória** (ajuda com OOM indiretamente)
+
+**Impacto OOM:** ⚡ Moderado (reduz objetos acumulados em memória)
 - ✅ Redução de conexões HTTP
 
 **Complexidade:** Baixa
@@ -798,62 +846,104 @@ class ProcessingMetrics:
 
 ---
 
-## 10. Recomendações Finais
+## 10. Recomendações Finais - **REVISADO COM FOCO EM OOM**
 
-### Prioridade Máxima (Implementar Imediatamente) 🚨
+### 🚨 CRÍTICO - Implementar ESTA SEMANA (Previne Crashes OOM)
 
-1. **Bulk Indexing OpenSearch** - Ganho massivo com baixo risco
-2. **Paginação PostgreSQL** - Redução imediata de memória
-3. **Usar Multipart Upload** - Feature já existe, só ativar
+1. **🔥 Paginação PostgreSQL** - Evita carregar milhares de docs em memória de uma vez
+   - **Impacto:** Reduz 60-90% do uso de memória inicial
+   - **Esforço:** 1-2 dias
+   - **Risco:** Muito baixo
+   
+2. **🔥 Streaming de Arquivos** - Processa arquivos em chunks, não carrega tudo em memória
+   - **Impacto:** Previne OOM em arquivos grandes (>50MB)
+   - **Esforço:** 2-3 dias (código multipart já existe!)
+   - **Risco:** Baixo
 
-### Alta Prioridade (Fase 1-2) ⚡
+3. **🔥 Garbage Collection Explícito + Memory Limits** - Garante liberação de memória
+   - **Impacto:** Reduz acúmulo de objetos entre documentos
+   - **Esforço:** 1 dia
+   - **Risco:** Muito baixo
 
-4. **Processamento em Batch** - Maior ganho geral de performance
-5. **ThreadPoolExecutor para I/O** - Paralelização sem complexidade excessiva
-6. **Connection Pooling** - Fundação para escalabilidade
+### ⚡ ALTA PRIORIDADE - Próximas 2 Semanas (Reduz Consumo)
 
-### Prioridade Média (Fase 3) 📊
+4. **Bulk Indexing OpenSearch** - Reduz objetos acumulados em memória
+5. **Connection Pooling** - Evita acúmulo de conexões abertas
+6. **Retry Logic com Cleanup** - Garante limpeza em caso de erro
 
-7. **Streaming de Arquivos** - Necessário para arquivos muito grandes
-8. **Retry Logic** - Melhora resiliência
-9. **Cache de Modelo ML** - Otimização pontual mas efetiva
+### 📊 MÉDIA PRIORIDADE - Após Estabilização (Semanas 3-4)
 
-### Baixa Prioridade (Futuro/Fase 4) 🔮
+7. **Monitoramento de Memória** - Métricas e alertas de uso
+8. **Cache de Modelo ML** - Mas com limite de tamanho
+9. **Otimização de Query PostgreSQL** - Reduz overhead
 
-10. **Fila de Processamento (Celery)** - Apenas se precisar escalabilidade horizontal massiva
-11. **Cache Distribuído** - Apenas se houver muita redundância de processamento
-12. **Multi-Worker Distribuído** - Apenas para escala muito grande (>100k docs/dia)
+### ⚠️ POSTERGAR - Implementar APENAS Após Resolver OOM
+
+10. **Processamento em Batch** - PODE AGRAVAR OOM se feito antes
+11. **ThreadPoolExecutor/Async** - PODE AGRAVAR OOM se feito antes
+12. **Multi-Worker Distribuído** - PODE AGRAVAR OOM se feito antes
+
+### ❌ BAIXA PRIORIDADE - Futuro Distante
+
+13. **Fila de Processamento (Celery)** - Apenas para escalabilidade horizontal
+14. **Cache Distribuído** - Apenas se houver redundância
 
 ---
 
-## 11. Próximos Passos
+## 11. Próximos Passos - **PLANO DE AÇÃO OOM**
 
-### Ação Imediata (Esta Semana)
+### 🚨 AÇÃO IMEDIATA (HOJE - DIA 0)
 
-1. ✅ Revisar este documento com a equipe
-2. ✅ Aprovar plano de implementação
-3. ✅ Definir ambientes de staging para testes de performance
-4. ✅ Configurar ferramentas de profiling e monitoramento
+1. ✅ **APROVAR este plano revisado com foco em OOM**
+2. ✅ Alocar desenvolvedor(es) para Fase 0 com prioridade máxima
+3. ✅ Configurar monitoramento de memória em produção (se ainda não existe)
+4. ✅ Criar ambiente de staging com limites de memória similares a produção
+5. ✅ Documentar casos recentes de OOM (logs, contexto, volume)
 
-### Semana 1-2
+### 📅 DIA 1-2: Paginação PostgreSQL
 
-1. 🚀 Implementar Fase 1 (Quick Wins)
-2. 📊 Estabelecer baseline de métricas
-3. 🧪 Testes de performance comparativos
-4. 📝 Documentar resultados
+1. 🚀 Implementar paginação em `list_gazettes_to_be_processed.py`
+2. 🧪 Testar com 10k+ documentos pendentes
+3. 📊 Medir uso de memória antes/depois
+4. ✅ Code review e merge
 
-### Semana 3-5
+### 📅 DIA 2-4: Streaming de Arquivos
 
-1. 🚀 Implementar Fase 2 (Processamento Paralelo)
-2. 🧪 Testes de carga e stress
-3. 📊 Avaliar ganhos reais vs. estimados
-4. 🐛 Bug fixes e ajustes finos
+1. 🚀 Implementar download em chunks
+2. 🚀 Modificar integração com Apache Tika para streaming
+3. 🚀 Ativar `upload_file_multipart` existente
+4. 🧪 Testar com arquivos grandes (100MB+)
+5. 📊 Medir uso de memória durante processamento
+6. ✅ Code review e merge
 
-### Revisão Mensal
+### 📅 DIA 5: Deploy e Validação
 
-- Avaliar ROI real
-- Decidir sobre Fase 3 e 4
-- Ajustar prioridades baseado em resultados
+1. 🚀 Deploy em staging
+2. 🧪 Processar 1000+ documentos reais
+3. 📊 Monitorar memória por 24 horas
+4. ✅ Se estável, deploy em produção
+5. 📊 Monitorar produção por 48-72 horas
+
+### 📅 SEMANA 2: Monitoramento e Ajustes
+
+1. 📊 Coletar métricas de produção
+2. 🐛 Corrigir problemas identificados
+3. 📝 Documentar lições aprendidas
+4. ✅ **GATE:** Sistema deve estar estável por 1+ semana antes de prosseguir
+
+### 📅 SEMANA 3-4: Fase 1 (Se estável)
+
+1. 🚀 Implementar Fase 1 (Bulk indexing, connection pooling)
+2. 🧪 Testes contínuos de memória
+3. 📊 Validar que não há regressão de OOM
+
+### ⏸️ PAUSAR E AVALIAR
+
+- ✅ Sistema estável por 2+ semanas?
+- ✅ Sem crashes OOM em produção?
+- ✅ Métricas de memória consistentes?
+- ✅ **SE SIM:** Considerar Fase 2
+- ❌ **SE NÃO:** Investigar e corrigir antes de prosseguir
 
 ---
 
@@ -896,17 +986,49 @@ S3_POOL_SIZE = int(os.getenv('S3_POOL_SIZE', '10'))
 
 ---
 
-## Conclusão
+## Conclusão - **REVISÃO COM FOCO EM OOM**
 
-Este relatório identificou 10 principais oportunidades de otimização de performance no sistema de processamento do Querido Diário. As otimizações propostas podem **reduzir o tempo de processamento em 60-80%** e o **consumo de memória em 40-60%**, com um plano de implementação faseado que minimiza riscos e permite validação incremental.
+Este relatório foi **REVISADO** para priorizar a solução de problemas de **Out Of Memory (OOM)** que têm causado crashes em produção. A priorização foi completamente alterada:
 
-A **Fase 1 (Quick Wins)** oferece o melhor custo-benefício e pode ser implementada em 1-2 semanas, enquanto as fases seguintes trazem ganhos mais substanciais com maior investimento.
+### ❌ Plano Original (Foco em Performance)
+- Prioridade: Paralelização e velocidade
+- Risco: **Poderia AGRAVAR problemas de OOM**
+- Timeline: 7-11 semanas
 
-**Recomendação:** Iniciar imediatamente com a Fase 1, medir resultados rigorosamente, e usar dados reais para tomar decisões sobre as próximas fases.
+### ✅ Plano Revisado (Foco em Estabilidade/OOM)
+- Prioridade: Redução de memória e estabilidade
+- Benefício: **Elimina crashes de OOM primeiro, performance depois**
+- Timeline: 3-5 dias para estabilização crítica
+
+### 🎯 Mudanças Principais
+
+1. **🚨 Fase 0 (NOVA):** Emergência OOM - 3-5 dias
+   - Paginação PostgreSQL (elimina picos iniciais)
+   - Streaming de arquivos (elimina OOM em arquivos grandes)
+   - Memory safeguards (garbage collection, limites)
+
+2. **⚠️ POSTERGAR:** Paralelização e Async
+   - ThreadPoolExecutor e batch processing foram **DESPRIORIZADOS**
+   - Motivo: Podem **multiplicar** uso de memória e agravar OOM
+   - Implementar apenas APÓS sistema estável
+
+3. **📊 Foco em Monitoramento:** 
+   - Métricas de memória em tempo real
+   - Gates de aprovação entre fases
+   - Rollback imediato se memória aumentar
+
+### 🚀 Recomendação REVISADA
+
+**CRÍTICO:** Implementar **Fase 0 IMEDIATAMENTE** (esta semana) antes de qualquer otimização de performance. Um sistema rápido mas instável é pior que um sistema lento mas confiável.
+
+**Não prosseguir** com otimizações de performance (batch, async, paralelização) até que:
+1. ✅ Sistema estável por 2+ semanas sem OOM
+2. ✅ Métricas de memória consistentes
+3. ✅ Volumes de produção processados com sucesso
 
 ---
 
 **Documento criado em:** 2025-11-28  
-**Versão:** 1.0  
+**Versão:** 2.0 - **REVISADO PARA FOCO EM OOM**  
 **Autores:** GitHub Copilot CLI - Análise de Codebase  
-**Status:** Pronto para Revisão
+**Status:** ⚠️ **PLANO DE AÇÃO EMERGENCIAL - APROVAÇÃO URGENTE NECESSÁRIA**
