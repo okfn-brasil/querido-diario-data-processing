@@ -10,6 +10,7 @@ from .interfaces import TextExtractorInterface
 
 class UnsupportedFileTypeError(Exception):
     """Exception raised when a file type is not supported for text extraction."""
+
     pass
 
 
@@ -33,7 +34,7 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         """
         if self.is_txt(filepath):
             return self._return_file_content(filepath)
-        
+
         try:
             with open(filepath, "rb") as file:
                 headers = {
@@ -42,19 +43,19 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
                 }
                 # Use streaming to prevent loading entire file in memory
                 response = requests.put(
-                    f"{self._url}/tika", 
-                    data=file, 
+                    f"{self._url}/tika",
+                    data=file,
                     headers=headers,
-                    stream=False  # Tika requires full upload, but we stream the read
+                    stream=False,  # Tika requires full upload, but we stream the read
                 )
                 response.encoding = "UTF-8"
                 text = response.text
-                
+
                 # Explicit cleanup to free memory immediately
                 response.close()
                 del response
                 gc.collect()
-                
+
                 return text
         except Exception as e:
             # Ensure cleanup even on error
