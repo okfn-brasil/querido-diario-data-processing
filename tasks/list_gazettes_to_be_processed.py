@@ -32,7 +32,7 @@ def get_gazettes_extracted_since_yesterday(
     Uses pagination to prevent loading all data into memory at once (OOM prevention)
     """
     logging.info("Listing gazettes extracted since yesterday (paginated)")
-    
+
     offset = 0
     while True:
         command = f"""
@@ -61,19 +61,21 @@ def get_gazettes_extracted_since_yesterday(
         LIMIT {QUERY_PAGE_SIZE} OFFSET {offset}
         ;
         """
-        
+
         page_results = list(database.select(command))
-        
+
         if not page_results:
             break
-            
-        logging.debug(f"Processing page with {len(page_results)} gazettes (offset={offset})")
-        
+
+        logging.debug(
+            f"Processing page with {len(page_results)} gazettes (offset={offset})"
+        )
+
         for gazette in page_results:
             yield format_gazette_data(gazette)
-        
+
         offset += QUERY_PAGE_SIZE
-        
+
         # If we got fewer results than page size, we're done
         if len(page_results) < QUERY_PAGE_SIZE:
             break
@@ -87,7 +89,7 @@ def get_all_gazettes_extracted(
     Uses pagination to prevent loading all data into memory at once (OOM prevention)
     """
     logging.info("Listing all gazettes extracted (paginated)")
-    
+
     offset = 0
     while True:
         command = f"""
@@ -114,19 +116,21 @@ def get_all_gazettes_extracted(
         LIMIT {QUERY_PAGE_SIZE} OFFSET {offset}
         ;
         """
-        
+
         page_results = list(database.select(command))
-        
+
         if not page_results:
             break
-            
-        logging.debug(f"Processing page with {len(page_results)} gazettes (offset={offset})")
-        
+
+        logging.debug(
+            f"Processing page with {len(page_results)} gazettes (offset={offset})"
+        )
+
         for gazette in page_results:
             yield format_gazette_data(gazette)
-        
+
         offset += QUERY_PAGE_SIZE
-        
+
         # If we got fewer results than page size, we're done
         if len(page_results) < QUERY_PAGE_SIZE:
             break
@@ -140,7 +144,7 @@ def get_unprocessed_gazettes(
     Uses pagination to prevent loading all data into memory at once (OOM prevention)
     """
     logging.info("Listing unprocessed gazettes (paginated)")
-    
+
     offset = 0
     while True:
         command = f"""
@@ -169,19 +173,21 @@ def get_unprocessed_gazettes(
         LIMIT {QUERY_PAGE_SIZE} OFFSET {offset}
         ;
         """
-        
+
         page_results = list(database.select(command))
-        
+
         if not page_results:
             break
-            
-        logging.debug(f"Processing page with {len(page_results)} unprocessed gazettes (offset={offset})")
-        
+
+        logging.debug(
+            f"Processing page with {len(page_results)} unprocessed gazettes (offset={offset})"
+        )
+
         for gazette in page_results:
             yield format_gazette_data(gazette)
-        
+
         offset += QUERY_PAGE_SIZE
-        
+
         # If we got fewer results than page size, we're done
         if len(page_results) < QUERY_PAGE_SIZE:
             break

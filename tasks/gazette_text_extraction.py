@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
 
-from data_extraction import TextExtractorInterface
+from data_extraction import TextExtractorInterface, UnsupportedFileTypeError
 from database import DatabaseInterface
 from index import IndexInterface
 from segmentation import get_segmenter
@@ -38,7 +38,7 @@ def extract_text_from_gazettes(
 
     ids = []
     processed_count = 0
-    
+
     for gazette in gazettes:
         try:
             document_ids = try_process_gazette_file(
@@ -46,11 +46,15 @@ def extract_text_from_gazettes(
             )
             ids.extend(document_ids)
             processed_count += 1
-            
+
             # Log progress periodically
             if processed_count % 10 == 0:
                 logging.info(f"Processed {processed_count} gazettes")
-                
+
+        except UnsupportedFileTypeError as e:
+            logging.warning(
+                f"Could not process gazette: {gazette['file_path']}. Cause: {e}"
+            )
         except Exception as e:
             logging.warning(
                 f"Could not process gazette: {gazette['file_path']}. Cause: {e}"
@@ -59,7 +63,7 @@ def extract_text_from_gazettes(
         finally:
             # Clear gazette data from memory after processing
             gazette.clear()
-            
+
             # Force GC every 10 documents to prevent memory accumulation
             if processed_count % 10 == 0:
                 gc.collect()
@@ -82,23 +86,28 @@ def try_process_gazette_file(
     """
     logging.debug(f"Processing gazette {gazette['file_path']}")
     gazette_file = None
-    
+
     try:
         gazette_file = download_gazette_file(gazette, storage)
-        
+
+        # Check if file is ZIP - not supported, skip processing
+        if text_extractor.is_zip(gazette_file):
+            logging.warning(f"Skipping unsupported ZIP file: {gazette['file_path']}")
+            raise UnsupportedFileTypeError("application/zip")
+
         # Check file size to prevent OOM on very large files
         file_size = os.path.getsize(gazette_file)
         if file_size > MAX_FILE_SIZE_BYTES:
             raise Exception(
                 f"File too large ({file_size / 1024 / 1024:.2f}MB > {MAX_FILE_SIZE_MB}MB): {gazette['file_path']}"
             )
-        
+
         gazette["source_text"] = try_to_extract_content(gazette_file, text_extractor)
         gazette["url"] = define_file_url(gazette["file_path"])
         gazette_txt_path = define_gazette_txt_path(gazette)
         gazette["file_raw_txt"] = define_file_url(gazette_txt_path)
         upload_raw_text(gazette_txt_path, gazette["source_text"], storage)
-        
+
         # Delete file ASAP to free disk space
         delete_gazette_files(gazette_file)
         gazette_file = None
@@ -114,10 +123,10 @@ def try_process_gazette_file(
                 upload_raw_text(segment_txt_path, segment["source_text"], storage)
                 index.index_document(segment, document_id=segment["file_checksum"])
                 document_ids.append(segment["file_checksum"])
-                
+
                 # Clear segment data from memory
                 segment.clear()
-                
+
             # Clear segments list
             del territory_segments
         else:
@@ -125,7 +134,7 @@ def try_process_gazette_file(
             document_ids.append(gazette["file_checksum"])
 
         set_gazette_as_processed(gazette, database)
-        
+
         # Clear gazette source_text from memory (large string)
         if "source_text" in gazette:
             del gazette["source_text"]
@@ -138,7 +147,7 @@ def try_process_gazette_file(
                 os.remove(gazette_file)
             except Exception as e:
                 logging.warning(f"Failed to cleanup temp file {gazette_file}: {e}")
-        
+
         # Force garbage collection after each document
         gc.collect()
 

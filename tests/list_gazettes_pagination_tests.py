@@ -11,7 +11,7 @@ Inclui testes de regressão para garantir que:
 import os
 from datetime import date, datetime
 from unittest import TestCase
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 from tasks.list_gazettes_to_be_processed import (
     get_all_gazettes_extracted,
@@ -30,7 +30,7 @@ class GazettesListingPaginationTests(TestCase):
     def setUp(self):
         """Setup comum para todos os testes"""
         self.database_mock = MagicMock()
-        
+
         # Mock data - simula resultados do banco
         self.sample_gazette_row = (
             1,  # id
@@ -110,8 +110,12 @@ class GazettesListingPaginationTests(TestCase):
         self.assertIn("OFFSET 0", sql_command, "SQL deve conter 'OFFSET 0'")
 
         # CRÍTICO: Verifica que NÃO usa placeholders de parâmetros
-        self.assertNotIn("%(limit)s", sql_command, "SQL não deve usar placeholder %(limit)s")
-        self.assertNotIn("%(offset)s", sql_command, "SQL não deve usar placeholder %(offset)s")
+        self.assertNotIn(
+            "%(limit)s", sql_command, "SQL não deve usar placeholder %(limit)s"
+        )
+        self.assertNotIn(
+            "%(offset)s", sql_command, "SQL não deve usar placeholder %(offset)s"
+        )
 
     @patch.dict("os.environ", {"GAZETTE_QUERY_PAGE_SIZE": "3"})
     def test_get_unprocessed_gazettes_stops_when_no_more_results(self):
@@ -167,7 +171,7 @@ class GazettesListingPaginationTests(TestCase):
 
         # Verifica os OFFSETs nas chamadas
         calls = self.database_mock.select.call_args_list
-        
+
         sql_1 = calls[0][0][0]
         sql_2 = calls[1][0][0]
         sql_3 = calls[2][0][0]
@@ -288,20 +292,20 @@ class GazettesListingRegressionTests(TestCase):
     def test_select_method_signature_compatibility(self):
         """
         REGRESSÃO: Garante que select() é sempre chamado com a assinatura correta
-        
+
         Este teste falha se tentarmos passar parâmetros extras para select(),
         prevenindo a regressão do bug original:
         TypeError: PostgreSQL.select() takes 2 positional arguments but 3 were given
         """
         database_mock = MagicMock()
-        
+
         # Configura o mock para aceitar APENAS 1 argumento
         def strict_select(command):
             """Mock que rejeita chamadas com mais de 1 argumento"""
             if not isinstance(command, str):
                 raise TypeError("select() expects a string command")
             return []
-        
+
         database_mock.select.side_effect = strict_select
 
         # Se o código tentar passar parâmetros extras, este teste falhará
@@ -325,6 +329,7 @@ class GazettesListingRegressionTests(TestCase):
 
         # Verifica que LIMIT e OFFSET são números inteiros no SQL
         import re
+
         limit_match = re.search(r"LIMIT\s+(\d+)", sql_command)
         offset_match = re.search(r"OFFSET\s+(\d+)", sql_command)
 
