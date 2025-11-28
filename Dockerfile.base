@@ -50,9 +50,9 @@ RUN addgroup --system $USER && \
 
 ENV PYTHONPATH=$WORKDIR
 
-# Copy Python packages from builder
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
+# Copy Python packages from builder to system location
+COPY --from=builder /root/.local /usr/local
+ENV PATH=/usr/local/bin:$PATH
 
 # Copy ML model from builder
 COPY --from=builder /tmp/bert-model /tmp/bert-model
