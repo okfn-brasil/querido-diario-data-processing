@@ -1,3 +1,4 @@
+import gc
 import logging
 import os
 
@@ -31,7 +32,13 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
             }
             response = requests.put(f"{self._url}/tika", data=file, headers=headers)
             response.encoding = "UTF-8"
-            return response.text
+            text = response.text
+
+            # Clear cache to free memory
+            del response
+            gc.collect()
+
+            return text
 
     def extract_text(self, filepath: str) -> str:
         logging.debug(f"Extracting text from {filepath}")

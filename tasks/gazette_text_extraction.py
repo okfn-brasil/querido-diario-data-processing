@@ -4,6 +4,7 @@ Tarefa para extrair o conteúdo textual dos diários
 Extrai o conteúdo dos diários, realiza segmentações (se necessário) e os indexa.
 """
 
+import gc
 import logging
 import os
 import tempfile
@@ -83,6 +84,10 @@ def try_process_gazette_file(
         document_ids.append(gazette["file_checksum"])
 
     set_gazette_as_processed(gazette, database)
+
+    # Clear memory after processing document
+    gc.collect()
+
     return document_ids
 
 
