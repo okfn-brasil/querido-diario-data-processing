@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
 
-from data_extraction import TextExtractorInterface
+from data_extraction import TextExtractorInterface, UnsupportedFileTypeError
 from database import DatabaseInterface
 from index import IndexInterface
 from segmentation import get_segmenter
@@ -51,6 +51,10 @@ def extract_text_from_gazettes(
             if processed_count % 10 == 0:
                 logging.info(f"Processed {processed_count} gazettes")
                 
+        except UnsupportedFileTypeError as e:
+            logging.warning(
+                f"Could not process gazette: {gazette['file_path']}. Cause: {e}"
+            )
         except Exception as e:
             logging.warning(
                 f"Could not process gazette: {gazette['file_path']}. Cause: {e}"
@@ -85,6 +89,13 @@ def try_process_gazette_file(
     
     try:
         gazette_file = download_gazette_file(gazette, storage)
+        
+        # Check if file is ZIP - not supported, skip processing
+        if text_extractor.is_zip(gazette_file):
+            logging.warning(
+                f"Skipping unsupported ZIP file: {gazette['file_path']}"
+            )
+            raise UnsupportedFileTypeError("application/zip")
         
         # Check file size to prevent OOM on very large files
         file_size = os.path.getsize(gazette_file)

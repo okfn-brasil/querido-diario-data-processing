@@ -8,6 +8,11 @@ import requests
 from .interfaces import TextExtractorInterface
 
 
+class UnsupportedFileTypeError(Exception):
+    """Exception raised when a file type is not supported for text extraction."""
+    pass
+
+
 class ApacheTikaTextExtractor(TextExtractorInterface):
     def __init__(self, url: str):
         self._url = url
@@ -70,12 +75,13 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
             raise Exception(f"File does not exists: {filepath}")
 
     def check_file_type_supported(self, filepath: str) -> None:
+        file_type = self.get_file_type(filepath)
         if (
             not self.is_doc(filepath)
             and not self.is_pdf(filepath)
             and not self.is_txt(filepath)
         ):
-            raise Exception("Unsupported file type: " + self.get_file_type(filepath))
+            raise UnsupportedFileTypeError(f"Unsupported file type: {file_type}")
 
     def is_pdf(self, filepath):
         """
@@ -114,6 +120,13 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         Generic method to check if a identified file type matches a given list of types
         """
         return self.get_file_type(filepath) in file_types
+
+    def is_zip(self, filepath):
+        """
+        If the file type is zip returns True. Otherwise,
+        returns False
+        """
+        return self.is_file_type(filepath, file_types=["application/zip"])
 
 
 def get_apache_tika_server_url():
