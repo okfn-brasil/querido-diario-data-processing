@@ -16,7 +16,7 @@ class OpenSearchInterface(IndexInterface):
         default_index: str = "",
     ):
         self._search_engine = opensearchpy.OpenSearch(
-            hosts=hosts, http_auth=(user, password)
+            hosts=hosts, http_auth=(user, password), timeout=timeout
         )
         self._timeout = timeout
         self._default_index = default_index
