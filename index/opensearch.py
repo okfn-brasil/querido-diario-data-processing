@@ -12,7 +12,7 @@ class OpenSearchInterface(IndexInterface):
         hosts: List,
         user: str,
         password: str,
-        timeout: int = 30,
+        timeout: int = 60,
         default_index: str = "",
     ):
         self._search_engine = opensearchpy.OpenSearch(
@@ -61,7 +61,7 @@ class OpenSearchInterface(IndexInterface):
     ) -> None:
         index = self.get_index_name(index)
         self._search_engine.index(
-            index=index, body=document, id=document_id, refresh=refresh
+            index=index, body=document, id=document_id, refresh=refresh, request_timeout=self._timeout
         )
 
     def search(self, query: Dict, index: str = "") -> Dict:
