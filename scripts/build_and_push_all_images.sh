@@ -1,3 +1,6 @@
+# Pull latest base image to ensure fresh cache for app builds
+docker pull ghcr.io/okfn-brasil/querido-diario-data-processing/base:latest
+
 docker buildx build \
        --platform linux/amd64,linux/arm64 \
        --file Dockerfile.base \
@@ -23,6 +26,10 @@ docker buildx build \
        --cache-from type=registry,ref=ghcr.io/okfn-brasil/querido-diario-data-processing/base:latest \
        --push \
        .
+
+# Pull latest base image to ensure fresh cache for app builds
+docker pull ghcr.io/okfn-brasil/querido-diario-data-processing/base:latest
+docker pull ghcr.io/okfn-brasil/querido-diario-data-processing:latest
 
 # Build for both architectures and create manifest with multi-arch latest tag
 docker buildx build \
