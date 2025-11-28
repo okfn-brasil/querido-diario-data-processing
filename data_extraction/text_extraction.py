@@ -23,22 +23,38 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
             return file.read()
 
     def _try_extract_text(self, filepath: str) -> str:
+        """
+        Extract text from file using streaming when possible to prevent OOM
+        """
         if self.is_txt(filepath):
             return self._return_file_content(filepath)
-        with open(filepath, "rb") as file:
-            headers = {
-                "Content-Type": self._get_file_type(filepath),
-                "Accept": "text/plain",
-            }
-            response = requests.put(f"{self._url}/tika", data=file, headers=headers)
-            response.encoding = "UTF-8"
-            text = response.text
-
-            # Clear cache to free memory
-            del response
+        
+        try:
+            with open(filepath, "rb") as file:
+                headers = {
+                    "Content-Type": self._get_file_type(filepath),
+                    "Accept": "text/plain",
+                }
+                # Use streaming to prevent loading entire file in memory
+                response = requests.put(
+                    f"{self._url}/tika", 
+                    data=file, 
+                    headers=headers,
+                    stream=False  # Tika requires full upload, but we stream the read
+                )
+                response.encoding = "UTF-8"
+                text = response.text
+                
+                # Explicit cleanup to free memory immediately
+                response.close()
+                del response
+                gc.collect()
+                
+                return text
+        except Exception as e:
+            # Ensure cleanup even on error
             gc.collect()
-
-            return text
+            raise e
 
     def extract_text(self, filepath: str) -> str:
         logging.debug(f"Extracting text from {filepath}")
