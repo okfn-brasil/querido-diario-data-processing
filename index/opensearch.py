@@ -1,9 +1,11 @@
 import os
+import time
 from typing import Dict, Iterable, List, Union
 
 import opensearchpy
 
 from .interfaces import IndexInterface
+from monitoring import log_opensearch_operation, log_opensearch_error
 
 
 class OpenSearchInterface(IndexInterface):
@@ -64,14 +66,68 @@ class OpenSearchInterface(IndexInterface):
         refresh: bool = False,
     ) -> None:
         index = self.get_index_name(index)
-        self._search_engine.index(
-            index=index, body=document, id=document_id, refresh=refresh, request_timeout=self._timeout
-        )
+        
+        start_time = time.time()
+        try:
+            self._search_engine.index(
+                index=index, body=document, id=document_id, refresh=refresh, request_timeout=self._timeout
+            )
+            duration_ms = (time.time() - start_time) * 1000
+            
+            # Log operação bem-sucedida
+            import json
+            document_size = len(json.dumps(document))
+            log_opensearch_operation(
+                'index',
+                index,
+                duration_ms,
+                document_id=document_id,
+                success=True,
+                document_size=document_size
+            )
+        except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
+            error_type = type(e).__name__
+            error_message = str(e)
+            
+            # Log erro
+            import json
+            try:
+                document_size = len(json.dumps(document))
+            except:
+                document_size = None
+            
+            log_opensearch_error(
+                'index',
+                index,
+                error_type,
+                error_message,
+                duration_ms,
+                document_id=document_id,
+                document_size=document_size
+            )
+            raise
 
     def search(self, query: Dict, index: str = "") -> Dict:
         index = self.get_index_name(index)
-        result = self._search_engine.search(index=index, body=query, request_timeout=60)
-        return result
+        
+        start_time = time.time()
+        try:
+            result = self._search_engine.search(index=index, body=query, request_timeout=60)
+            duration_ms = (time.time() - start_time) * 1000
+            
+            # Log operação bem-sucedida
+            log_opensearch_operation('search', index, duration_ms, success=True)
+            
+            return result
+        except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
+            error_type = type(e).__name__
+            error_message = str(e)
+            
+            # Log erro
+            log_opensearch_error('search', index, error_type, error_message, duration_ms)
+            raise
 
     def analyze(self, text: str, field: str, index: str = "") -> Dict:
         index = self.get_index_name(index)

@@ -9,6 +9,7 @@ from database import create_database_interface
 from index import create_index_interface
 from storage import create_storage_interface
 from tasks import run_task
+from monitoring import setup_structured_logging, get_monitor
 
 
 def setup_memory_controls():
@@ -85,13 +86,27 @@ def aggregates_pipeline():
 def execute_pipeline(pipeline):
     setup_memory_controls()
     enable_debug_if_necessary()
+    
+    # Configura logging estruturado
+    log_level = logging.DEBUG if is_debug_enabled() else logging.INFO
+    setup_structured_logging(log_level)
+    
+    logging.info("=== Iniciando pipeline de processamento ===")
+    logging.info(f"Pipeline: {pipeline or 'gazette_texts'}")
+    logging.info(f"Modo de execução: {get_execution_mode()}")
 
-    if not pipeline or pipeline == "gazette_texts":
-        gazette_texts_pipeline()
-    elif pipeline == "aggregates":
-        aggregates_pipeline()
-    else:
-        raise ValueError("Pipeline inválido.")
+    try:
+        if not pipeline or pipeline == "gazette_texts":
+            gazette_texts_pipeline()
+        elif pipeline == "aggregates":
+            aggregates_pipeline()
+        else:
+            raise ValueError("Pipeline inválido.")
+    finally:
+        # Imprime estatísticas de conexão ao finalizar
+        monitor = get_monitor()
+        monitor.print_summary()
+        logging.info("=== Pipeline finalizado ===")
 
 
 if __name__ == "__main__":

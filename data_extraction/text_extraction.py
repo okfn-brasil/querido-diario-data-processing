@@ -1,11 +1,13 @@
 import gc
 import logging
 import os
+import time
 
 import magic
 import requests
 
 from .interfaces import TextExtractorInterface
+from monitoring import log_tika_request, log_tika_response, log_tika_error
 
 
 class UnsupportedFileTypeError(Exception):
@@ -35,10 +37,18 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         if self.is_txt(filepath):
             return self._return_file_content(filepath)
 
+        file_size = os.path.getsize(filepath)
+        content_type = self._get_file_type(filepath)
+        
+        # Log requisição ao Tika
+        log_tika_request(filepath, file_size, content_type, self._url)
+        
+        start_time = time.time()
+        
         try:
             with open(filepath, "rb") as file:
                 headers = {
-                    "Content-Type": self._get_file_type(filepath),
+                    "Content-Type": content_type,
                     "Accept": "text/plain",
                 }
                 # Use streaming to prevent loading entire file in memory
@@ -48,8 +58,14 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
                     headers=headers,
                     stream=False,  # Tika requires full upload, but we stream the read
                 )
+                
+                duration_ms = (time.time() - start_time) * 1000
+                
                 response.encoding = "UTF-8"
                 text = response.text
+                
+                # Log resposta bem-sucedida
+                log_tika_response(filepath, duration_ms, len(text), response.status_code)
 
                 # Explicit cleanup to free memory immediately
                 response.close()
@@ -58,6 +74,19 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
 
                 return text
         except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
+            error_type = type(e).__name__
+            error_message = str(e)
+            
+            # Log erro detalhado
+            log_tika_error(
+                filepath, 
+                error_type, 
+                error_message, 
+                duration_ms,
+                file_size=file_size
+            )
+            
             # Ensure cleanup even on error
             gc.collect()
             raise e
