@@ -1,5 +1,7 @@
+import json
 import os
 import time
+from datetime import date, datetime
 from functools import wraps
 from typing import Dict, Iterable, List, Union
 
@@ -7,6 +9,13 @@ import opensearchpy
 
 from .interfaces import IndexInterface
 from monitoring import log_opensearch_operation, log_opensearch_error
+
+
+def date_serializer(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    raise TypeError(f"Type {type(obj)} not serializable")
 
 
 def retry_with_exponential_backoff(max_retries=3, initial_delay=1.0, backoff_factor=2.0):
@@ -115,8 +124,7 @@ class OpenSearchInterface(IndexInterface):
                 duration_ms = (time.time() - start_time) * 1000
                 
                 # Log operação bem-sucedida
-                import json
-                document_size = len(json.dumps(document))
+                document_size = len(json.dumps(document, default=date_serializer))
                 log_opensearch_operation(
                     'index',
                     index,
@@ -138,9 +146,8 @@ class OpenSearchInterface(IndexInterface):
                     error_message = str(e)
                     
                     # Log erro
-                    import json
                     try:
-                        document_size = len(json.dumps(document))
+                        document_size = len(json.dumps(document, default=date_serializer))
                     except:
                         document_size = None
                     

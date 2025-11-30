@@ -8,9 +8,16 @@ facilitando a análise de problemas de conexão e performance.
 import json
 import logging
 import time
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, Optional
 from functools import wraps
+
+
+def date_serializer(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    raise TypeError(f"Type {type(obj)} not serializable")
 
 
 # Configuração de logging estruturado
@@ -337,7 +344,7 @@ def monitor_opensearch_call(operation: str):
                 if 'document' in kwargs or 'body' in kwargs:
                     doc = kwargs.get('document') or kwargs.get('body')
                     if doc:
-                        document_size = len(json.dumps(doc))
+                        document_size = len(json.dumps(doc, default=date_serializer))
                 
                 log_opensearch_operation(
                     operation, 
