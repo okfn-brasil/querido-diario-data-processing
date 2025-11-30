@@ -54,11 +54,20 @@ def extract_text_from_gazettes(
 
         except UnsupportedFileTypeError as e:
             logging.warning(
-                f"Could not process gazette: {gazette['file_path']}. Cause: {e}"
+                f"Could not process gazette {gazette.get('id', 'unknown')}: "
+                f"{gazette.get('file_path', 'unknown path')} "
+                f"(territory: {gazette.get('territory_id', 'unknown')}, "
+                f"date: {gazette.get('date', 'unknown')}). "
+                f"Cause: {e}"
             )
         except Exception as e:
-            logging.warning(
-                f"Could not process gazette: {gazette['file_path']}. Cause: {e}"
+            logging.error(
+                f"Failed to process gazette {gazette.get('id', 'unknown')}: "
+                f"{gazette.get('file_path', 'unknown path')} "
+                f"(territory: {gazette.get('territory_id', 'unknown')}, "
+                f"date: {gazette.get('date', 'unknown')}, "
+                f"checksum: {gazette.get('file_checksum', 'unknown')}). "
+                f"Error: {type(e).__name__}: {str(e)}"
             )
             logging.exception(e)
         finally:
@@ -225,7 +234,12 @@ def try_to_extract_content(
     try:
         return text_extractor.extract_text(gazette_file)
     except Exception as e:
-        os.remove(gazette_file)
+        # Clean up file before re-raising
+        if os.path.exists(gazette_file):
+            try:
+                os.remove(gazette_file)
+            except Exception as cleanup_error:
+                logging.warning(f"Failed to cleanup file {gazette_file}: {cleanup_error}")
         raise e
 
 
