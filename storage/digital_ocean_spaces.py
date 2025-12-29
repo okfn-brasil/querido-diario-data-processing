@@ -101,7 +101,7 @@ class DigitalOceanSpaces(StorageInterface):
         if isinstance(content_to_be_uploaded, str):
             f = BytesIO(content_to_be_uploaded.encode())
             self._client.upload_fileobj(
-                f, self._bucket, file_key, ExtraArgs={"ACL": permission}
+                f, self._bucket, file_key
             )
             # Explicit cleanup
             f.close()
@@ -110,7 +110,6 @@ class DigitalOceanSpaces(StorageInterface):
                 content_to_be_uploaded,
                 self._bucket,
                 file_key,
-                ExtraArgs={"ACL": permission},
             )
 
     def upload_file(
@@ -121,7 +120,7 @@ class DigitalOceanSpaces(StorageInterface):
     ) -> None:
         logging.debug(f"Uploading {file_key}")
         self._client.upload_file(
-            file_path, self._bucket, file_key, ExtraArgs={"ACL": permission}
+            file_path, self._bucket, file_key
         )
 
     def upload_file_multipart(
@@ -134,7 +133,7 @@ class DigitalOceanSpaces(StorageInterface):
         logging.debug(f"Uploading {file_key} with multipart")
 
         multipart_upload = self._client.create_multipart_upload(
-            Bucket=self._bucket, Key=file_key, ACL=permission
+            Bucket=self._bucket, Key=file_key
         )
         upload_id = multipart_upload["UploadId"]
 
