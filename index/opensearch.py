@@ -7,8 +7,9 @@ from typing import Dict, Iterable, List, Union
 
 import opensearchpy
 
+from monitoring import log_opensearch_error, log_opensearch_operation
+
 from .interfaces import IndexInterface
-from monitoring import log_opensearch_operation, log_opensearch_error
 
 
 def date_serializer(obj):
@@ -18,36 +19,40 @@ def date_serializer(obj):
     raise TypeError(f"Type {type(obj)} not serializable")
 
 
-def retry_with_exponential_backoff(max_retries=3, initial_delay=1.0, backoff_factor=2.0):
+def retry_with_exponential_backoff(
+    max_retries=3, initial_delay=1.0, backoff_factor=2.0
+):
     """
     Decorator to retry operations with exponential backoff.
-    
+
     Args:
         max_retries: Maximum number of retry attempts (default: 3)
         initial_delay: Initial delay in seconds before first retry (default: 1.0)
         backoff_factor: Multiplier for delay between retries (default: 2.0)
     """
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             delay = initial_delay
             last_exception = None
-            
+
             for attempt in range(max_retries + 1):
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:
                     last_exception = e
-                    
+
                     if attempt < max_retries:
                         time.sleep(delay)
                         delay *= backoff_factor
                     else:
                         raise last_exception
-            
+
             raise last_exception
-        
+
         return wrapper
+
     return decorator
 
 
@@ -83,7 +88,9 @@ class OpenSearchInterface(IndexInterface):
             raise Exception("Index name not defined")
         return self._default_index
 
-    @retry_with_exponential_backoff(max_retries=3, initial_delay=1.0, backoff_factor=2.0)
+    @retry_with_exponential_backoff(
+        max_retries=3, initial_delay=1.0, backoff_factor=2.0
+    )
     def create_index(self, index_name: str = "", body: Dict = {}) -> None:
         index_name = self.get_index_name(index_name)
         if self.index_exists(index_name):
@@ -94,7 +101,9 @@ class OpenSearchInterface(IndexInterface):
             timeout=self._timeout,
         )
 
-    @retry_with_exponential_backoff(max_retries=3, initial_delay=1.0, backoff_factor=2.0)
+    @retry_with_exponential_backoff(
+        max_retries=3, initial_delay=1.0, backoff_factor=2.0
+    )
     def refresh_index(self, index_name: str = "") -> None:
         index_name = self.get_index_name(index_name)
         if self.index_exists(index_name):
@@ -111,32 +120,33 @@ class OpenSearchInterface(IndexInterface):
         refresh: bool = False,
     ) -> None:
         index = self.get_index_name(index)
-        
+
         start_time = time.time()
         delay = 1.0
-        last_exception = None
-        
+
         for attempt in range(4):  # 3 retries + 1 initial attempt
             try:
                 self._search_engine.index(
-                    index=index, body=document, id=document_id, refresh=refresh, request_timeout=self._timeout
+                    index=index,
+                    body=document,
+                    id=document_id,
+                    refresh=refresh,
+                    request_timeout=self._timeout,
                 )
                 duration_ms = (time.time() - start_time) * 1000
-                
+
                 # Log operação bem-sucedida
                 document_size = len(json.dumps(document, default=date_serializer))
                 log_opensearch_operation(
-                    'index',
+                    "index",
                     index,
                     duration_ms,
                     document_id=document_id,
                     success=True,
-                    document_size=document_size
+                    document_size=document_size,
                 )
                 return
             except Exception as e:
-                last_exception = e
-                
                 if attempt < 3:  # Still have retries left
                     time.sleep(delay)
                     delay *= 2.0
@@ -144,43 +154,49 @@ class OpenSearchInterface(IndexInterface):
                     duration_ms = (time.time() - start_time) * 1000
                     error_type = type(e).__name__
                     error_message = str(e)
-                    
+
                     # Log erro
                     try:
-                        document_size = len(json.dumps(document, default=date_serializer))
-                    except:
+                        document_size = len(
+                            json.dumps(document, default=date_serializer)
+                        )
+                    except Exception:
                         document_size = None
-                    
+
                     log_opensearch_error(
-                        'index',
+                        "index",
                         index,
                         error_type,
                         error_message,
                         duration_ms,
                         document_id=document_id,
-                        document_size=document_size
+                        document_size=document_size,
                     )
                     raise
 
     def search(self, query: Dict, index: str = "") -> Dict:
         index = self.get_index_name(index)
-        
+
         start_time = time.time()
         try:
-            result = self._search_engine.search(index=index, body=query, request_timeout=60)
+            result = self._search_engine.search(
+                index=index, body=query, request_timeout=60
+            )
             duration_ms = (time.time() - start_time) * 1000
-            
+
             # Log operação bem-sucedida
-            log_opensearch_operation('search', index, duration_ms, success=True)
-            
+            log_opensearch_operation("search", index, duration_ms, success=True)
+
             return result
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
             error_type = type(e).__name__
             error_message = str(e)
-            
+
             # Log erro
-            log_opensearch_error('search', index, error_type, error_message, duration_ms)
+            log_opensearch_error(
+                "search", index, error_type, error_message, duration_ms
+            )
             raise
 
     def analyze(self, text: str, field: str, index: str = "") -> Dict:

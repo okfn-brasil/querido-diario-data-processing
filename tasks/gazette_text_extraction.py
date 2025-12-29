@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
 
 from botocore.exceptions import ClientError
+
 from data_extraction import TextExtractorInterface, UnsupportedFileTypeError
 from database import DatabaseInterface
 from index import IndexInterface
@@ -100,10 +101,12 @@ def try_process_gazette_file(
     try:
         gazette_file = download_gazette_file(gazette, storage)
     except ClientError as e:
-        error_code = e.response.get('Error', {}).get('Code', '')
-        if error_code == '404':
+        error_code = e.response.get("Error", {}).get("Code", "")
+        if error_code == "404":
             logging.error(f"File not found in storage (404): {gazette['file_path']}")
-            logging.error(f"Gazette ID: {gazette.get('id')}, Checksum: {gazette.get('file_checksum')}")
+            logging.error(
+                f"Gazette ID: {gazette.get('id')}, Checksum: {gazette.get('file_checksum')}"
+            )
             # Skip this gazette and continue processing others
             return []
         else:
@@ -239,7 +242,9 @@ def try_to_extract_content(
             try:
                 os.remove(gazette_file)
             except Exception as cleanup_error:
-                logging.warning(f"Failed to cleanup file {gazette_file}: {cleanup_error}")
+                logging.warning(
+                    f"Failed to cleanup file {gazette_file}: {cleanup_error}"
+                )
         raise e
 
 

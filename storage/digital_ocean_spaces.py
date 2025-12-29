@@ -14,7 +14,7 @@ def get_storage_region():
 
 
 def get_storage_endpoint():
-    return os.environ["STORAGE_ENDPOINT"]
+    return os.environ.get("STORAGE_ENDPOINT")
 
 
 def get_storage_access_key():
@@ -44,7 +44,8 @@ def create_storage_interface() -> StorageInterface:
 
 class DigitalOceanSpaces(StorageInterface):
     """
-    Class to interact with the Digital Ocena Spaces using the S3 protocol
+    Classe para interagir com armazenamento de objetos usando o protocolo S3.
+    Compatível com Digital Ocean Spaces, AWS S3 e outros serviços S3-compatíveis.
     """
 
     def __init__(
@@ -61,13 +62,21 @@ class DigitalOceanSpaces(StorageInterface):
         self._access_secret = access_secret
         self._bucket = bucket
         self._session = boto3.session.Session()
-        self._client = self._session.client(
-            "s3",
-            region_name=self._region,
-            endpoint_url=self._endpoint,
-            aws_access_key_id=self._access_key,
-            aws_secret_access_key=self._access_secret,
-        )
+
+        # Configuração do cliente S3
+        # Se endpoint não for fornecido (None ou vazio), boto3 usa o endpoint padrão da AWS
+        client_config = {
+            "service_name": "s3",
+            "region_name": self._region,
+            "aws_access_key_id": self._access_key,
+            "aws_secret_access_key": self._access_secret,
+        }
+
+        # Adiciona endpoint_url apenas se fornecido (necessário para Digital Ocean Spaces e Minio)
+        if self._endpoint:
+            client_config["endpoint_url"] = self._endpoint
+
+        self._client = self._session.client(**client_config)
 
     def get_file(self, file_to_be_downloaded: Union[str, Path], destination) -> None:
         """
