@@ -149,5 +149,5 @@ class DigitalOceanSpacesIntegrationTests(TestCase):
         content_to_be_uploaded = "content of bucket"
         spaces.upload_content(file_key, content_to_be_uploaded)
         upload_fileobj_mock.assert_called_once_with(
-            sentinel.bytesio, self.BUCKET, file_key, ExtraArgs={"ACL": "public-read"}
+            sentinel.bytesio, self.BUCKET, file_key
         )
