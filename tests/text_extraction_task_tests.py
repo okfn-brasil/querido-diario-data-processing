@@ -49,6 +49,7 @@ class TextExtractionTaskTests(TestCase):
             self.tmpfile_returned_by_text_extraction_function_mock = tmpfile.name
         self.text_extraction_function = MagicMock(spec=TextExtractorInterface)
         self.text_extraction_function.extract_text.return_value = ""
+        self.text_extraction_function.is_zip.return_value = False
         self.index_mock = MagicMock()
         self.index_mock.index_document = MagicMock()
 
@@ -164,6 +165,7 @@ class TextExtractionTaskTests(TestCase):
         text_extraction_function.extract_text.return_value = expected_data[
             "source_text"
         ]
+        text_extraction_function.is_zip.return_value = False
 
         extract_text_pending_gazettes(
             database_mock,
@@ -185,6 +187,7 @@ class TextExtractionTaskTests(TestCase):
         text_extraction_function.extract_text.side_effect = Exception(
             "Unsupported file type"
         )
+        text_extraction_function.is_zip.return_value = False
 
         extract_text_pending_gazettes(
             self.database_mock,
@@ -257,6 +260,7 @@ class TextExtractionTaskTests(TestCase):
             Exception("Unsupported file type"),
             file_content_returned_by_text_extraction_function_mock,
         ]
+        text_extraction_function.is_zip.return_value = False
 
         extract_text_pending_gazettes(
             database_mock,

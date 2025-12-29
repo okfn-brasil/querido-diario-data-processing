@@ -7,3 +7,9 @@ class TextExtractorInterface(abc.ABC):
         """
         Extract the text from the given file
         """
+
+    @abc.abstractmethod
+    def is_zip(self, filepath: str) -> bool:
+        """
+        Check if the given file is a ZIP archive
+        """

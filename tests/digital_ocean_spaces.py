@@ -60,6 +60,28 @@ class DigitalOceanSpacesIntegrationTests(TestCase):
                 msg="DigitalOceanSpaces should implement the StorageInterface",
             )
 
+    def test_object_create_without_endpoint_for_aws_s3(self):
+        """Testa criação do cliente S3 sem endpoint customizado (AWS S3)"""
+        with patch(
+            "boto3.Session.client",
+        ) as mock:
+            spaces = DigitalOceanSpaces(
+                self.REGION,
+                None,  # Sem endpoint para AWS S3
+                self.ACCESS_KEY,
+                self.ACCESS_SECRET,
+                self.BUCKET,
+            )
+            # Verifica que o cliente foi criado sem endpoint_url
+            mock.assert_called_once()
+            call_kwargs = mock.call_args[1]
+            self.assertEqual(call_kwargs["service_name"], "s3")
+            self.assertEqual(call_kwargs["region_name"], self.REGION)
+            self.assertEqual(call_kwargs["aws_access_key_id"], self.ACCESS_KEY)
+            self.assertEqual(call_kwargs["aws_secret_access_key"], self.ACCESS_SECRET)
+            self.assertNotIn("endpoint_url", call_kwargs)
+            self.assertEqual(self.BUCKET, spaces._bucket)
+
     def test_object_create(self):
         with patch(
             "boto3.Session.client",

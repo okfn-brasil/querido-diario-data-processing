@@ -7,9 +7,9 @@ from os import environ
 from data_extraction import create_apache_tika_text_extraction
 from database import create_database_interface
 from index import create_index_interface
+from monitoring import get_monitor, setup_structured_logging
 from storage import create_storage_interface
 from tasks import run_task
-from monitoring import setup_structured_logging, get_monitor
 
 
 def setup_memory_controls():
@@ -86,11 +86,11 @@ def aggregates_pipeline():
 def execute_pipeline(pipeline):
     setup_memory_controls()
     enable_debug_if_necessary()
-    
+
     # Configura logging estruturado
     log_level = logging.DEBUG if is_debug_enabled() else logging.INFO
     setup_structured_logging(log_level)
-    
+
     logging.info("=== Iniciando pipeline de processamento ===")
     logging.info(f"Pipeline: {pipeline or 'gazette_texts'}")
     logging.info(f"Modo de execução: {get_execution_mode()}")

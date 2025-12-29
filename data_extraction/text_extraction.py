@@ -6,8 +6,9 @@ import time
 import magic
 import requests
 
+from monitoring import log_tika_error, log_tika_request, log_tika_response
+
 from .interfaces import TextExtractorInterface
-from monitoring import log_tika_request, log_tika_response, log_tika_error
 
 
 class UnsupportedFileTypeError(Exception):
@@ -41,23 +42,27 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
 
         file_size = os.path.getsize(filepath)
         content_type = self._get_file_type(filepath)
-        
+
         # Log requisição ao Tika
         log_tika_request(filepath, file_size, content_type, self._url)
-        
+
         last_exception = None
         for attempt in range(self._max_retries):
             start_time = time.time()
-            
+
             try:
-                return self._make_tika_request(filepath, file_size, content_type, start_time)
-            except (requests.exceptions.ConnectionError, 
-                    requests.exceptions.Timeout,
-                    requests.exceptions.ChunkedEncodingError) as e:
+                return self._make_tika_request(
+                    filepath, file_size, content_type, start_time
+                )
+            except (
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout,
+                requests.exceptions.ChunkedEncodingError,
+            ) as e:
                 last_exception = e
-                
+
                 if attempt < self._max_retries - 1:
-                    wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                    wait_time = 2**attempt  # Exponential backoff: 1s, 2s, 4s
                     logging.warning(
                         f"Transient error on attempt {attempt + 1}/{self._max_retries} "
                         f"for {filepath}: {type(e).__name__}. Retrying in {wait_time}s..."
@@ -70,11 +75,13 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
             except Exception as e:
                 # Non-retryable errors
                 raise e
-        
+
         # If we exhausted all retries
         raise last_exception
 
-    def _make_tika_request(self, filepath: str, file_size: int, content_type: str, start_time: float) -> str:
+    def _make_tika_request(
+        self, filepath: str, file_size: int, content_type: str, start_time: float
+    ) -> str:
         """Make the actual HTTP request to Tika"""
         try:
             with open(filepath, "rb") as file:
@@ -90,9 +97,9 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
                     stream=False,  # Tika requires full upload, but we stream the read
                     timeout=(30, 300),  # (connect timeout, read timeout) in seconds
                 )
-                
+
                 duration_ms = (time.time() - start_time) * 1000
-                
+
                 # Check for HTTP errors
                 if response.status_code != 200:
                     error_msg = (
@@ -105,15 +112,17 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
                         error_msg,
                         duration_ms,
                         file_size=file_size,
-                        status_code=response.status_code
+                        status_code=response.status_code,
                     )
                     raise requests.HTTPError(error_msg)
-                
+
                 response.encoding = "UTF-8"
                 text = response.text
-                
+
                 # Log resposta bem-sucedida
-                log_tika_response(filepath, duration_ms, len(text), response.status_code)
+                log_tika_response(
+                    filepath, duration_ms, len(text), response.status_code
+                )
 
                 # Explicit cleanup to free memory immediately
                 response.close()
@@ -125,24 +134,16 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
             duration_ms = (time.time() - start_time) * 1000
             error_msg = f"Failed to connect to Tika at {self._url}: {str(e)}"
             log_tika_error(
-                filepath,
-                "ConnectionError",
-                error_msg,
-                duration_ms,
-                file_size=file_size
+                filepath, "ConnectionError", error_msg, duration_ms, file_size=file_size
             )
             logging.error(f"Tika connection error for {filepath}: {error_msg}")
             gc.collect()
             raise
-        except requests.exceptions.Timeout as e:
+        except requests.exceptions.Timeout:
             duration_ms = (time.time() - start_time) * 1000
             error_msg = f"Tika request timeout after {duration_ms/1000:.1f}s for file: {filepath}"
             log_tika_error(
-                filepath,
-                "TimeoutError",
-                error_msg,
-                duration_ms,
-                file_size=file_size
+                filepath, "TimeoutError", error_msg, duration_ms, file_size=file_size
             )
             logging.error(f"Tika timeout for {filepath}: {error_msg}")
             gc.collect()
@@ -155,12 +156,12 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
                 "ChunkedEncodingError",
                 error_msg,
                 duration_ms,
-                file_size=file_size
+                file_size=file_size,
             )
             logging.error(f"Tika chunked encoding error for {filepath}: {error_msg}")
             gc.collect()
             raise
-        except requests.HTTPError as e:
+        except requests.HTTPError:
             # Already logged above, just ensure cleanup
             gc.collect()
             raise
@@ -168,16 +169,12 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
             duration_ms = (time.time() - start_time) * 1000
             error_type = type(e).__name__
             error_message = str(e)
-            
+
             # Log erro detalhado
             log_tika_error(
-                filepath, 
-                error_type, 
-                error_message, 
-                duration_ms,
-                file_size=file_size
+                filepath, error_type, error_message, duration_ms, file_size=file_size
             )
-            
+
             # Ensure cleanup even on error
             gc.collect()
             raise e
@@ -190,7 +187,9 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
             return self._try_extract_text(filepath)
         except Exception as e:
             file_size = os.path.getsize(filepath) if os.path.exists(filepath) else 0
-            file_type = self._get_file_type(filepath) if os.path.exists(filepath) else "unknown"
+            file_type = (
+                self._get_file_type(filepath) if os.path.exists(filepath) else "unknown"
+            )
             error_details = (
                 f"Could not extract file content: {filepath} "
                 f"(size: {file_size / 1024 / 1024:.2f}MB, type: {file_type}, "
