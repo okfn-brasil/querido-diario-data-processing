@@ -22,6 +22,8 @@ class ApacheTikaTextExtractorTest(TestCase):
     def test_request_is_sent_to_apache_tika_server(
         self, magic_mock, open_mock, request_get_mock
     ):
+        # Configure mock to return status_code 200
+        request_get_mock.return_value = MagicMock(status_code=200, text="")
         filepath = "tests/data/fake_gazette.pdf"
         expected_headers = {"Content-Type": "application/pdf", "Accept": "text/plain"}
         self.extractor.extract_text(filepath)
@@ -31,10 +33,14 @@ class ApacheTikaTextExtractorTest(TestCase):
             f"{self.url}/tika", data=open_mock(), headers=expected_headers
         )
 
-    @patch("requests.put", return_value=MagicMock(text="Fake gazette content"))
+    @patch("requests.put")
     @patch("builtins.open", new_callable=mock_open, read_data="")
     @patch("magic.from_file", return_value="application/pdf")
     def test_request_reponse_return(self, magic_mock, open_mock, request_get_mock):
+        # Configure mock to return status_code 200 and text content
+        request_get_mock.return_value = MagicMock(
+            status_code=200, text="Fake gazette content"
+        )
         text = self.extractor.extract_text("tests/data/fake_gazette.pdf")
         self.assertEqual("Fake gazette content", text)
 

@@ -33,6 +33,9 @@ def get_gazettes_extracted_since_yesterday(
     """
     logging.info("Listing gazettes extracted since yesterday (paginated)")
 
+    # Read page size dynamically to allow test mocking
+    page_size = int(os.environ.get("GAZETTE_QUERY_PAGE_SIZE", DEFAULT_PAGE_SIZE))
+
     offset = 0
     while True:
         command = f"""
@@ -59,7 +62,7 @@ def get_gazettes_extracted_since_yesterday(
             scraped_at > current_timestamp - interval '1 day'
             AND gazettes.file_path NOT LIKE '%.zip'
         ORDER BY gazettes.id
-        LIMIT {QUERY_PAGE_SIZE} OFFSET {offset}
+        LIMIT {page_size} OFFSET {offset}
         ;
         """
 
@@ -75,10 +78,10 @@ def get_gazettes_extracted_since_yesterday(
         for gazette in page_results:
             yield format_gazette_data(gazette)
 
-        offset += QUERY_PAGE_SIZE
+        offset += page_size
 
         # If we got fewer results than page size, we're done
-        if len(page_results) < QUERY_PAGE_SIZE:
+        if len(page_results) < page_size:
             break
 
 
@@ -90,6 +93,9 @@ def get_all_gazettes_extracted(
     Uses pagination to prevent loading all data into memory at once (OOM prevention)
     """
     logging.info("Listing all gazettes extracted (paginated)")
+
+    # Read page size dynamically to allow test mocking
+    page_size = int(os.environ.get("GAZETTE_QUERY_PAGE_SIZE", DEFAULT_PAGE_SIZE))
 
     offset = 0
     while True:
@@ -116,7 +122,7 @@ def get_all_gazettes_extracted(
         WHERE
             gazettes.file_path NOT LIKE '%.zip'
         ORDER BY gazettes.id
-        LIMIT {QUERY_PAGE_SIZE} OFFSET {offset}
+        LIMIT {page_size} OFFSET {offset}
         ;
         """
 
@@ -132,10 +138,10 @@ def get_all_gazettes_extracted(
         for gazette in page_results:
             yield format_gazette_data(gazette)
 
-        offset += QUERY_PAGE_SIZE
+        offset += page_size
 
         # If we got fewer results than page size, we're done
-        if len(page_results) < QUERY_PAGE_SIZE:
+        if len(page_results) < page_size:
             break
 
 
@@ -147,6 +153,9 @@ def get_unprocessed_gazettes(
     Uses pagination to prevent loading all data into memory at once (OOM prevention)
     """
     logging.info("Listing unprocessed gazettes (paginated)")
+
+    # Read page size dynamically to allow test mocking
+    page_size = int(os.environ.get("GAZETTE_QUERY_PAGE_SIZE", DEFAULT_PAGE_SIZE))
 
     offset = 0
     while True:
@@ -174,7 +183,7 @@ def get_unprocessed_gazettes(
             processed is False
             AND gazettes.file_path NOT LIKE '%.zip'
         ORDER BY gazettes.id
-        LIMIT {QUERY_PAGE_SIZE} OFFSET {offset}
+        LIMIT {page_size} OFFSET {offset}
         ;
         """
 
@@ -190,10 +199,10 @@ def get_unprocessed_gazettes(
         for gazette in page_results:
             yield format_gazette_data(gazette)
 
-        offset += QUERY_PAGE_SIZE
+        offset += page_size
 
         # If we got fewer results than page size, we're done
-        if len(page_results) < QUERY_PAGE_SIZE:
+        if len(page_results) < page_size:
             break
 
 

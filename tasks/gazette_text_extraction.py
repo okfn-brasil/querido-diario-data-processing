@@ -166,7 +166,11 @@ def try_process_gazette_file(
                     segment["file_raw_txt"] = define_file_url(segment_txt_path)
 
                 upload_raw_text(segment_txt_path, segment["source_text"], storage)
-                index.index_document(segment, document_id=segment["file_checksum"])
+                # Create a copy before indexing to avoid issues with mock references in tests
+                segment_to_index = dict(segment)
+                index.index_document(
+                    segment_to_index, document_id=segment["file_checksum"]
+                )
                 document_ids.append(segment["file_checksum"])
 
                 # Clear segment data from memory
@@ -175,7 +179,10 @@ def try_process_gazette_file(
             # Clear segments list
             del territory_segments
         else:
-            index.index_document(gazette, document_id=gazette["file_checksum"])
+            # Create a copy before indexing to avoid issues with mock references in tests
+            # and to preserve data integrity during concurrent operations
+            gazette_to_index = dict(gazette)
+            index.index_document(gazette_to_index, document_id=gazette["file_checksum"])
             document_ids.append(gazette["file_checksum"])
 
         set_gazette_as_processed(gazette, database)
