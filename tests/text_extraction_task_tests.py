@@ -75,8 +75,11 @@ class TextExtractionTaskTests(TestCase):
         )
 
         self.storage_mock.get_file.assert_called_once()
+        # Check the file_path directly instead of accessing self.data[0]
+        # which may have been cleared during processing
         self.assertEqual(
-            self.storage_mock.get_file.call_args.args[0], self.data[0]["file_path"]
+            self.storage_mock.get_file.call_args.args[0],
+            "sc_gaspar/2020-10-18/972aca2e-1174-11eb-b2d5-a86daaca905e.pdf",
         )
         self.assertIsInstance(
             self.storage_mock.get_file.call_args.args[1], tempfile._TemporaryFileWrapper

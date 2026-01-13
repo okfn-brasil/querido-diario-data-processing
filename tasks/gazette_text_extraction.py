@@ -127,9 +127,20 @@ def try_process_gazette_file(
             )
 
         gazette["source_text"] = try_to_extract_content(gazette_file, text_extractor)
-        gazette["url"] = define_file_url(gazette["file_path"])
         gazette_txt_path = define_gazette_txt_path(gazette)
-        gazette["file_raw_txt"] = define_file_url(gazette_txt_path)
+
+        # Store relative paths instead of full URLs (controlled by feature flag)
+        use_relative_paths = (
+            os.environ.get("USE_RELATIVE_FILE_PATHS", "false").lower() == "true"
+        )
+        if use_relative_paths:
+            gazette["url"] = gazette["file_path"]  # Relative path only
+            gazette["file_raw_txt"] = gazette_txt_path  # Relative path only
+        else:
+            # Legacy behavior: store full URLs
+            gazette["url"] = define_file_url(gazette["file_path"])
+            gazette["file_raw_txt"] = define_file_url(gazette_txt_path)
+
         upload_raw_text(gazette_txt_path, gazette["source_text"], storage)
 
         # Delete file ASAP to free disk space
@@ -143,9 +154,23 @@ def try_process_gazette_file(
 
             for segment in territory_segments:
                 segment_txt_path = define_segment_txt_path(segment)
-                segment["file_raw_txt"] = define_file_url(segment_txt_path)
+
+                # Store relative path for segments (controlled by feature flag)
+                use_relative_paths = (
+                    os.environ.get("USE_RELATIVE_FILE_PATHS", "false").lower() == "true"
+                )
+                if use_relative_paths:
+                    segment["file_raw_txt"] = segment_txt_path  # Relative path only
+                else:
+                    # Legacy behavior: store full URL
+                    segment["file_raw_txt"] = define_file_url(segment_txt_path)
+
                 upload_raw_text(segment_txt_path, segment["source_text"], storage)
-                index.index_document(segment, document_id=segment["file_checksum"])
+                # Create a copy before indexing to avoid issues with mock references in tests
+                segment_to_index = dict(segment)
+                index.index_document(
+                    segment_to_index, document_id=segment["file_checksum"]
+                )
                 document_ids.append(segment["file_checksum"])
 
                 # Clear segment data from memory
@@ -154,7 +179,10 @@ def try_process_gazette_file(
             # Clear segments list
             del territory_segments
         else:
-            index.index_document(gazette, document_id=gazette["file_checksum"])
+            # Create a copy before indexing to avoid issues with mock references in tests
+            # and to preserve data integrity during concurrent operations
+            gazette_to_index = dict(gazette)
+            index.index_document(gazette_to_index, document_id=gazette["file_checksum"])
             document_ids.append(gazette["file_checksum"])
 
         set_gazette_as_processed(gazette, database)
@@ -215,6 +243,10 @@ def define_segment_txt_path(segment: Dict):
 def define_file_url(path: str):
     """
     Joins the storage endpoint with the path to form the URL
+
+    DEPRECATED: This function will be removed in a future version.
+    With USE_RELATIVE_FILE_PATHS=true, paths are stored without endpoints.
+    The API will handle endpoint concatenation dynamically.
     """
     file_endpoint = get_file_endpoint()
     return f"{file_endpoint}/{path}"
@@ -223,6 +255,10 @@ def define_file_url(path: str):
 def get_file_endpoint() -> str:
     """
     Get the endpoint where the gazette files can be downloaded.
+
+    DEPRECATED: This function will be removed in a future version.
+    The QUERIDO_DIARIO_FILES_ENDPOINT should be used in the API layer,
+    not in data processing.
     """
     return os.environ["QUERIDO_DIARIO_FILES_ENDPOINT"]
 

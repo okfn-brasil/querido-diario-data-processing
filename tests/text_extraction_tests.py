@@ -22,19 +22,31 @@ class ApacheTikaTextExtractorTest(TestCase):
     def test_request_is_sent_to_apache_tika_server(
         self, magic_mock, open_mock, request_get_mock
     ):
+        # Configure mock to return status_code 200 and close method
+        mock_response = MagicMock(status_code=200, text="")
+        mock_response.close = MagicMock()
+        request_get_mock.return_value = mock_response
         filepath = "tests/data/fake_gazette.pdf"
         expected_headers = {"Content-Type": "application/pdf", "Accept": "text/plain"}
         self.extractor.extract_text(filepath)
         open_mock.assert_called_with(filepath, "rb")
         magic_mock.assert_called_with(filepath, mime=True)
         request_get_mock.assert_called_with(
-            f"{self.url}/tika", data=open_mock(), headers=expected_headers
+            f"{self.url}/tika",
+            data=open_mock(),
+            headers=expected_headers,
+            stream=False,
+            timeout=(30, 300),
         )
 
-    @patch("requests.put", return_value=MagicMock(text="Fake gazette content"))
+    @patch("requests.put")
     @patch("builtins.open", new_callable=mock_open, read_data="")
     @patch("magic.from_file", return_value="application/pdf")
     def test_request_reponse_return(self, magic_mock, open_mock, request_get_mock):
+        # Configure mock to return status_code 200, text content, and close method
+        mock_response = MagicMock(status_code=200, text="Fake gazette content")
+        mock_response.close = MagicMock()
+        request_get_mock.return_value = mock_response
         text = self.extractor.extract_text("tests/data/fake_gazette.pdf")
         self.assertEqual("Fake gazette content", text)
 

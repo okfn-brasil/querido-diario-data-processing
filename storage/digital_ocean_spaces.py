@@ -100,9 +100,7 @@ class DigitalOceanSpaces(StorageInterface):
 
         if isinstance(content_to_be_uploaded, str):
             f = BytesIO(content_to_be_uploaded.encode())
-            self._client.upload_fileobj(
-                f, self._bucket, file_key
-            )
+            self._client.upload_fileobj(f, self._bucket, file_key)
             # Explicit cleanup
             f.close()
         else:
@@ -119,9 +117,7 @@ class DigitalOceanSpaces(StorageInterface):
         permission: str = "public-read",
     ) -> None:
         logging.debug(f"Uploading {file_key}")
-        self._client.upload_file(
-            file_path, self._bucket, file_key
-        )
+        self._client.upload_file(file_path, self._bucket, file_key)
 
     def upload_file_multipart(
         self,
