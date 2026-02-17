@@ -26,7 +26,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     find /root/.local -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
 # Download ML model with cleanup
-RUN python -c "import sentence_transformers; sentence_transformers.SentenceTransformer('neuralmind/bert-base-portuguese-cased').save('/tmp/bert-model')" && \
+RUN mkdir -p /home/gazette/models && \
+    python -c "import sentence_transformers; sentence_transformers.SentenceTransformer('neuralmind/bert-base-portuguese-cased').save('/home/gazette/models/bert-base-portuguese-cased')" && \
     rm -rf ~/.cache/huggingface ~/.cache/torch ~/.cache/pip
 
 # Runtime stage
@@ -54,9 +55,8 @@ ENV PYTHONPATH=$WORKDIR
 COPY --from=builder /root/.local /usr/local
 ENV PATH=/usr/local/bin:$PATH
 
-# Copy ML model from builder
-COPY --from=builder /tmp/bert-model /tmp/bert-model
-ENV SENTENCE_TRANSFORMERS_HOME=/tmp
+# Copy ML model from builder to user home
+COPY --from=builder --chown=$USER:$USER /home/gazette/models $USER_HOME/models
 
 # Set working directory
 WORKDIR $WORKDIR
