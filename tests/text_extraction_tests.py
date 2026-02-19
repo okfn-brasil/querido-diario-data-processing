@@ -16,22 +16,28 @@ class ApacheTikaTextExtractorTest(TestCase):
     def test_text_extractor_wrapper_creation(self):
         self.assertEqual(self.url, self.extractor._url)
 
-    @patch("requests.put")
+    @patch("data_extraction.text_extraction.requests.Session")
     @patch("builtins.open", new_callable=mock_open, read_data="")
     @patch("magic.from_file", return_value="application/pdf")
     def test_request_is_sent_to_apache_tika_server(
-        self, magic_mock, open_mock, request_get_mock
+        self, magic_mock, open_mock, session_mock
     ):
-        # Configure mock to return status_code 200 and close method
+        # Configure mock session and response
         mock_response = MagicMock(status_code=200, text="")
         mock_response.close = MagicMock()
-        request_get_mock.return_value = mock_response
+        mock_session_instance = MagicMock()
+        mock_session_instance.put = MagicMock(return_value=mock_response)
+        session_mock.return_value = mock_session_instance
+
+        # Create extractor with mocked session
+        extractor = ApacheTikaTextExtractor(self.url)
         filepath = "tests/data/fake_gazette.pdf"
         expected_headers = {"Content-Type": "application/pdf", "Accept": "text/plain"}
-        self.extractor.extract_text(filepath)
+        extractor.extract_text(filepath)
+
         open_mock.assert_called_with(filepath, "rb")
         magic_mock.assert_called_with(filepath, mime=True)
-        request_get_mock.assert_called_with(
+        mock_session_instance.put.assert_called_with(
             f"{self.url}/tika",
             data=open_mock(),
             headers=expected_headers,
@@ -39,23 +45,35 @@ class ApacheTikaTextExtractorTest(TestCase):
             timeout=(30, 300),
         )
 
-    @patch("requests.put")
+    @patch("data_extraction.text_extraction.requests.Session")
     @patch("builtins.open", new_callable=mock_open, read_data="")
     @patch("magic.from_file", return_value="application/pdf")
-    def test_request_reponse_return(self, magic_mock, open_mock, request_get_mock):
-        # Configure mock to return status_code 200, text content, and close method
+    def test_request_reponse_return(self, magic_mock, open_mock, session_mock):
+        # Configure mock session and response
         mock_response = MagicMock(status_code=200, text="Fake gazette content")
         mock_response.close = MagicMock()
-        request_get_mock.return_value = mock_response
-        text = self.extractor.extract_text("tests/data/fake_gazette.pdf")
+        mock_session_instance = MagicMock()
+        mock_session_instance.put = MagicMock(return_value=mock_response)
+        session_mock.return_value = mock_session_instance
+
+        # Create extractor with mocked session
+        extractor = ApacheTikaTextExtractor(self.url)
+        text = extractor.extract_text("tests/data/fake_gazette.pdf")
         self.assertEqual("Fake gazette content", text)
 
-    @patch("requests.put", side_effect=Exception())
+    @patch("data_extraction.text_extraction.requests.Session")
     @patch("builtins.open", new_callable=mock_open, read_data="")
     @patch("magic.from_file", return_value="application/pdf")
-    def test_odt_file_content_extraction(self, magic_mock, open_mock, request_get_mock):
+    def test_odt_file_content_extraction(self, magic_mock, open_mock, session_mock):
+        # Configure mock session to raise exception
+        mock_session_instance = MagicMock()
+        mock_session_instance.put = MagicMock(side_effect=Exception())
+        session_mock.return_value = mock_session_instance
+
+        # Create extractor with mocked session
+        extractor = ApacheTikaTextExtractor(self.url)
         with self.assertRaisesRegex(Exception, "Could not extract file content"):
-            self.extractor.extract_text("tests/data/fake_gazette.pdf")
+            extractor.extract_text("tests/data/fake_gazette.pdf")
 
     def test_extract_from_pdf_file_should_return_text_file(self):
         text = self.extractor.extract_text("tests/data/fake_gazette.pdf")

@@ -1,10 +1,13 @@
 import gc
 import logging
 import os
+import random
 import time
 
 import magic
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry as Urllib3Retry
 
 from monitoring import log_tika_error, log_tika_request, log_tika_response
 
@@ -18,9 +21,39 @@ class UnsupportedFileTypeError(Exception):
 
 
 class ApacheTikaTextExtractor(TextExtractorInterface):
-    def __init__(self, url: str, max_retries: int = 3):
+    def __init__(
+        self,
+        url: str,
+        max_retries: int = 5,
+        retry_base_delay: float = 2.0,
+        connection_pool_size: int = 10,
+    ):
         self._url = url
         self._max_retries = max_retries
+        self._retry_base_delay = retry_base_delay
+        self._session = self._create_session(connection_pool_size)
+
+    def _create_session(self, pool_size: int) -> requests.Session:
+        """
+        Create a requests session with connection pooling and keep-alive.
+        This reuses TCP connections and improves performance.
+        """
+        session = requests.Session()
+
+        # Configure connection pooling
+        adapter = HTTPAdapter(
+            pool_connections=pool_size,
+            pool_maxsize=pool_size,
+            max_retries=0,  # We handle retries manually with better logic
+            pool_block=False,
+        )
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+
+        # Set default headers for keep-alive
+        session.headers.update({"Connection": "keep-alive"})
+
+        return session
 
     def _get_file_type(self, filepath: str) -> str:
         """
@@ -62,10 +95,14 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
                 last_exception = e
 
                 if attempt < self._max_retries - 1:
-                    wait_time = 2**attempt  # Exponential backoff: 1s, 2s, 4s
+                    # Exponential backoff with jitter to prevent thundering herd
+                    base_wait = self._retry_base_delay * (2**attempt)
+                    jitter = random.uniform(0, base_wait * 0.1)  # 10% jitter
+                    wait_time = base_wait + jitter
+
                     logging.warning(
                         f"Transient error on attempt {attempt + 1}/{self._max_retries} "
-                        f"for {filepath}: {type(e).__name__}. Retrying in {wait_time}s..."
+                        f"for {filepath}: {type(e).__name__}. Retrying in {wait_time:.1f}s..."
                     )
                     time.sleep(wait_time)
                 else:
@@ -90,7 +127,8 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
                     "Accept": "text/plain",
                 }
                 # Use streaming to prevent loading entire file in memory
-                response = requests.put(
+                # Use session for connection pooling and keep-alive
+                response = self._session.put(
                     f"{self._url}/tika",
                     data=file,
                     headers=headers,
@@ -263,4 +301,15 @@ def get_apache_tika_server_url():
 
 def create_apache_tika_text_extraction() -> TextExtractorInterface:
     apache_tika_server_url = get_apache_tika_server_url()
-    return ApacheTikaTextExtractor(apache_tika_server_url)
+
+    # Read configuration from environment with defaults
+    max_retries = int(os.environ.get("TIKA_MAX_RETRIES", "5"))
+    retry_base_delay = float(os.environ.get("TIKA_RETRY_BASE_DELAY", "2.0"))
+    connection_pool_size = int(os.environ.get("TIKA_CONNECTION_POOL_SIZE", "10"))
+
+    return ApacheTikaTextExtractor(
+        apache_tika_server_url,
+        max_retries=max_retries,
+        retry_base_delay=retry_base_delay,
+        connection_pool_size=connection_pool_size,
+    )
