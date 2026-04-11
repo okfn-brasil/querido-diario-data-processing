@@ -80,7 +80,7 @@ class ALAssociacaoMunicipiosSegmenter(AssociationSegmenter):
         clean_name = territory_name.strip().replace("\n", "")
         # Alguns nomes de municípios possuem um /AL no final, exemplo: Viçosa no diário 2022-01-17, ato 8496EC0A. Para evitar erros como "vicosa-/al-secretaria-municipal...", a linha seguir remove isso.
         clean_name = re.sub(
-            "\s*(\/AL.*|GABINETE DO PREFEITO.*|PODER.*|http.*|PORTARIA.*|Extrato.*|ATA DE.*|SECRETARIA.*|Fundo.*|SETOR.*|ERRATA.*|- AL.*|GABINETE.*|EXTRATO.*|SÚMULA.*|RATIFICAÇÃO.*)",
+            r"\s*(\/AL.*|GABINETE DO PREFEITO.*|PODER.*|http.*|PORTARIA.*|Extrato.*|ATA DE.*|SECRETARIA.*|Fundo.*|SETOR.*|ERRATA.*|- AL.*|GABINETE.*|EXTRATO.*|SÚMULA.*|RATIFICAÇÃO.*)",
             "",
             clean_name,
         )

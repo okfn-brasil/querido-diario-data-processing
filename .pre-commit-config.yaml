@@ -15,7 +15,7 @@ repos:
       fail_fast: true
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.6.2'
+    rev: 'v0.15.10'
     hooks:
     - id: ruff
       fail_fast: true
