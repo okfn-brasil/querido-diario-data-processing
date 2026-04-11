@@ -57,6 +57,20 @@ make re-run
 
 Por padrão, este pipeline processará todos os documentos do banco, independente se já foram processados previamente. Se desejar mudar este comportamento, altere a variável de ambiente `EXECUTION_MODE` no `envvars`.
 
+### Etapas do pipeline `gazette_texts`
+
+O pipeline executa as seguintes etapas em sequência:
+
+1. **`extract_text_from_gazettes`** — converte os arquivos dos diários (PDF, ODT etc.) em texto puro usando o [Apache Tika](https://tika.apache.org/) e indexa o conteúdo completo no OpenSearch.
+
+2. Para cada tema configurado (arquivos em `data/`):
+
+   2a. **`extract_themed_excerpts_from_gazettes`** — realiza uma **busca lexical** no OpenSearch usando as palavras-chave e conjuntos de termos definidos no tema. Os trechos encontrados (fragmentos de até 2000 caracteres que contêm os termos próximos entre si) são indexados no índice temático correspondente.
+
+   2b. **`embedding_rerank_excerpts`** — para cada trecho indexado na etapa anterior, calcula uma **pontuação de similaridade semântica** usando o modelo BERT em português ([`neuralmind/bert-base-portuguese-cased`](https://huggingface.co/neuralmind/bert-base-portuguese-cased)). O modelo codifica tanto os títulos das queries do tema quanto o texto de cada trecho em vetores numéricos e compara sua proximidade semântica. A pontuação resultante (`excerpt_embedding_score`) é salva no documento, permitindo que buscas posteriores refinem o ranking além da correspondência lexical.
+
+   2c. **`tag_entities_in_excerpts`** — identifica e anota entidades nomeadas (pessoas, organizações, locais etc.) nos trechos temáticos.
+
 Com os textos extraídos, também podemos executar o pipeline de agregação de dados, que disponibiliza os textos dos diários em formato CSV. Para isso, execute:
 
 ```console

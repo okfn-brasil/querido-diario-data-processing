@@ -15,14 +15,24 @@ from index import IndexInterface
 
 from .utils import get_documents_with_ids
 
+_model = None
+
+
+def _get_model() -> sentence_transformers.SentenceTransformer:
+    global _model
+    if _model is None:
+        user_folder = os.environ["HOME"]
+        _model = sentence_transformers.SentenceTransformer(
+            f"{user_folder}/models/bert-base-portuguese-cased",
+            model_kwargs={"low_cpu_mem_usage": True},
+        )
+    return _model
+
 
 def embedding_rerank_excerpts(
     theme: Dict, excerpt_ids: List[str], index: IndexInterface
 ) -> None:
-    user_folder = os.environ["HOME"]
-    model = sentence_transformers.SentenceTransformer(
-        f"{user_folder}/models/bert-base-portuguese-cased"
-    )
+    model = _get_model()
     queries = get_natural_language_queries(theme)
     queries_vectors = model.encode(queries, convert_to_tensor=True)
 
