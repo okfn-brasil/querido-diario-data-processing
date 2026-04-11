@@ -1,6 +1,6 @@
 # Base image with all dependencies for querido-diario-data-processing
 # This image is rebuilt only when requirements.txt changes
-FROM docker.io/python:3.11-slim AS builder
+FROM docker.io/python:3.14-slim AS builder
 
 # Install build dependencies in single layer for better caching
 RUN apt-get update -y && \
@@ -31,7 +31,7 @@ RUN mkdir -p /home/gazette/models && \
     rm -rf ~/.cache/huggingface ~/.cache/torch ~/.cache/pip
 
 # Runtime stage
-FROM docker.io/python:3.11-slim
+FROM docker.io/python:3.14-slim
 
 ENV USER=gazette
 ENV USER_HOME=/home/$USER
