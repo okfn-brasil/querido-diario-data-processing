@@ -57,9 +57,24 @@ BACKEND_PORT ?= 8000
 # DOCKER BUILD OPTIMIZATION - Build metadata for multiarch
 # ============================================================================
 BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-VCS_REF := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-VERSION := $(shell git describe --tags --always 2>/dev/null || echo "latest")
-REGISTRY ?= ghcr.io/$(IMAGE_NAMESPACE)
+VCS_REF    := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+VERSION    := $(shell git describe --tags --always 2>/dev/null || echo "latest")
+
+# Derive registry from git remote when not explicitly set.
+# Extracts owner and host from `git remote get-url origin`, then maps:
+#   github.com → ghcr.io   |   gitlab.com → registry.gitlab.com
+# Example: git@github.com:okfn-brasil/repo.git → ghcr.io/okfn-brasil
+# Override at call time: make build-base-multi-arch REGISTRY=my.registry/org
+_GIT_REMOTE_URL  := $(shell git remote get-url origin 2>/dev/null || echo "")
+_GIT_OWNER       := $(shell echo "$(_GIT_REMOTE_URL)" | \
+    sed -E 's|git@[^:]+:([^/]+)/[^/]+(\.git)?$$|\1|; \
+             s|https?://[^/]+/([^/]+)/[^/]+(\.git)?$$|\1|')
+_GIT_REMOTE_HOST := $(shell echo "$(_GIT_REMOTE_URL)" | \
+    sed -E 's|git@([^:]+):.*|\1|; \
+             s|https?://([^/]+)/.*|\1|')
+_REGISTRY_HOST   := $(shell echo "$(_GIT_REMOTE_HOST)" | \
+    sed 's|github\.com|ghcr.io|; s|gitlab\.com|registry.gitlab.com|')
+REGISTRY ?= $(if $(_GIT_OWNER),$(_REGISTRY_HOST)/$(_GIT_OWNER),ghcr.io/$(IMAGE_NAMESPACE))
 
 run-command=docker compose run --rm app $1
 
