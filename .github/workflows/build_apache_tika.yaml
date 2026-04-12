@@ -67,7 +67,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           load: ${{ matrix.platform == 'linux/amd64' }}
           cache-from: type=gha,scope=tika-test-${{ matrix.arch }}
-          cache-to: type=gha,mode=min,scope=tika-test-${{ matrix.arch }}
+          cache-to: type=gha,mode=min,scope=tika-test-${{ matrix.arch }},ignore-error=true
           build-args: |
             TIKA_VERSION=${{ inputs.tika_version || '3.2.2' }}
           tags: |
@@ -165,7 +165,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           cache-from: type=gha,scope=tika-main-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=tika-main-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=tika-main-${{ matrix.arch }},ignore-error=true
           build-args: |
             TIKA_VERSION=${{ inputs.tika_version || '3.2.2' }}
             BUILD_DATE=${{ steps.meta.outputs.build_date }}
@@ -182,7 +182,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           cache-from: type=gha,scope=tika-tag-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=tika-tag-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=tika-tag-${{ matrix.arch }},ignore-error=true
           build-args: |
             TIKA_VERSION=${{ inputs.tika_version || '3.2.2' }}
             BUILD_DATE=${{ steps.meta.outputs.build_date }}

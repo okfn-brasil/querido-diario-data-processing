@@ -75,7 +75,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           cache-from: type=gha,scope=base-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=base-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=base-${{ matrix.arch }},ignore-error=true
           build-args: |
             BUILD_DATE=${{ steps.meta.outputs.build_date }}
             VCS_REF=${{ steps.meta.outputs.vcs_ref }}
