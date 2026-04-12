@@ -1,3 +1,4 @@
+import types
 from unittest import TestCase
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -17,7 +18,7 @@ class ApacheTikaTextExtractorTest(TestCase):
         self.assertEqual(self.url, self.extractor._url)
 
     @patch("data_extraction.text_extraction.requests.Session")
-    @patch("builtins.open", new_callable=mock_open, read_data="")
+    @patch("builtins.open", new_callable=mock_open, read_data=b"")
     @patch("magic.from_file", return_value="application/pdf")
     def test_request_is_sent_to_apache_tika_server(
         self, magic_mock, open_mock, session_mock
@@ -35,15 +36,13 @@ class ApacheTikaTextExtractorTest(TestCase):
         expected_headers = {"Content-Type": "application/pdf", "Accept": "text/plain"}
         extractor.extract_text(filepath)
 
-        open_mock.assert_called_with(filepath, "rb")
         magic_mock.assert_called_with(filepath, mime=True)
-        mock_session_instance.put.assert_called_with(
-            f"{self.url}/tika",
-            data=open_mock(),
-            headers=expected_headers,
-            stream=False,
-            timeout=(30, 300),
-        )
+        call_kwargs = mock_session_instance.put.call_args
+        self.assertEqual(call_kwargs[0][0], f"{self.url}/tika")
+        self.assertIsInstance(call_kwargs[1]["data"], types.GeneratorType)
+        self.assertEqual(call_kwargs[1]["headers"], expected_headers)
+        self.assertEqual(call_kwargs[1]["stream"], False)
+        self.assertEqual(call_kwargs[1]["timeout"], (30, 300))
 
     @patch("data_extraction.text_extraction.requests.Session")
     @patch("builtins.open", new_callable=mock_open, read_data="")
@@ -110,6 +109,23 @@ class ApacheTikaTextExtractorTest(TestCase):
             self.extractor.extract_text,
             "tests/data/fake_gazette.jpg",
         )
+
+    def test_chunk_file_generator_yields_chunks(self):
+        filepath = "tests/data/fake_gazette.pdf"
+        extractor = ApacheTikaTextExtractor(self.url, chunk_size=64)
+        chunks = list(extractor._chunk_file_generator(filepath))
+        self.assertGreater(len(chunks), 0)
+        for chunk in chunks:
+            self.assertLessEqual(len(chunk), 64)
+        import os
+
+        self.assertEqual(sum(len(c) for c in chunks), os.path.getsize(filepath))
+
+    def test_chunk_file_generator_is_generator(self):
+        filepath = "tests/data/fake_gazette.pdf"
+        extractor = ApacheTikaTextExtractor(self.url)
+        gen = extractor._chunk_file_generator(filepath)
+        self.assertIsInstance(gen, types.GeneratorType)
 
     def check_if_text_has_the_fake_text(self, text):
         self.assertIsNotNone(text, msg="Extracted text should not be None")
