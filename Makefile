@@ -1,8 +1,9 @@
 IMAGE_NAMESPACE ?= okfn-brasil
 IMAGE_NAME ?= querido-diario-data-processing
 IMAGE_TAG ?= latest
-APACHE_TIKA_IMAGE_NAME ?=  querido-diario-apache-tika-server
+APACHE_TIKA_IMAGE_NAME ?= querido-diario-apache-tika-server
 APACHE_TIKA_IMAGE_TAG ?= latest
+TIKA_VERSION ?= 3.2.2
 POD_NAME ?= querido-diario
 
 # Architecture detection and configuration
@@ -52,6 +53,29 @@ FULL_PROJECT ?= false
 API_PORT ?= 8080
 BACKEND_PORT ?= 8000
 
+# ============================================================================
+# DOCKER BUILD OPTIMIZATION - Build metadata for multiarch
+# ============================================================================
+BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+VCS_REF    := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+VERSION    := $(shell git describe --tags --always 2>/dev/null || echo "latest")
+
+# Derive registry from git remote when not explicitly set.
+# Extracts owner and host from `git remote get-url origin`, then maps:
+#   github.com → ghcr.io   |   gitlab.com → registry.gitlab.com
+# Example: git@github.com:okfn-brasil/repo.git → ghcr.io/okfn-brasil
+# Override at call time: make build-base-multi-arch REGISTRY=my.registry/org
+_GIT_REMOTE_URL  := $(shell git remote get-url origin 2>/dev/null || echo "")
+_GIT_OWNER       := $(shell echo "$(_GIT_REMOTE_URL)" | \
+    sed -E 's|git@[^:]+:([^/]+)/[^/]+(\.git)?$$|\1|; \
+             s|https?://[^/]+/([^/]+)/[^/]+(\.git)?$$|\1|')
+_GIT_REMOTE_HOST := $(shell echo "$(_GIT_REMOTE_URL)" | \
+    sed -E 's|git@([^:]+):.*|\1|; \
+             s|https?://([^/]+)/.*|\1|')
+_REGISTRY_HOST   := $(shell echo "$(_GIT_REMOTE_HOST)" | \
+    sed 's|github\.com|ghcr.io|; s|gitlab\.com|registry.gitlab.com|')
+REGISTRY ?= $(if $(_GIT_OWNER),$(_REGISTRY_HOST)/$(_GIT_OWNER),ghcr.io/$(IMAGE_NAMESPACE))
+
 run-command=docker compose run --rm app $1
 
 wait-for=docker compose run --rm app wait-for-it --timeout=60 $1
@@ -68,17 +92,127 @@ build-devel:
 .PHONY: build-tika-server
 build-tika-server:
 	docker build --platform $(PLATFORM) --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
-		-f Dockerfile_apache_tika $(CURDIR)
-
-.PHONY: build-multi-arch
-build-multi-arch:
-	docker buildx build --platform linux/amd64,linux/arm64 --tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
-		-f Dockerfile $(CURDIR)
-	docker buildx build --platform linux/amd64,linux/arm64 --tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
+		--build-arg TIKA_VERSION=$(TIKA_VERSION) \
 		-f Dockerfile_apache_tika $(CURDIR)
 
 .PHONY: build
 build: build-devel build-tika-server
+
+# ============================================================================
+# OPTIMIZED MULTIARCH BUILD TARGETS (NEW)
+# ============================================================================
+
+.PHONY: build-base-multi-arch
+build-base-multi-arch:
+	@echo "Building base image for multiarch (amd64, arm64) with cache..."
+	@echo "Build Date: $(BUILD_DATE)"
+	@echo "VCS Ref: $(VCS_REF)"
+	@echo "Version: $(VERSION)"
+	docker buildx build \
+		--platform linux/amd64,linux/arm64 \
+		--tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):base-$(VERSION) \
+		--tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):base-latest \
+		--cache-from type=registry,ref=$(REGISTRY)/$(IMAGE_NAME):base-buildcache \
+		--cache-to type=registry,ref=$(REGISTRY)/$(IMAGE_NAME):base-buildcache,mode=max \
+		--build-arg BUILD_DATE=$(BUILD_DATE) \
+		--build-arg VCS_REF=$(VCS_REF) \
+		--build-arg VERSION=$(VERSION) \
+		--push \
+		-f Dockerfile.base $(CURDIR)
+
+.PHONY: build-base-multi-arch-load
+build-base-multi-arch-load:
+	@echo "Building base image for current arch (amd64) and loading locally..."
+	docker buildx build \
+		--platform linux/amd64 \
+		--tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):base-$(IMAGE_TAG) \
+		--load \
+		--build-arg BUILD_DATE=$(BUILD_DATE) \
+		--build-arg VCS_REF=$(VCS_REF) \
+		--build-arg VERSION=$(VERSION) \
+		-f Dockerfile.base $(CURDIR)
+
+.PHONY: build-multi-arch-optimized
+build-multi-arch-optimized:
+	@echo "Building final image for multiarch (amd64, arm64) with cache..."
+	docker buildx build \
+		--platform linux/amd64,linux/arm64 \
+		--tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
+		--tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(VERSION) \
+		--cache-from type=registry,ref=$(REGISTRY)/$(IMAGE_NAME):buildcache \
+		--cache-to type=registry,ref=$(REGISTRY)/$(IMAGE_NAME):buildcache,mode=max \
+		--build-arg BUILD_DATE=$(BUILD_DATE) \
+		--build-arg VCS_REF=$(VCS_REF) \
+		--build-arg VERSION=$(VERSION) \
+		--push \
+		-f Dockerfile $(CURDIR)
+
+.PHONY: build-multi-arch-tika-optimized
+build-multi-arch-tika-optimized:
+	@echo "Building Apache Tika image for multiarch (amd64, arm64) with cache..."
+	docker buildx build \
+		--platform linux/amd64,linux/arm64 \
+		--tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
+		--cache-from type=registry,ref=$(REGISTRY)/$(APACHE_TIKA_IMAGE_NAME):buildcache \
+		--cache-to type=registry,ref=$(REGISTRY)/$(APACHE_TIKA_IMAGE_NAME):buildcache,mode=max \
+		--build-arg BUILD_DATE=$(BUILD_DATE) \
+		--build-arg VCS_REF=$(VCS_REF) \
+		--build-arg TIKA_VERSION=$(TIKA_VERSION) \
+		--push \
+		-f Dockerfile_apache_tika $(CURDIR)
+
+.PHONY: build-all-multi-arch
+build-all-multi-arch: build-base-multi-arch build-multi-arch-optimized build-multi-arch-tika-optimized
+	@echo "✓ All images built and pushed for multiarch (amd64, arm64)"
+
+.PHONY: build-multi-arch-load
+build-multi-arch-load:
+	@echo "Building all images for current architecture and loading locally..."
+	docker buildx build \
+		--platform linux/amd64 \
+		--tag $(IMAGE_NAMESPACE)/$(IMAGE_NAME):$(IMAGE_TAG) \
+		--load \
+		--build-arg BUILD_DATE=$(BUILD_DATE) \
+		--build-arg VCS_REF=$(VCS_REF) \
+		--build-arg VERSION=$(VERSION) \
+		-f Dockerfile $(CURDIR)
+	docker buildx build \
+		--platform linux/amd64 \
+		--tag $(IMAGE_NAMESPACE)/$(APACHE_TIKA_IMAGE_NAME):$(APACHE_TIKA_IMAGE_TAG) \
+		--load \
+		--build-arg BUILD_DATE=$(BUILD_DATE) \
+		--build-arg VCS_REF=$(VCS_REF) \
+		-f Dockerfile_apache_tika $(CURDIR)
+	@echo "✓ All images built for linux/amd64 and loaded locally"
+
+.PHONY: help-build
+help-build:
+	@echo "Docker Build Targets:"
+	@echo "  make build                        - Build for current architecture ($(DEFAULT_PLATFORM))"
+	@echo "  make build amd64=1                - Build for AMD64 architecture"
+	@echo "  make build arm64=1                - Build for ARM64 architecture"
+	@echo "  make build-base-multi-arch        - Build base image for amd64+arm64 and push"
+	@echo "  make build-base-multi-arch-load   - Build base image for amd64 and load locally"
+	@echo "  make build-multi-arch-optimized   - Build final image for amd64+arm64 with cache"
+	@echo "  make build-multi-arch-load        - Build all images for amd64 and load locally"
+	@echo "  make build-all-multi-arch         - Build all images for amd64+arm64 (base+final+tika)"
+	@echo ""
+	@echo "Cache Information:"
+	@echo "  Registry cache: $(REGISTRY)"
+	@echo "  Build timestamp: $(BUILD_DATE)"
+	@echo "  Git revision: $(VCS_REF)"
+	@echo "  Version: $(VERSION)"
+	@echo ""
+	@echo "Note: Multiarch builds require docker buildx and push to registry"
+	@echo "      Use 'make build-multi-arch-load' to build and load locally for amd64"
+
+# ============================================================================
+# LEGACY MULTIARCH TARGET (DEPRECATED - Use new targets above)
+# ============================================================================
+
+.PHONY: build-multi-arch
+build-multi-arch: build-multi-arch-load
+	@echo "Note: Use 'make build-multi-arch-load' or 'make build-base-multi-arch' for optimized builds"
 
 .PHONY: login
 login:

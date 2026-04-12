@@ -68,9 +68,9 @@ def extract_text_from_gazettes(
                 f"(territory: {gazette.get('territory_id', 'unknown')}, "
                 f"date: {gazette.get('date', 'unknown')}, "
                 f"checksum: {gazette.get('file_checksum', 'unknown')}). "
-                f"Error: {type(e).__name__}: {str(e)}"
+                f"Error: {type(e).__name__}: {str(e)}",
+                exc_info=True,
             )
-            logging.exception(e)
         finally:
             # Clear gazette data from memory after processing
             gazette.clear()

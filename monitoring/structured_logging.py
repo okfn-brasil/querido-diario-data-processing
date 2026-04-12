@@ -8,9 +8,36 @@ facilitando a análise de problemas de conexão e performance.
 import json
 import logging
 import time
+import traceback
 from datetime import date, datetime
 from functools import wraps
 from typing import Dict, Optional
+
+# Campos internos do LogRecord que não devem ser incluídos no JSON de saída
+_LOG_RECORD_BUILTIN_ATTRS = {
+    "args",
+    "created",
+    "exc_info",
+    "exc_text",
+    "filename",
+    "funcName",
+    "levelname",
+    "levelno",
+    "lineno",
+    "message",
+    "module",
+    "msecs",
+    "msg",
+    "name",
+    "pathname",
+    "process",
+    "processName",
+    "relativeCreated",
+    "stack_info",
+    "taskName",
+    "thread",
+    "threadName",
+}
 
 
 def date_serializer(obj):
@@ -20,16 +47,60 @@ def date_serializer(obj):
     raise TypeError(f"Type {type(obj)} not serializable")
 
 
+class JsonFormatter(logging.Formatter):
+    """
+    Formata cada entrada de log como uma única linha JSON.
+
+    Campos fixos: timestamp, level, logger, message.
+    Campos extras (via extra={}) são incluídos diretamente no JSON.
+    Tracebacks são serializados como string única no campo 'traceback',
+    evitando fragmentação por coletores de logs como Grafana Loki.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        log_entry: Dict = {
+            "timestamp": datetime.utcfromtimestamp(record.created).isoformat() + "Z",
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+
+        # Inclui campos extras (estruturados) passados via extra={}
+        for key, value in record.__dict__.items():
+            if key not in _LOG_RECORD_BUILTIN_ATTRS:
+                log_entry[key] = value
+
+        # Serializa traceback como string única (sem quebras de linha)
+        if record.exc_info:
+            log_entry["traceback"] = "".join(
+                traceback.format_exception(*record.exc_info)
+            ).strip()
+
+        return json.dumps(log_entry, default=date_serializer, ensure_ascii=False)
+
+
 # Configuração de logging estruturado
 def setup_structured_logging(level: int = logging.INFO) -> None:
     """
-    Configura logging estruturado com formato JSON para melhor análise
+    Configura logging estruturado com formato JSON para melhor análise.
+
+    Cada entrada de log é emitida como uma única linha JSON, preservando
+    todos os campos estruturados e mantendo tracebacks em um único campo.
+    Bibliotecas externas verbosas (opensearchpy, urllib3) são silenciadas
+    no nível WARNING para reduzir ruído operacional.
     """
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    handler = logging.StreamHandler()
+    handler.setFormatter(JsonFormatter())
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level)
+    # Evita adicionar handlers duplicados em re-chamadas (ex.: testes)
+    if not root_logger.handlers:
+        root_logger.addHandler(handler)
+
+    # Suprime logs de HTTP de bibliotecas externas (ex.: POST /_analyze por chamada)
+    logging.getLogger("opensearchpy").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
 class ConnectionMonitor:
@@ -144,7 +215,7 @@ def log_tika_request(
         url: URL do servidor Tika
     """
     logger = logging.getLogger("tika.request")
-    logger.info(
+    logger.debug(
         "TIKA_REQUEST",
         extra={
             "event_type": "tika_request",
@@ -171,7 +242,7 @@ def log_tika_response(
         status_code: Código de status HTTP
     """
     logger = logging.getLogger("tika.response")
-    logger.info(
+    logger.debug(
         "TIKA_RESPONSE",
         extra={
             "event_type": "tika_response",

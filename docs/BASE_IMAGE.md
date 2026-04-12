@@ -5,19 +5,23 @@ This document explains how to build the base image locally or in CI.
 ## What is the Base Image?
 
 The base image (`ghcr.io/okfn-brasil/querido-diario-data-processing/base:latest`) contains:
-- Python 3.11
-- All dependencies from `requirements.txt`
-- Pre-downloaded ML models (BERT Portuguese)
-- Runtime libraries
+- Python 3.14 (slim)
+- All runtime dependencies from `requirements.txt`
+- PyTorch CPU-only build (sentence-transformers inference, no GPU needed)
+- Pre-downloaded ML models (BERT Portuguese: `neuralmind/bert-base-portuguese-cased`)
+- Runtime system libraries (`libpq5`, `libmagic1`)
 
-It's built separately from the main application to:
-- Speed up builds (15 min → 1-2 min)
-- Reduce disk space usage (20GB → 2GB during builds)
-- Only rebuild when dependencies change
+It is built separately from the application image so that:
+- Code-only changes rebuild in ~1 minute instead of 15–30 minutes
+- Dependencies and models are cached independently of application code
+- The base image is only rebuilt when `requirements.txt` or `Dockerfile.base` change
+
+> **Note:** Development tools (`black`, `coverage`, `ruff`) live in
+> `requirements-dev.txt` and are **not** installed in the production image.
 
 ## Automated Builds (CI)
 
-The base image is automatically built by GitHub Actions when:
+The base image is automatically rebuilt by GitHub Actions when:
 - `requirements.txt` changes
 - `Dockerfile.base` changes
 - Manually triggered via workflow dispatch
@@ -26,178 +30,134 @@ See: `.github/workflows/build_base_image.yaml`
 
 ## Manual Local Build
 
-### Quick Start
-
-```bash
-# Run the automated script
-./scripts/build_base_image_local.sh
-```
-
-The script will:
-1. Set up Docker Buildx
-2. Install QEMU for cross-platform builds
-3. Ask if you want to push to registry or load locally
-4. Build the image(s)
-
 ### Prerequisites
 
-**Option 1: Docker Desktop** (Recommended - Easiest)
+**Option 1: Docker Desktop** (recommended — buildx included)
 - Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- Buildx and multi-arch support are included
 
 **Option 2: Docker Engine on Linux**
 ```bash
-# Install Docker (if not already installed)
-curl -fsSL https://get.docker.com | sh
-
 # Install Buildx plugin
 mkdir -p ~/.docker/cli-plugins/
-curl -L https://github.com/docker/buildx/releases/download/v0.12.0/buildx-v0.12.0.linux-amd64 \
+curl -fsSL https://github.com/docker/buildx/releases/latest/download/buildx-linux-amd64 \
   -o ~/.docker/cli-plugins/docker-buildx
 chmod +x ~/.docker/cli-plugins/docker-buildx
-
-# Verify installation
 docker buildx version
 ```
 
-### Building for Both Architectures (amd64 + arm64)
+### Quick Start
 
-**Option A: Push to Registry** (Builds both, requires registry access)
+```bash
+# Build base image for the current architecture and load locally
+make build-base-multi-arch-load
+
+# Build final application image and load locally
+make build-multi-arch-load
+```
+
+### Available Make Targets
+
+| Target | Description |
+|--------|-------------|
+| `make build-base-multi-arch-load` | Build base for current arch, load locally |
+| `make build-base-multi-arch` | Build base for amd64+arm64, push to registry |
+| `make build-multi-arch-load` | Build all images for current arch, load locally |
+| `make build-multi-arch-optimized` | Build final image for amd64+arm64, push |
+| `make build-multi-arch-tika-optimized` | Build Tika image for amd64+arm64, push |
+| `make build-all-multi-arch` | Build everything for amd64+arm64, push |
+| `make help-build` | Show all build targets with details |
+
+### Building for Both Architectures (amd64 + arm64)
 
 ```bash
 # 1. Login to GitHub Container Registry
 docker login ghcr.io
-# Username: your-github-username
-# Password: your-github-personal-access-token
 
-# 2. Build and push
-docker buildx build \
-  --platform linux/amd64,linux/arm64 \
-  --file Dockerfile.base \
-  --tag ghcr.io/okfn-brasil/querido-diario-data-processing/base:latest \
-  --push \
-  .
+# 2. Build and push base image for both architectures
+make build-base-multi-arch
+
+# 3. Build and push application image for both architectures
+make build-multi-arch-optimized
 ```
 
-**Option B: Load Locally** (Builds only current platform)
-
-```bash
-# Build for your current architecture only
-docker buildx build \
-  --file Dockerfile.base \
-  --tag ghcr.io/okfn-brasil/querido-diario-data-processing/base:latest \
-  --load \
-  .
+The `REGISTRY` variable is automatically derived from the git remote:
+```
+git@github.com:okfn-brasil/repo.git  →  ghcr.io/okfn-brasil
 ```
 
-**Note:** Docker buildx cannot load multi-arch images locally. You can only load one architecture at a time.
+Override if needed: `make build-base-multi-arch REGISTRY=my.registry/org`
 
 ### Setting up Multi-Architecture Support
 
-If you want to build for both amd64 and arm64:
-
 ```bash
-# 1. Create a new buildx builder
+# 1. Create a buildx builder
 docker buildx create --name multiarch --driver docker-container --use
 
-# 2. Bootstrap the builder
+# 2. Bootstrap and install QEMU for cross-platform emulation
 docker buildx inspect --bootstrap
-
-# 3. Install QEMU for cross-platform emulation
 docker run --privileged --rm tonistiigi/binfmt --install all
 
-# 4. Verify platforms available
+# 3. Verify available platforms
 docker buildx inspect multiarch
-# Should show: Platforms: linux/amd64, linux/arm64, ...
+# Should include: linux/amd64, linux/arm64
+```
 
-# 5. Now you can build for multiple platforms
-docker buildx build \
-  --platform linux/amd64,linux/arm64 \
-  --file Dockerfile.base \
-  --tag ghcr.io/okfn-brasil/querido-diario-data-processing/base:latest \
-  --push \
-  .
+### Updating the Apache Tika Version
+
+The Tika version is controlled by the `TIKA_VERSION` Make variable (default: `3.2.2`):
+
+```bash
+make build-tika-server TIKA_VERSION=3.3.0
+make build-multi-arch-tika-optimized TIKA_VERSION=3.3.0
 ```
 
 ## Testing the Base Image
 
-After building, test that it works:
-
 ```bash
-# Run a test command
 docker run --rm ghcr.io/okfn-brasil/querido-diario-data-processing/base:latest \
-  python -c "import sentence_transformers; print('✅ Base image works!')"
+  python -c "import sentence_transformers; print('Base image OK')"
 ```
 
-## Building the Main Application Image
+## When to Rebuild
 
-Once the base image exists, build the main application:
+| Change | Rebuild needed |
+|--------|---------------|
+| `requirements.txt` | Base image |
+| `Dockerfile.base` | Base image |
+| Application code | Final image only |
+| `requirements-dev.txt` | Neither (dev only) |
+| `Dockerfile_apache_tika` | Tika image |
 
-```bash
-# This will use the base image and only copy application code
-docker build -t my-app:latest -f Dockerfile .
+## Remote Build Cache
 
-# Should complete in 1-2 minutes (was 15 minutes before)
-```
+Multiarch builds use registry-based cache to speed up subsequent builds:
+
+| Cache tag | Used by |
+|-----------|---------|
+| `…/base:base-buildcache` | `build-base-multi-arch` |
+| `…/base:buildcache` | `build-multi-arch-optimized` |
+| `…/tika:buildcache` | `build-multi-arch-tika-optimized` |
+
+First build for each architecture: 20–30 min (amd64), up to 60 min (arm64 via QEMU).
+Subsequent builds with warm cache: 5–10 min.
 
 ## Troubleshooting
 
-### Error: "multiple platforms feature is currently not supported for docker driver"
-
-You need to create a buildx builder:
+### "multiple platforms feature is currently not supported for docker driver"
 ```bash
 docker buildx create --name multiarch --driver docker-container --use
 ```
 
-### Error: "exec user process caused: exec format error"
-
-You're trying to run an image built for a different architecture.
-Either:
-- Build for your current platform only (remove `--platform` flag)
-- Or install QEMU: `docker run --privileged --rm tonistiigi/binfmt --install all`
-
-### Build is very slow
-
-Cross-platform builds (e.g., building arm64 on amd64) use QEMU emulation and are slower.
-For faster builds:
-- Build only for your current platform
-- Or use a machine with the target architecture
-- Or use GitHub Actions (builds natively on each platform)
+### "exec user process caused: exec format error"
+You are running an image built for a different architecture. Install QEMU:
+```bash
+docker run --privileged --rm tonistiigi/binfmt --install all
+```
 
 ### Out of disk space
-
-The base image build requires ~20GB of free disk space.
-Clean up Docker:
 ```bash
 docker system prune -af --volumes
 ```
 
-## GitHub Actions Secrets
-
-To push images to GHCR from GitHub Actions, the workflow uses `GITHUB_TOKEN` which is automatically provided.
-
-No manual secrets configuration is needed!
-
-## Image Tags
-
-The base image uses these tags:
-- `latest` - Multi-arch manifest (points to latest-amd64 and latest-arm64)
-- `latest-amd64` - AMD64/x86_64 architecture
-- `latest-arm64` - ARM64/aarch64 architecture
-
-## When to Rebuild
-
-Rebuild the base image when:
-- ✅ `requirements.txt` changes (new Python dependencies)
-- ✅ ML model changes (different BERT model)
-- ✅ Base OS dependencies change (apt packages in Dockerfile.base)
-- ❌ Application code changes (use main Dockerfile, not base)
-
-## Performance Comparison
-
-| Metric | Without Base Image | With Base Image |
-|--------|-------------------|-----------------|
-| Build time | 15-20 min | 1-2 min |
-| Disk space | ~20GB | ~2GB |
-| Rebuild frequency | Every build | Only on dep changes |
-| Cache effectiveness | Low (layers change) | High (base stable) |
+### GitHub Actions — pushing to GHCR
+The `GITHUB_TOKEN` is automatically provided; no extra secrets are needed.

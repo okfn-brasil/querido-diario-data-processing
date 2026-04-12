@@ -1,19 +1,33 @@
-FROM docker.io/debian:bookworm-slim
-
-# Create user and install dependencies in optimized layers
-RUN useradd --system --no-create-home --shell /usr/sbin/nologin gazette
+# Multi-stage build to reduce final image size
+# Stage 1: Download Apache Tika JAR
+# Override TIKA_VERSION at build time: docker build --build-arg TIKA_VERSION=x.y.z
+ARG TIKA_VERSION=3.2.2
+FROM docker.io/debian:bookworm-slim AS downloader
+ARG TIKA_VERSION
 
 RUN apt-get update -y && \
-	apt-get -y install --no-install-recommends \
-		default-jre-headless \
-		curl \
-		ca-certificates && \
-	apt-get clean && \
-	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    apt-get -y install --no-install-recommends curl && \
+    curl -fSL -o /tika-server.jar \
+        "https://dlcdn.apache.org/tika/${TIKA_VERSION}/tika-server-standard-${TIKA_VERSION}.jar" && \
+    chmod 755 /tika-server.jar && \
+    apt-get remove -y curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install Apache Tika (cached separately for version updates)
-RUN curl -o /tika-server.jar https://dlcdn.apache.org/tika/3.2.2/tika-server-standard-3.2.2.jar && \
-	chmod 755 /tika-server.jar
+# Stage 2: Runtime image with only necessary dependencies
+FROM docker.io/debian:bookworm-slim
+
+# Create user and install only runtime dependencies
+RUN useradd --system --no-create-home --shell /usr/sbin/nologin gazette && \
+    apt-get update -y && \
+    apt-get -y install --no-install-recommends \
+        default-jre-headless \
+        ca-certificates && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Copy JAR from downloader stage
+COPY --from=downloader /tika-server.jar /tika-server.jar
 
 USER gazette
 EXPOSE 9998

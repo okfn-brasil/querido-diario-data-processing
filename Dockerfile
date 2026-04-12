@@ -1,10 +1,23 @@
-# Production image using pre-built base with all dependencies
-# Base image contains: Python 3.11, all requirements.txt dependencies, ML models
-FROM ghcr.io/okfn-brasil/querido-diario-data-processing/base:latest
+# Build arguments for multiarch support
+ARG TARGETARCH=amd64
+ARG TARGETOS=linux
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION=latest
 
-RUN apt-get update -y && \
-    apt-get -y install --no-install-recommends \
-        libmagic1
+# Production image using pre-built base with all dependencies
+# Base image contains: Python 3.14, all requirements.txt dependencies, ML models
+FROM ghcr.io/okfn-brasil/querido-diario-data-processing/base:latest
+ARG TARGETARCH
+ARG TARGETOS
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION
+
+# Labels for OCI image metadata
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
+LABEL org.opencontainers.image.revision="${VCS_REF}"
+LABEL org.opencontainers.image.version="${VERSION}"
 
 ENV USER=gazette
 ENV USER_HOME=/home/$USER

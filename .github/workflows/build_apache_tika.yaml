@@ -1,11 +1,20 @@
 on:
   push:
+    branches:
+      - main
     paths:
       - 'Dockerfile_apache_tika'
       - '.github/workflows/build_apache_tika.yaml'
     tags:
       - "v*"
+  issue_comment:
+    types: [created]
   workflow_dispatch:
+    inputs:
+      tika_version:
+        description: 'Apache Tika version (e.g. 3.2.2)'
+        required: false
+        default: '3.2.2'
 
 name: Build Apache Tika container image
 
@@ -20,6 +29,9 @@ concurrency:
 jobs:
   test-apache-tika:
     name: Test Apache Tika on multiple architectures
+    if: |
+      (github.event_name != 'issue_comment') ||
+      (github.event.issue.pull_request != null && contains(github.event.comment.body, 'cicd/build'))
     strategy:
       fail-fast: false
       matrix:
@@ -34,19 +46,21 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || github.ref }}
 
       - name: Free up disk space
         run: ./.github/scripts/free_disk_space.sh
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
         with:
           driver-opts: |
             image=moby/buildkit:v0.12.5
 
       - name: Build Apache Tika test image for ${{ matrix.platform }}
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
         with:
           context: .
           file: ./Dockerfile_apache_tika
@@ -54,6 +68,8 @@ jobs:
           load: ${{ matrix.platform == 'linux/amd64' }}
           cache-from: type=gha,scope=tika-test-${{ matrix.arch }}
           cache-to: type=gha,mode=min,scope=tika-test-${{ matrix.arch }}
+          build-args: |
+            TIKA_VERSION=${{ inputs.tika_version || '3.2.2' }}
           tags: |
             test-apache-tika:${{ matrix.arch }}
 
@@ -113,27 +129,36 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || github.ref }}
 
       - name: Free up disk space
         run: ./.github/scripts/free_disk_space.sh
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
         with:
           driver-opts: |
             image=moby/buildkit:v0.12.5
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Generate build metadata
+        id: meta
+        run: |
+          echo "build_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
+          echo "vcs_ref=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "version=$(git describe --tags --always 2>/dev/null || echo 'latest')" >> $GITHUB_OUTPUT
+
       - name: Build and push Apache Tika development container image
-        if: ${{ startsWith(github.ref, 'refs/heads/') }}
-        uses: docker/build-push-action@v5
+        if: ${{ startsWith(github.ref, 'refs/heads/') || github.event_name == 'issue_comment' }}
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
         with:
           context: .
           file: ./Dockerfile_apache_tika
@@ -141,12 +166,16 @@ jobs:
           push: true
           cache-from: type=gha,scope=tika-main-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=tika-main-${{ matrix.arch }}
+          build-args: |
+            TIKA_VERSION=${{ inputs.tika_version || '3.2.2' }}
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
+            VCS_REF=${{ steps.meta.outputs.vcs_ref }}
           tags: |
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest-${{ matrix.arch }}
+            ghcr.io/${{ github.repository_owner }}/querido-diario-apache-tika-server:latest-${{ matrix.arch }}
 
       - name: Build and push Apache Tika tagged container image
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
         with:
           context: .
           file: ./Dockerfile_apache_tika
@@ -154,8 +183,12 @@ jobs:
           push: true
           cache-from: type=gha,scope=tika-tag-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=tika-tag-${{ matrix.arch }}
+          build-args: |
+            TIKA_VERSION=${{ inputs.tika_version || '3.2.2' }}
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
+            VCS_REF=${{ steps.meta.outputs.vcs_ref }}
           tags: |
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-${{ matrix.arch }}
+            ghcr.io/${{ github.repository_owner }}/querido-diario-apache-tika-server:${{ github.ref_name }}-${{ matrix.arch }}
 
   create-apache-tika-manifest:
     name: Create Apache Tika multi-arch manifest
@@ -164,47 +197,50 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify single-arch images availability (branch)
-        if: ${{ startsWith(github.ref, 'refs/heads/') }}
+      - name: Verify single-arch images availability (branch/PR)
+        if: ${{ startsWith(github.ref, 'refs/heads/') || github.event_name == 'issue_comment' }}
         run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/querido-diario-apache-tika-server"
           for tag in latest-amd64 latest-arm64; do
             for i in {1..20}; do
-              if docker buildx imagetools inspect ghcr.io/okfn-brasil/querido-diario-apache-tika-server:$tag > /dev/null 2>&1; then
-                echo "Found ghcr.io/okfn-brasil/querido-diario-apache-tika-server:$tag";
+              if docker buildx imagetools inspect $IMAGE:$tag > /dev/null 2>&1; then
+                echo "Found $IMAGE:$tag";
                 break;
               fi
-              echo "Waiting for ghcr.io/okfn-brasil/querido-diario-apache-tika-server:$tag to be available ($i/20)...";
+              echo "Waiting for $IMAGE:$tag to be available ($i/20)...";
               sleep 3;
             done
           done
 
       - name: Create and push Apache Tika development manifest
-        if: ${{ startsWith(github.ref, 'refs/heads/') }}
+        if: ${{ startsWith(github.ref, 'refs/heads/') || github.event_name == 'issue_comment' }}
         run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/querido-diario-apache-tika-server"
           docker buildx imagetools create \
-            -t ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest \
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest-amd64 \
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:latest-arm64
+            -t $IMAGE:latest \
+            $IMAGE:latest-amd64 \
+            $IMAGE:latest-arm64
 
       - name: Verify single-arch images availability (tag)
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/querido-diario-apache-tika-server"
           for arch in amd64 arm64; do
             for i in {1..20}; do
-              if docker buildx imagetools inspect ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-$arch > /dev/null 2>&1; then
-                echo "Found ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-$arch";
+              if docker buildx imagetools inspect $IMAGE:${{ github.ref_name }}-$arch > /dev/null 2>&1; then
+                echo "Found $IMAGE:${{ github.ref_name }}-$arch";
                 break;
               fi
-              echo "Waiting for ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-$arch to be available ($i/20)...";
+              echo "Waiting for $IMAGE:${{ github.ref_name }}-$arch to be available ($i/20)...";
               sleep 3;
             done
           done
@@ -212,7 +248,8 @@ jobs:
       - name: Create and push Apache Tika tagged manifest
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/querido-diario-apache-tika-server"
           docker buildx imagetools create \
-            -t ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }} \
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-amd64 \
-            ghcr.io/okfn-brasil/querido-diario-apache-tika-server:${{ github.ref_name }}-arm64
+            -t $IMAGE:${{ github.ref_name }} \
+            $IMAGE:${{ github.ref_name }}-amd64 \
+            $IMAGE:${{ github.ref_name }}-arm64
