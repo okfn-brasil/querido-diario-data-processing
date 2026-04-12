@@ -168,7 +168,7 @@ jobs:
             BUILD_DATE=${{ steps.meta.outputs.build_date }}
             VCS_REF=${{ steps.meta.outputs.vcs_ref }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/querido-diario-apache-tika-server:latest-${{ matrix.arch }}
+            ghcr.io/${{ github.repository_owner }}/querido-diario-data-processing/apache-tika:latest-${{ matrix.arch }}
 
       - name: Build and push Apache Tika tagged container image
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
@@ -185,7 +185,7 @@ jobs:
             BUILD_DATE=${{ steps.meta.outputs.build_date }}
             VCS_REF=${{ steps.meta.outputs.vcs_ref }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/querido-diario-apache-tika-server:${{ github.ref_name }}-${{ matrix.arch }}
+            ghcr.io/${{ github.repository_owner }}/querido-diario-data-processing/apache-tika:${{ github.ref_name }}-${{ matrix.arch }}
 
   create-apache-tika-manifest:
     name: Create Apache Tika multi-arch manifest
@@ -206,7 +206,7 @@ jobs:
       - name: Verify single-arch images availability (branch/PR)
         if: ${{ startsWith(github.ref, 'refs/heads/') || github.event_name == 'issue_comment' }}
         run: |
-          IMAGE="ghcr.io/${{ github.repository_owner }}/querido-diario-apache-tika-server"
+          IMAGE="ghcr.io/${{ github.repository_owner }}/querido-diario-data-processing/apache-tika"
           for tag in latest-amd64 latest-arm64; do
             for i in {1..20}; do
               if docker buildx imagetools inspect $IMAGE:$tag > /dev/null 2>&1; then
@@ -221,7 +221,7 @@ jobs:
       - name: Create and push Apache Tika development manifest
         if: ${{ startsWith(github.ref, 'refs/heads/') || github.event_name == 'issue_comment' }}
         run: |
-          IMAGE="ghcr.io/${{ github.repository_owner }}/querido-diario-apache-tika-server"
+          IMAGE="ghcr.io/${{ github.repository_owner }}/querido-diario-data-processing/apache-tika"
           docker buildx imagetools create \
             -t $IMAGE:latest \
             $IMAGE:latest-amd64 \
@@ -230,7 +230,7 @@ jobs:
       - name: Verify single-arch images availability (tag)
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
-          IMAGE="ghcr.io/${{ github.repository_owner }}/querido-diario-apache-tika-server"
+          IMAGE="ghcr.io/${{ github.repository_owner }}/querido-diario-data-processing/apache-tika"
           for arch in amd64 arm64; do
             for i in {1..20}; do
               if docker buildx imagetools inspect $IMAGE:${{ github.ref_name }}-$arch > /dev/null 2>&1; then
@@ -245,7 +245,7 @@ jobs:
       - name: Create and push Apache Tika tagged manifest
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
-          IMAGE="ghcr.io/${{ github.repository_owner }}/querido-diario-apache-tika-server"
+          IMAGE="ghcr.io/${{ github.repository_owner }}/querido-diario-data-processing/apache-tika"
           docker buildx imagetools create \
             -t $IMAGE:${{ github.ref_name }} \
             $IMAGE:${{ github.ref_name }}-amd64 \
