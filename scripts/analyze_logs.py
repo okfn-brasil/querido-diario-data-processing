@@ -135,7 +135,7 @@ def print_report(stats):
 
     if stats["tika"]["responses"] > 0:
         avg_duration = stats["tika"]["total_duration_ms"] / stats["tika"]["responses"]
-        print(f"Duração média: {avg_duration:.2f}ms ({avg_duration/1000:.2f}s)")
+        print(f"Duração média: {avg_duration:.2f}ms ({avg_duration / 1000:.2f}s)")
 
     if stats["tika"]["errors"]:
         print("\n❌ Erros do Tika:")
@@ -147,7 +147,7 @@ def print_report(stats):
     if stats["tika"]["slow_requests"]:
         print(f"\n⚠️  Requisições lentas (>30s): {len(stats['tika']['slow_requests'])}")
         for filepath, duration in stats["tika"]["slow_requests"][:5]:
-            print(f"  - {filepath}: {duration/1000:.2f}s")
+            print(f"  - {filepath}: {duration / 1000:.2f}s")
         if len(stats["tika"]["slow_requests"]) > 5:
             print(f"  ... e mais {len(stats['tika']['slow_requests']) - 5}")
 
@@ -187,7 +187,7 @@ def print_report(stats):
             f"\n⚠️  Operações lentas (>5s): {len(stats['opensearch']['slow_operations'])}"
         )
         for operation, duration in stats["opensearch"]["slow_operations"][:5]:
-            print(f"  - {operation}: {duration/1000:.2f}s")
+            print(f"  - {operation}: {duration / 1000:.2f}s")
 
     # Problemas de Conexão
     print("\n\n🔌 PROBLEMAS DE CONEXÃO")

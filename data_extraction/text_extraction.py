@@ -181,7 +181,7 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
             raise
         except requests.exceptions.Timeout:
             duration_ms = (time.time() - start_time) * 1000
-            error_msg = f"Tika request timeout after {duration_ms/1000:.1f}s for file: {filepath}"
+            error_msg = f"Tika request timeout after {duration_ms / 1000:.1f}s for file: {filepath}"
             log_tika_error(
                 filepath, "TimeoutError", error_msg, duration_ms, file_size=file_size
             )
