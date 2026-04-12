@@ -12,9 +12,9 @@ on:
   workflow_dispatch:
     inputs:
       tika_version:
-        description: 'Apache Tika version (e.g. 3.2.2)'
+        description: 'Apache Tika version (e.g. 3.3.0)'
         required: false
-        default: '3.2.2'
+        default: '3.3.0'
 
 name: Build Apache Tika container image
 
@@ -65,11 +65,11 @@ jobs:
           context: .
           file: ./Dockerfile_apache_tika
           platforms: ${{ matrix.platform }}
-          load: ${{ matrix.platform == 'linux/amd64' }}
+          load: true
           cache-from: type=gha,scope=tika-test-${{ matrix.arch }}
           cache-to: type=gha,mode=min,scope=tika-test-${{ matrix.arch }},ignore-error=true
           build-args: |
-            TIKA_VERSION=${{ inputs.tika_version || '3.2.2' }}
+            TIKA_VERSION=${{ inputs.tika_version || '3.3.0' }}
           tags: |
             test-apache-tika:${{ matrix.arch }}
 
@@ -167,7 +167,7 @@ jobs:
           cache-from: type=gha,scope=tika-main-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=tika-main-${{ matrix.arch }},ignore-error=true
           build-args: |
-            TIKA_VERSION=${{ inputs.tika_version || '3.2.2' }}
+            TIKA_VERSION=${{ inputs.tika_version || '3.3.0' }}
             BUILD_DATE=${{ steps.meta.outputs.build_date }}
             VCS_REF=${{ steps.meta.outputs.vcs_ref }}
           tags: |
@@ -184,7 +184,7 @@ jobs:
           cache-from: type=gha,scope=tika-tag-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=tika-tag-${{ matrix.arch }},ignore-error=true
           build-args: |
-            TIKA_VERSION=${{ inputs.tika_version || '3.2.2' }}
+            TIKA_VERSION=${{ inputs.tika_version || '3.3.0' }}
             BUILD_DATE=${{ steps.meta.outputs.build_date }}
             VCS_REF=${{ steps.meta.outputs.vcs_ref }}
           tags: |
