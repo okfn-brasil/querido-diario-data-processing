@@ -5,6 +5,16 @@ on:
     paths:
       - 'Dockerfile'
       - '.github/workflows/build_container_image.yaml'
+      - 'config'
+      - 'database'
+      - 'data_extraction'
+      - 'index'
+      - 'iniciativas'
+      - 'main'
+      - 'monitoring'
+      - 'segmentation'
+      - 'storage'
+      - 'tasks'
     tags:
       - "v*"
   schedule:
