@@ -27,10 +27,12 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         max_retries: int = 5,
         retry_base_delay: float = 2.0,
         connection_pool_size: int = 10,
+        chunk_size: int = 8192,
     ):
         self._url = url
         self._max_retries = max_retries
         self._retry_base_delay = retry_base_delay
+        self._chunk_size = chunk_size
         self._session = self._create_session(connection_pool_size)
 
     def _create_session(self, pool_size: int) -> requests.Session:
@@ -54,6 +56,17 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         session.headers.update({"Connection": "keep-alive"})
 
         return session
+
+    def _chunk_file_generator(self, filepath: str):
+        """Yields file content in chunks for chunked transfer encoding.
+
+        Passing a generator to requests causes it to use Transfer-Encoding: chunked
+        instead of Content-Length, allowing Tika to process data incrementally
+        and avoid buffering the entire file in memory before parsing.
+        """
+        with open(filepath, "rb") as file:
+            while chunk := file.read(self._chunk_size):
+                yield chunk
 
     def _get_file_type(self, filepath: str) -> str:
         """
@@ -124,53 +137,51 @@ class ApacheTikaTextExtractor(TextExtractorInterface):
         """Make the actual HTTP request to Tika"""
         log_tika_request(filepath, file_size, content_type, self._url)
         try:
-            with open(filepath, "rb") as file:
-                headers = {
-                    "Content-Type": content_type,
-                    "Accept": "text/plain",
-                }
-                # Use streaming to prevent loading entire file in memory
-                # Use session for connection pooling and keep-alive
-                response = self._session.put(
-                    f"{self._url}/tika",
-                    data=file,
-                    headers=headers,
-                    stream=False,  # Tika requires full upload, but we stream the read
-                    timeout=(30, 300),  # (connect timeout, read timeout) in seconds
+            headers = {
+                "Content-Type": content_type,
+                "Accept": "text/plain",
+            }
+            # Send file as chunked stream: passing a generator makes requests use
+            # Transfer-Encoding: chunked (no Content-Length), so Tika receives
+            # data incrementally and avoids buffering the whole file before parsing.
+            response = self._session.put(
+                f"{self._url}/tika",
+                data=self._chunk_file_generator(filepath),
+                headers=headers,
+                stream=False,
+                timeout=(30, 300),  # (connect timeout, read timeout) in seconds
+            )
+
+            duration_ms = (time.time() - start_time) * 1000
+
+            # Check for HTTP errors
+            if response.status_code != 200:
+                error_msg = (
+                    f"Tika returned HTTP {response.status_code} for {filepath}. "
+                    f"Response: {response.text[:500]}"
                 )
-
-                duration_ms = (time.time() - start_time) * 1000
-
-                # Check for HTTP errors
-                if response.status_code != 200:
-                    error_msg = (
-                        f"Tika returned HTTP {response.status_code} for {filepath}. "
-                        f"Response: {response.text[:500]}"
-                    )
-                    log_tika_error(
-                        filepath,
-                        f"HTTPError{response.status_code}",
-                        error_msg,
-                        duration_ms,
-                        file_size=file_size,
-                        status_code=response.status_code,
-                    )
-                    raise requests.HTTPError(error_msg)
-
-                response.encoding = "UTF-8"
-                text = response.text
-
-                # Log resposta bem-sucedida
-                log_tika_response(
-                    filepath, duration_ms, len(text), response.status_code
+                log_tika_error(
+                    filepath,
+                    f"HTTPError{response.status_code}",
+                    error_msg,
+                    duration_ms,
+                    file_size=file_size,
+                    status_code=response.status_code,
                 )
+                raise requests.HTTPError(error_msg)
 
-                # Explicit cleanup to free memory immediately
-                response.close()
-                del response
-                gc.collect()
+            response.encoding = "UTF-8"
+            text = response.text
 
-                return text
+            # Log resposta bem-sucedida
+            log_tika_response(filepath, duration_ms, len(text), response.status_code)
+
+            # Explicit cleanup to free memory immediately
+            response.close()
+            del response
+            gc.collect()
+
+            return text
         except requests.exceptions.ConnectionError as e:
             duration_ms = (time.time() - start_time) * 1000
             error_msg = f"Failed to connect to Tika at {self._url}: {str(e)}"
@@ -293,10 +304,12 @@ def create_apache_tika_text_extraction() -> TextExtractorInterface:
     max_retries = int(os.environ.get("TIKA_MAX_RETRIES", "5"))
     retry_base_delay = float(os.environ.get("TIKA_RETRY_BASE_DELAY", "2.0"))
     connection_pool_size = int(os.environ.get("TIKA_CONNECTION_POOL_SIZE", "10"))
+    chunk_size = int(os.environ.get("TIKA_CHUNK_SIZE", "8192"))
 
     return ApacheTikaTextExtractor(
         apache_tika_server_url,
         max_retries=max_retries,
         retry_base_delay=retry_base_delay,
         connection_pool_size=connection_pool_size,
+        chunk_size=chunk_size,
     )
