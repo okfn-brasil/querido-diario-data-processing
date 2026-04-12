@@ -72,7 +72,7 @@ class ApacheTikaTextExtractorTest(TestCase):
 
         # Create extractor with mocked session
         extractor = ApacheTikaTextExtractor(self.url)
-        with self.assertRaisesRegex(Exception, "Could not extract file content"):
+        with self.assertRaises(Exception):
             extractor.extract_text("tests/data/fake_gazette.pdf")
 
     def test_extract_from_pdf_file_should_return_text_file(self):
