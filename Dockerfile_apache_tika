@@ -1,14 +1,14 @@
 # Multi-stage build to reduce final image size
 # Stage 1: Download Apache Tika JAR
 # Override TIKA_VERSION at build time: docker build --build-arg TIKA_VERSION=x.y.z
-ARG TIKA_VERSION=3.2.2
+ARG TIKA_VERSION=3.3.0
 FROM docker.io/debian:bookworm-slim AS downloader
 ARG TIKA_VERSION
 
 RUN apt-get update -y && \
     apt-get -y install --no-install-recommends ca-certificates curl && \
     curl -fSL -o /tika-server.jar \
-        "https://dlcdn.apache.org/tika/${TIKA_VERSION}/tika-server-standard-${TIKA_VERSION}.jar" && \
+        "https://archive.apache.org/dist/tika/${TIKA_VERSION}/tika-server-standard-${TIKA_VERSION}.jar" && \
     chmod 755 /tika-server.jar && \
     apt-get remove -y curl && \
     apt-get clean && \
