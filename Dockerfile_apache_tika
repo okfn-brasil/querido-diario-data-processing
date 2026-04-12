@@ -6,7 +6,7 @@ FROM docker.io/debian:bookworm-slim AS downloader
 ARG TIKA_VERSION
 
 RUN apt-get update -y && \
-    apt-get -y install --no-install-recommends curl && \
+    apt-get -y install --no-install-recommends ca-certificates curl && \
     curl -fSL -o /tika-server.jar \
         "https://dlcdn.apache.org/tika/${TIKA_VERSION}/tika-server-standard-${TIKA_VERSION}.jar" && \
     chmod 755 /tika-server.jar && \
