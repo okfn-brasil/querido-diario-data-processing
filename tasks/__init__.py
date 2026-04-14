@@ -9,6 +9,7 @@ AVAILABLE_TASKS = {
     "extract_text_from_gazettes": "tasks.gazette_text_extraction",
     "extract_themed_excerpts_from_gazettes": "tasks.gazette_themed_excerpts_extraction",
     "get_gazettes_to_be_processed": "tasks.list_gazettes_to_be_processed",
+    "get_themed_excerpt_ids_without_embedding": "tasks.list_themed_excerpts",
     "get_themes": "tasks.gazette_themes_listing",
     "get_territories": "tasks.list_territories",
     "tag_entities_in_excerpts": "tasks.gazette_excerpts_entities_tagging",

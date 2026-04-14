@@ -75,6 +75,24 @@ def gazette_texts_pipeline():
         run_task("tag_entities_in_excerpts", theme, themed_excerpt_ids, index)
 
 
+def embedding_rerank_pipeline():
+    """
+    Re-executa o reranqueamento de embedding para excertos sem pontuação.
+    Útil para processar excertos de execuções anteriores em que o BERT falhou
+    ou não foi executado.
+    """
+    index = create_index_interface()
+    themes = run_task("get_themes")
+
+    for theme in themes:
+        excerpt_ids = run_task("get_themed_excerpt_ids_without_embedding", theme, index)
+        if not excerpt_ids:
+            logging.info(f"Sem excertos pendentes para o tema {theme['index']}")
+            continue
+        logging.info(f"{len(excerpt_ids)} excertos para reranquear em {theme['index']}")
+        run_task("embedding_rerank_excerpts", theme, excerpt_ids, index)
+
+
 def aggregates_pipeline():
     database = create_database_interface()
     storage = create_storage_interface()
@@ -100,6 +118,8 @@ def execute_pipeline(pipeline):
             gazette_texts_pipeline()
         elif pipeline == "aggregates":
             aggregates_pipeline()
+        elif pipeline == "embedding_rerank":
+            embedding_rerank_pipeline()
         else:
             raise ValueError("Pipeline inválido.")
     finally:
