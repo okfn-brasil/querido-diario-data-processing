@@ -61,7 +61,7 @@ def get_gazettes_extracted_since_yesterday(
         WHERE
             scraped_at > current_timestamp - interval '1 day'
             AND gazettes.file_path NOT LIKE '%.zip'
-        ORDER BY gazettes.id
+        ORDER BY gazettes.id DESC
         LIMIT {page_size} OFFSET {offset}
         ;
         """
@@ -121,7 +121,7 @@ def get_all_gazettes_extracted(
         INNER JOIN territories ON territories.id = gazettes.territory_id
         WHERE
             gazettes.file_path NOT LIKE '%.zip'
-        ORDER BY gazettes.id
+        ORDER BY gazettes.id DESC
         LIMIT {page_size} OFFSET {offset}
         ;
         """
@@ -182,7 +182,7 @@ def get_unprocessed_gazettes(
         WHERE
             processed is False
             AND gazettes.file_path NOT LIKE '%.zip'
-        ORDER BY gazettes.id
+        ORDER BY gazettes.id DESC
         LIMIT {page_size} OFFSET {offset}
         ;
         """
