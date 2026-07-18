@@ -15,10 +15,19 @@ from tasks import run_task
 def setup_memory_controls():
     """
     Configure memory limits and garbage collection to prevent memory overflow.
-    Set soft/hard memory limits (1.5 GB soft, 1.9 GB hard for 2GB container)
+
+    Reads MEMORY_LIMIT_BYTES (meant to be injected from the container's own
+    resources.limits.memory via the Kubernetes Downward API — see
+    querido-diario-deployment's cronjob.yaml) and derives soft/hard RLIMIT_AS
+    from it, leaving headroom for non-heap process overhead (interpreter,
+    shared libs, C extensions). Falls back to a conservative 2 GB default
+    when unset (e.g. running outside k8s), matching the previous hardcoded
+    behavior.
     """
-    soft_limit = int(1.5 * 1024 * 1024 * 1024)  # 1.5 GB
-    hard_limit = int(1.9 * 1024 * 1024 * 1024)  # 1.9 GB
+    default_limit_bytes = 2 * 1024 * 1024 * 1024  # 2 GB fallback
+    limit_bytes = int(environ.get("MEMORY_LIMIT_BYTES", default_limit_bytes))
+    hard_limit = int(limit_bytes * 0.9)
+    soft_limit = int(limit_bytes * 0.75)
     resource.setrlimit(resource.RLIMIT_AS, (soft_limit, hard_limit))
 
     # More aggressive garbage collection
