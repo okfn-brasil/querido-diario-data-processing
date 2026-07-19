@@ -23,6 +23,7 @@ def create_gazettes_index(index: IndexInterface) -> None:
                 },
                 "file_checksum": {"type": "keyword"},
                 "file_path": {"type": "keyword"},
+                "file_raw_txt": {"type": "keyword"},
                 "file_url": {"type": "keyword"},
                 "id": {"type": "keyword"},
                 "is_extra_edition": {"type": "boolean"},
