@@ -78,5 +78,7 @@ FULL_PROJECT=true make setup
 
 4. Pronto! Agora você já pode começar a editar o código e executar os pipelines.
 
+Se algo der errado na configuração, na execução ou nos testes, consulte as [perguntas frequentes (FAQ)](/docs/FAQ.md).
+
 # Mantendo
 As pessoas mantenedoras devem seguir as diretrizes do [Guia para Mantenedoras](https://docs.queridodiario.ok.org.br/pt-br/latest/contribuindo/guia-de-contribuicao.html#mantendo) do Querido Diário.

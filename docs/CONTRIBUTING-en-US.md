@@ -78,5 +78,7 @@ FULL_PROJECT=true make setup
 
 4. Done! Now you can start editing the code and running the pipelines.
 
+If something goes wrong during setup, runs or tests, check the [frequently asked questions (FAQ)](/docs/FAQ-en-US.md).
+
 # Maintaining
 Maintainers must follow the guidelines in Querido Diário's [Guide for Maintainers](https://docs.queridodiario.ok.org.br/en/latest/contributing/contribution-guide.html#maintaining).

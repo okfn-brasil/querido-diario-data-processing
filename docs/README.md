@@ -43,7 +43,7 @@ make build
 make setup
 ```
 
-Para mais detalhes sobre a configuração leia ["como configurar o ambiente de desenvolvimento"](/docs/CONTRIBUTING.md#como-configurar-o-ambiente-de-desenvolvimento).
+Para mais detalhes sobre a configuração leia ["como configurar o ambiente de desenvolvimento"](/docs/CONTRIBUTING.md#como-configurar-o-ambiente-de-desenvolvimento). Dúvidas e erros comuns de instalação e execução estão nas [perguntas frequentes (FAQ)](/docs/FAQ.md).
 
 # Como executar
 
@@ -87,6 +87,8 @@ Os resultados podem ser encontrados no motor de busca e no armazenamento de obje
 </p>
 
 Ingresse em nosso [canal de comunidade](https://go.ok.org.br/discord) para trocas sobre os projetos, dúvidas, pedidos de ajuda com contribuição e conversar sobre inovação cívica em geral.
+
+Antes de perguntar, confira as [perguntas frequentes (FAQ)](/docs/FAQ.md).
 
 # Agradecimentos
 A aplicação foi inicialmente desenvolvida junto às pessoas do estúdio de software [Jurema](https://jurema.la/).
