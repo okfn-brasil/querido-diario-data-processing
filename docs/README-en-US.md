@@ -43,7 +43,7 @@ make build
 make setup
 ```
 
-For more details about the setup, read ["how to set up the development environment"](/docs/CONTRIBUTING-en-US.md#how-to-configure-the-development-environment).
+For more details about the setup, read ["how to set up the development environment"](/docs/CONTRIBUTING-en-US.md#how-to-configure-the-development-environment). Common installation and runtime questions and errors are covered in the [frequently asked questions (FAQ)](/docs/FAQ-en-US.md).
 
 # How to run
 
@@ -73,6 +73,8 @@ The results can be found in the search engine and object storage. Find tips on h
 </p>
 
 Join our [community channel](https://go.ok.org.br/discord) to discuss projects, ask questions, request help with contributions, and chat about civic innovation in general.
+
+Before asking, check the [frequently asked questions (FAQ)](/docs/FAQ-en-US.md).
 
 # Acknowledgments
 The application was initially developed with the people from the software studio [Jurema](https://jurema.la/).
