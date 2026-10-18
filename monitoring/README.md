@@ -216,13 +216,33 @@ except Exception as e:
     raise
 ```
 
+## Métricas Prometheus
+
+`monitoring/metrics.py` define as séries do pipeline, usadas tanto pelo CronJob
+quanto pelos workers da fila (diferenciados pelo rótulo `mode`):
+
+| Métrica | Tipo | Rótulos | Descrição |
+|---|---|---|---|
+| `qd_gazettes_processed_total` | Counter | `mode`, `status` | Diários processados; `status` é `ok`, `unsupported` ou `error` |
+| `qd_gazette_processing_seconds` | Histogram | `mode` | Tempo de processamento por diário |
+| `qd_scrape_to_index_seconds` | Histogram | `mode` | Latência entre `scraped_at` e a indexação (só `ok`) |
+
+- **CronJob:** processos batch não são raspados pelo Prometheus. No fim de
+  `execute_pipeline`, as métricas são enviadas ao Pushgateway (job
+  `data-processing`) quando `PUSHGATEWAY_URL` está definida. Falhas no envio
+  só geram um aviso no log.
+- **Workers da fila:** chamar `start_metrics_server()` para expor `/metrics`
+  (porta `METRICS_PORT`, padrão 9100) e raspar via `PodMonitor`.
+
 ## Variáveis de Ambiente
 
 - `DEBUG=1` - Ativa logs de debug com mais detalhes
+- `PIPELINE_MODE` - Valor do rótulo `mode` das métricas (padrão `cron`)
+- `PUSHGATEWAY_URL` - Endereço do Pushgateway (ex.: `pushgateway-prometheus-pushgateway.monitoring:9091`); sem ela, nada é enviado
+- `METRICS_PORT` - Porta do servidor de métricas dos workers (padrão `9100`)
 
 ## Próximos Passos
 
 1. **Alertas Automáticos**: Adicionar alertas quando taxa de erro > 5%
-2. **Métricas Prometheus**: Exportar métricas para Prometheus/Grafana
-3. **Retry Automático**: Implementar retry com backoff exponencial
-4. **Circuit Breaker**: Adicionar circuit breaker para proteger Tika
+2. **Retry Automático**: Implementar retry com backoff exponencial
+3. **Circuit Breaker**: Adicionar circuit breaker para proteger Tika
