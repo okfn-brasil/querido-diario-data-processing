@@ -8,6 +8,7 @@ from data_extraction import create_apache_tika_text_extraction
 from database import create_database_interface
 from index import create_index_interface
 from monitoring import get_monitor, setup_structured_logging
+from monitoring.metrics import push_metrics_if_configured
 from storage import create_storage_interface
 from tasks import run_task
 
@@ -135,6 +136,7 @@ def execute_pipeline(pipeline):
         # Imprime estatísticas de conexão ao finalizar
         monitor = get_monitor()
         monitor.print_summary()
+        push_metrics_if_configured()
         logging.info("=== Pipeline finalizado ===")
 
 

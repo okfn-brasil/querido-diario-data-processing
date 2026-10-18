@@ -9,6 +9,7 @@ from .list_gazettes_pagination_tests import (
     GazettesListingRegressionTests,
 )
 from .main_tests import MainModuleTests
+from .metrics_tests import GazetteProcessingMetricsTests, PushgatewayTests
 from .opensearch import (
     IndexInterfaceFactoryFunctionTests,
     OpensearchBasicTests,
@@ -33,11 +34,13 @@ __all__ = [
     "GazettesListingPaginationTests",
     "GazettesListingRegressionTests",
     "IndexInterfaceFactoryFunctionTests",
+    "GazetteProcessingMetricsTests",
     "MainModuleTests",
     "OpensearchBasicTests",
     "OpensearchIntegrationTests",
     "PostgreSQLConnectionTests",
     "PostgreSQLTests",
+    "PushgatewayTests",
     "StorageInterfaceCreationTests",
     "TextExtractionTaskTests",
     "unittest",

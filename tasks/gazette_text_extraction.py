@@ -16,12 +16,17 @@ from botocore.exceptions import ClientError
 from data_extraction import TextExtractorInterface, UnsupportedFileTypeError
 from database import DatabaseInterface
 from index import IndexInterface
+from monitoring.metrics import observe_gazette_processing
 from segmentation import get_segmenter
 from storage import StorageInterface
 
 # Memory management configuration
 MAX_FILE_SIZE_MB = int(os.environ.get("MAX_GAZETTE_FILE_SIZE_MB", 500))
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+
+
+class GazetteFileNotFoundError(Exception):
+    """The gazette file is missing from storage (404)"""
 
 
 def extract_text_from_gazettes(
@@ -43,9 +48,10 @@ def extract_text_from_gazettes(
 
     for gazette in gazettes:
         try:
-            document_ids = try_process_gazette_file(
-                gazette, territories, database, storage, index, text_extractor
-            )
+            with observe_gazette_processing(gazette):
+                document_ids = try_process_gazette_file(
+                    gazette, territories, database, storage, index, text_extractor
+                )
             ids.extend(document_ids)
             processed_count += 1
 
@@ -53,6 +59,9 @@ def extract_text_from_gazettes(
             if processed_count % 10 == 0:
                 logging.info(f"Processed {processed_count} gazettes")
 
+        except GazetteFileNotFoundError:
+            # Already logged where detected; skip this gazette
+            pass
         except UnsupportedFileTypeError as e:
             logging.warning(
                 f"Could not process gazette {gazette.get('id', 'unknown')}: "
@@ -107,8 +116,7 @@ def try_process_gazette_file(
             logging.error(
                 f"Gazette ID: {gazette.get('id')}, Checksum: {gazette.get('file_checksum')}"
             )
-            # Skip this gazette and continue processing others
-            return []
+            raise GazetteFileNotFoundError(gazette["file_path"]) from e
         else:
             # Re-raise other ClientErrors
             raise
