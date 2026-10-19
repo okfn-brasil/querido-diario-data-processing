@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Optional
 
 from database import DatabaseInterface
 
@@ -224,3 +224,39 @@ def format_gazette_data(data):
         "territory_name": data[13],
         "state_code": data[14],
     }
+
+
+def get_gazette_by_id(database: DatabaseInterface, gazette_id: int) -> Optional[Dict]:
+    """
+    Get a single gazette by its id, or None if it does not exist anymore.
+    Used by the extraction queue workers, whose messages carry only the id.
+    """
+    # DatabaseInterface.select does not take parameters; int() keeps the id safe
+    command = f"""
+    SELECT
+        gazettes.id,
+        gazettes.source_text,
+        gazettes.date,
+        gazettes.edition_number,
+        gazettes.is_extra_edition,
+        gazettes.power,
+        gazettes.file_checksum,
+        gazettes.file_path,
+        gazettes.file_url,
+        gazettes.scraped_at,
+        gazettes.created_at,
+        gazettes.territory_id,
+        gazettes.processed,
+        territories.name as territory_name,
+        territories.state_code
+    FROM
+        gazettes
+    INNER JOIN territories ON territories.id = gazettes.territory_id
+    WHERE
+        gazettes.id = {int(gazette_id)}
+    ;
+    """
+    results = list(database.select(command))
+    if not results:
+        return None
+    return format_gazette_data(results[0])
