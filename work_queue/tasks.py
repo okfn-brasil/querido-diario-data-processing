@@ -10,6 +10,7 @@ indexa com `document_id=file_checksum` (sobrescreve, não duplica) e
 
 import logging
 
+import psycopg2
 from botocore.exceptions import ConnectionError as BotoConnectionError
 from botocore.exceptions import HTTPClientError as BotoHTTPClientError
 from celery import signals
@@ -44,7 +45,37 @@ TRANSIENT_ERRORS = (
     OpenSearchConnectionError,
     BotoConnectionError,
     BotoHTTPClientError,
+    # Postgres reiniciando ou conexão perdida; a conexão é refeita antes da
+    # nova tentativa (ver _discard_database)
+    psycopg2.OperationalError,
+    psycopg2.InterfaceError,
 )
+
+
+def _get_database():
+    """
+    Conexão do processo com o Postgres, aberta de novo se a anterior foi
+    descartada após um erro
+    """
+    if deps.get("database") is None:
+        deps["database"] = create_database_interface()
+    return deps["database"]
+
+
+def _discard_database():
+    """
+    Descarta a conexão após qualquer erro do Postgres. O worker vive por horas
+    e reusa a mesma conexão: uma conexão caída (Postgres reiniciado) ou presa
+    numa transação abortada faria todos os diários seguintes falharem e irem
+    para a DLQ. A próxima tarefa (ou a nova tentativa desta) abre outra.
+    """
+    database = deps.pop("database", None)
+    if database is None:
+        return
+    try:
+        database.close()
+    except Exception:
+        pass
 
 
 @signals.worker_process_init.connect
@@ -53,11 +84,10 @@ def init_dependencies(**_):
     Cria as conexões uma vez por processo filho do worker, e não no processo
     pai, para não compartilhar conexões entre processos após o fork.
     """
-    deps["database"] = create_database_interface()
     deps["storage"] = create_storage_interface()
     deps["index"] = create_index_interface()
     deps["text_extractor"] = create_apache_tika_text_extraction()
-    deps["territories"] = list(get_territories(deps["database"]))
+    deps["territories"] = list(get_territories(_get_database()))
     # No processo filho porque o prometheus_client não está em modo
     # multiprocess: as métricas só existem no processo que processa o diário.
     # Funciona com --concurrency=1; com mais filhos, as portas colidiriam
@@ -73,23 +103,28 @@ def init_dependencies(**_):
     max_retries=5,
 )
 def extract_gazette(self, gazette_id: int):
-    gazette = get_gazette_by_id(deps["database"], gazette_id)
-    if gazette is None or gazette["processed"]:
-        # Idempotência: já processado (mensagem entregue de novo) ou removido
-        logging.info(f"Diário {gazette_id} já processado ou inexistente")
-        redis_keys.release_enqueued(gazette_id)
-        return
-
     try:
+        gazette = get_gazette_by_id(_get_database(), gazette_id)
+        if gazette is None or gazette["processed"]:
+            # Idempotência: já processado (mensagem entregue de novo) ou removido
+            logging.info(f"Diário {gazette_id} já processado ou inexistente")
+            redis_keys.release_enqueued(gazette_id)
+            return
+
         with observe_gazette_processing(gazette):
             document_ids = try_process_gazette_file(
                 gazette,
                 deps["territories"],
-                deps["database"],
+                _get_database(),
                 deps["storage"],
                 deps["index"],
                 deps["text_extractor"],
             )
+    except psycopg2.Error:
+        # Conexão caída é transitória (nova tentativa); os demais erros vão
+        # para a DLQ. Nos dois casos, a conexão não é mais confiável
+        _discard_database()
+        raise
     except GazetteFileNotFoundError as e:
         # Não é transitório: não adianta tentar de novo
         redis_keys.send_to_dlq(gazette_id, f"not found: {e}")

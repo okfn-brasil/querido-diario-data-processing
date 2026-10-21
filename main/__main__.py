@@ -128,29 +128,28 @@ def enqueue_extraction_pipeline():
 def themes_from_queue_pipeline():
     """
     Excertos temáticos dos documentos indexados pelos workers da fila, em lotes
-    tirados de qd:themes:pending.
+    lidos de qd:themes:pending.
     """
     from work_queue import redis_keys
 
     index = create_index_interface()
-    gazette_ids = redis_keys.pop_themes_batch(5000)
+    gazette_ids = redis_keys.peek_themes_batch(5000)
     if not gazette_ids:
         logging.info("Sem documentos pendentes para os temas")
         return
     logging.info(f"{len(gazette_ids)} documentos para os temas")
 
-    try:
-        for theme in run_task("get_themes"):
-            run_task("create_themed_excerpts_index", theme, index)
-            themed_excerpt_ids = run_task(
-                "extract_themed_excerpts_from_gazettes", theme, gazette_ids, index
-            )
-            run_task("embedding_rerank_excerpts", theme, themed_excerpt_ids, index)
-            run_task("tag_entities_in_excerpts", theme, themed_excerpt_ids, index)
-    except Exception:
-        # Devolve o lote para a próxima execução não perder esses documentos
-        redis_keys.mark_for_themes(gazette_ids)
-        raise
+    for theme in run_task("get_themes"):
+        run_task("create_themed_excerpts_index", theme, index)
+        themed_excerpt_ids = run_task(
+            "extract_themed_excerpts_from_gazettes", theme, gazette_ids, index
+        )
+        run_task("embedding_rerank_excerpts", theme, themed_excerpt_ids, index)
+        run_task("tag_entities_in_excerpts", theme, themed_excerpt_ids, index)
+
+    # Só sai da fila depois de passar por todos os temas: se o processo morrer
+    # antes, o lote é processado de novo na próxima execução
+    redis_keys.remove_from_themes(gazette_ids)
 
 
 def aggregates_pipeline():

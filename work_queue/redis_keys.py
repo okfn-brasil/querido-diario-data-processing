@@ -12,6 +12,11 @@ até alguém reprocessá-lo. Como o diário continua `processed=false`, se a cha
 expirasse o produtor o reenfileiraria e ele voltaria à DLQ a cada 6 h. Para
 reprocessar um diário da DLQ: tirá-lo de qd:extraction:dead, apagar
 qd:enqueued:{id} e deixar o produtor reenfileirá-lo na próxima execução.
+
+Temas: o lote é lido sem ser removido e só sai de qd:themes:pending depois de
+processado. Se o pod dos temas morrer no meio (OOMKilled no BERT, por exemplo),
+os documentos continuam pendentes e a próxima execução os processa de novo;
+reprocessar não duplica, porque o id de cada excerto é um hash do conteúdo.
 """
 
 import json
@@ -69,5 +74,12 @@ def mark_for_themes(checksums: Iterable[str]) -> None:
         get_client().sadd(THEMES_PENDING_KEY, *checksums)
 
 
-def pop_themes_batch(n: int) -> List[str]:
-    return get_client().spop(THEMES_PENDING_KEY, n) or []
+def peek_themes_batch(n: int) -> List[str]:
+    """Até n documentos pendentes, sem removê-los (ver docstring do módulo)"""
+    return get_client().srandmember(THEMES_PENDING_KEY, n) or []
+
+
+def remove_from_themes(checksums: Iterable[str]) -> None:
+    checksums = list(checksums)
+    if checksums:
+        get_client().srem(THEMES_PENDING_KEY, *checksums)
