@@ -25,6 +25,7 @@ from .text_extraction_tests import (
     ApacheTikaTextExtractorTest,
     FactoryMethodApacheTikaTest,
 )
+from .work_queue_tests import ThemesFromQueueTests, WorkQueueTaskTests
 
 __all__ = [
     "ApacheTikaTextExtractorTest",
@@ -43,5 +44,7 @@ __all__ = [
     "PushgatewayTests",
     "StorageInterfaceCreationTests",
     "TextExtractionTaskTests",
+    "ThemesFromQueueTests",
+    "WorkQueueTaskTests",
     "unittest",
 ]
