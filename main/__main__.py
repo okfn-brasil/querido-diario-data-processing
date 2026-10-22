@@ -103,6 +103,55 @@ def embedding_rerank_pipeline():
         run_task("embedding_rerank_excerpts", theme, excerpt_ids, index)
 
 
+def enqueue_extraction_pipeline():
+    """
+    Produtor da fila de extração: enfileira o id de cada diário não processado
+    que ainda não esteja na fila. A extração é feita pelos workers
+    (work_queue.tasks.extract_gazette).
+    """
+    from work_queue import redis_keys
+    from work_queue.tasks import extract_gazette
+
+    database = create_database_interface()
+    # No baseline quem cria o índice é o gazette_texts_pipeline; aqui ele tem
+    # que existir antes de o primeiro worker indexar
+    run_task("create_gazettes_index", create_index_interface())
+
+    enqueued = 0
+    for gazette in run_task("get_gazettes_to_be_processed", "UNPROCESSED", database):
+        if redis_keys.try_mark_enqueued(gazette["id"]):
+            extract_gazette.delay(gazette["id"])
+            enqueued += 1
+    logging.info(f"{enqueued} diários enfileirados")
+
+
+def themes_from_queue_pipeline():
+    """
+    Excertos temáticos dos documentos indexados pelos workers da fila, em lotes
+    lidos de qd:themes:pending.
+    """
+    from work_queue import redis_keys
+
+    index = create_index_interface()
+    gazette_ids = redis_keys.peek_themes_batch(5000)
+    if not gazette_ids:
+        logging.info("Sem documentos pendentes para os temas")
+        return
+    logging.info(f"{len(gazette_ids)} documentos para os temas")
+
+    for theme in run_task("get_themes"):
+        run_task("create_themed_excerpts_index", theme, index)
+        themed_excerpt_ids = run_task(
+            "extract_themed_excerpts_from_gazettes", theme, gazette_ids, index
+        )
+        run_task("embedding_rerank_excerpts", theme, themed_excerpt_ids, index)
+        run_task("tag_entities_in_excerpts", theme, themed_excerpt_ids, index)
+
+    # Só sai da fila depois de passar por todos os temas: se o processo morrer
+    # antes, o lote é processado de novo na próxima execução
+    redis_keys.remove_from_themes(gazette_ids)
+
+
 def aggregates_pipeline():
     database = create_database_interface()
     storage = create_storage_interface()
@@ -130,6 +179,10 @@ def execute_pipeline(pipeline):
             aggregates_pipeline()
         elif pipeline == "embedding_rerank":
             embedding_rerank_pipeline()
+        elif pipeline == "enqueue_extraction":
+            enqueue_extraction_pipeline()
+        elif pipeline == "themes_from_queue":
+            themes_from_queue_pipeline()
         else:
             raise ValueError("Pipeline inválido.")
     finally:

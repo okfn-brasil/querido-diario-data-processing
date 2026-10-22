@@ -43,6 +43,9 @@ class PostgreSQL(DatabaseInterface):
             dbname=database, user=user, password=password, host=host, port=port
         )
 
+    def close(self) -> None:
+        self._connection.close()
+
     def _commit_changes(self, command: str, data: Dict = {}) -> None:
         with self._connection.cursor() as cursor:
             logging.debug(f"Making change: {cursor.query}")
