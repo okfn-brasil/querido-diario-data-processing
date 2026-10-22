@@ -4,10 +4,13 @@ ARG TARGETOS=linux
 ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION=latest
+# Tag of the base image; use "local" with a base built locally
+# (e.g. `make build-data-processing-base` in querido-diario-deployment)
+ARG BASE_TAG=latest
 
 # Production image using pre-built base with all dependencies
 # Base image contains: Python 3.14, all requirements.txt dependencies, ML models
-FROM ghcr.io/okfn-brasil/querido-diario-data-processing/base:latest
+FROM ghcr.io/okfn-brasil/querido-diario-data-processing/base:${BASE_TAG}
 ARG TARGETARCH
 ARG TARGETOS
 ARG BUILD_DATE
