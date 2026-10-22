@@ -25,10 +25,15 @@ from .text_extraction_tests import (
     ApacheTikaTextExtractorTest,
     FactoryMethodApacheTikaTest,
 )
-from .work_queue_tests import ThemesFromQueueTests, WorkQueueTaskTests
+from .work_queue_tests import (
+    CeleryAppTests,
+    ThemesFromQueueTests,
+    WorkQueueTaskTests,
+)
 
 __all__ = [
     "ApacheTikaTextExtractorTest",
+    "CeleryAppTests",
     "CreationDatabaseInterfaceFunctionTests",
     "DigitalOceanSpacesIntegrationTests",
     "FactoryMethodApacheTikaTest",

@@ -1,4 +1,6 @@
 import os
+import subprocess
+import sys
 from datetime import date, datetime
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
@@ -202,3 +204,25 @@ class ThemesFromQueueTests(TestCase):
         with self.assertRaises(MemoryError):
             themes_from_queue_pipeline()
         self.assertEqual(self.pending(), {"a", "b"})
+
+
+class CeleryAppTests(TestCase):
+    def test_broker_is_queue_redis_even_with_backend_celery_broker_url(self):
+        # Processo novo: o broker é resolvido quando celery_app é importado
+        env = {
+            **os.environ,
+            "CELERY_BROKER_URL": "redis://redis:6378",
+            "QUEUE_BROKER_URL": "redis://redis-queue:6379/0",
+        }
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from work_queue.celery_app import app; print(app.conf.broker_url)",
+            ],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        self.assertEqual(result.stdout.strip(), "redis://redis-queue:6379/0")
