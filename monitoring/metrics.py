@@ -17,7 +17,7 @@ from prometheus_client import (
     CollectorRegistry,
     Counter,
     Histogram,
-    push_to_gateway,
+    pushadd_to_gateway,
     start_http_server,
 )
 
@@ -110,12 +110,18 @@ def push_metrics_if_configured() -> bool:
     Processos batch (CronJob) não são raspados pelo Prometheus, então precisam
     empurrar as métricas no fim da execução. Falhas no envio não interrompem o
     pipeline.
+
+    Usa POST (pushadd), que substitui só as métricas enviadas e mantém as
+    outras do grupo. Com PUT (push_to_gateway), uma nova tentativa do mesmo Job
+    (restartPolicy: OnFailure) que não processou nenhum diário envia o registro
+    vazio e apaga as métricas da tentativa anterior: métricas com rótulos só
+    existem no registro depois da primeira observação.
     """
     url = os.environ.get("PUSHGATEWAY_URL")
     if not url:
         return False
     try:
-        push_to_gateway(url, job=PUSHGATEWAY_JOB, registry=REGISTRY)
+        pushadd_to_gateway(url, job=PUSHGATEWAY_JOB, registry=REGISTRY)
     except Exception as e:
         logging.warning(f"Falha ao enviar métricas ao Pushgateway ({url}): {e}")
         return False
