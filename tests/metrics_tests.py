@@ -113,13 +113,13 @@ class GazetteProcessingMetricsTests(TestCase):
 
 class PushgatewayTests(TestCase):
     @patch.dict("os.environ", {}, clear=True)
-    @patch("monitoring.metrics.push_to_gateway")
+    @patch("monitoring.metrics.pushadd_to_gateway")
     def test_does_not_push_without_url(self, push):
         self.assertFalse(push_metrics_if_configured())
         push.assert_not_called()
 
     @patch.dict("os.environ", {"PUSHGATEWAY_URL": "pushgateway:9091"})
-    @patch("monitoring.metrics.push_to_gateway")
+    @patch("monitoring.metrics.pushadd_to_gateway")
     def test_pushes_application_registry(self, push):
         self.assertTrue(push_metrics_if_configured())
         push.assert_called_once_with(
@@ -127,7 +127,7 @@ class PushgatewayTests(TestCase):
         )
 
     @patch.dict("os.environ", {"PUSHGATEWAY_URL": "pushgateway:9091"})
-    @patch("monitoring.metrics.push_to_gateway", side_effect=OSError("refused"))
+    @patch("monitoring.metrics.pushadd_to_gateway", side_effect=OSError("refused"))
     def test_push_failure_does_not_raise(self, push):
         with self.assertLogs(level="WARNING"):
             self.assertFalse(push_metrics_if_configured())
